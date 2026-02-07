@@ -1,6 +1,11 @@
 # PLAN.md - Dilemma Arena
 
-## Status: 🟢 Ready for Devnet
+## Status: 🟡 Awaiting Devnet SOL
+
+**Program ID:** `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
+**Deployer Wallet:** `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
+**Required SOL:** ~2 SOL (434KB program + rent + tx fees)
+**Faucet:** https://faucet.solana.com (rate limited)
 
 ---
 
@@ -156,11 +161,31 @@ V1 philosophy: players build their own clients. Contract is the API.
 | Localnet demo | 🟢 Complete |
 | Dynamic account sizing | 🟢 Complete |
 | WASM integration | ⚪ Planned |
-| Devnet deploy | ⚪ Planned |
+| Devnet deploy | 🟡 Awaiting SOL |
 | Mainnet launch | ⚪ Planned |
+
+---
+
+## Deployment Readiness
+
+### Build Artifacts
+- [x] Contract compiled (434KB .so)
+- [x] Program keypair generated
+- [x] Program ID set in lib.rs and Anchor.toml
+- [x] All 13 tests passing on localnet
+- [x] Anchor.toml configured for devnet
+
+### Deployment Steps
+1. Fund wallet with ~2 SOL: `solana airdrop 2` or https://faucet.solana.com
+2. Deploy: `anchor deploy --provider.cluster devnet`
+3. Initialize config (creates Tournament #0)
+4. Start operator bot
+
+### Blocked On
+- Devnet faucet rate limit (429 errors)
 
 ---
 
 ## Current Focus
 
-Devnet deployment.
+Fund deployer wallet, then deploy to devnet.
