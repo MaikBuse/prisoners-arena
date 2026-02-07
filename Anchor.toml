@@ -3,19 +3,19 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-dilemma_arena = "DiLEmmA1111111111111111111111111111111111111"
+dilemma_arena = "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7"
 
 [programs.devnet]
-dilemma_arena = "DiLEmmA1111111111111111111111111111111111111"
+dilemma_arena = "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7"
 
 [programs.mainnet]
-dilemma_arena = "DiLEmmA1111111111111111111111111111111111111"
+dilemma_arena = "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
