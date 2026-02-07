@@ -1,0 +1,25 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+dilemma_arena = "DiLEmmA1111111111111111111111111111111111111"
+
+[programs.devnet]
+dilemma_arena = "DiLEmmA1111111111111111111111111111111111111"
+
+[programs.mainnet]
+dilemma_arena = "DiLEmmA1111111111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[workspace]
+members = ["programs/dilemma-arena"]

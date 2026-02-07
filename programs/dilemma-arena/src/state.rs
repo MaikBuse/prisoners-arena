@@ -1,0 +1,226 @@
+//! Account state definitions
+
+use anchor_lang::prelude::*;
+
+/// Claim expiry in seconds (30 days)
+pub const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
+
+/// Winner percentage (top 25%)
+pub const WINNER_PERCENTAGE: u32 = 25;
+
+/// Matches per transaction batch
+pub const MATCHES_PER_TX: u32 = 5;
+
+/// Maximum participants per tournament (for account sizing)
+pub const MAX_PARTICIPANTS: usize = 5000;
+
+/// Global configuration account
+#[account]
+#[derive(Default)]
+pub struct Config {
+    /// Admin who can update config and withdraw fees
+    pub admin: Pubkey,
+    /// Operator who can run tournament lifecycle (separate from admin)
+    pub operator: Pubkey,
+    /// House fee in basis points (0-10000, where 100 = 1%)
+    pub house_fee_bps: u16,
+    /// Fixed stake for all players (lamports)
+    pub stake: u64,
+    /// Minimum participants to start tournament (must be even, >= 2)
+    pub min_participants: u16,
+    /// Maximum participants per tournament
+    pub max_participants: u16,
+    /// Registration duration in seconds
+    pub registration_duration: i64,
+    /// Number of matches each player plays (K)
+    pub matches_per_player: u16,
+    /// Accumulated fees pending withdrawal
+    pub accumulated_fees: u64,
+    /// Current tournament ID (increments each tournament)
+    pub current_tournament_id: u32,
+    /// PDA bump seed
+    pub bump: u8,
+}
+
+impl Config {
+    pub const LEN: usize = 8 + // discriminator
+        32 +  // admin
+        32 +  // operator
+        2 +   // house_fee_bps
+        8 +   // stake
+        2 +   // min_participants
+        2 +   // max_participants
+        8 +   // registration_duration
+        2 +   // matches_per_player
+        8 +   // accumulated_fees
+        4 +   // current_tournament_id
+        1 +   // bump
+        32;   // padding for future fields
+}
+
+/// Tournament state machine
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TournamentState {
+    #[default]
+    Registration,
+    Running,
+    Payout,
+}
+
+/// Tournament account
+/// 
+/// Sized dynamically based on max_participants at creation.
+#[account]
+#[derive(Default)]
+pub struct Tournament {
+    /// Tournament ID
+    pub id: u32,
+    /// Current state
+    pub state: TournamentState,
+    
+    // Snapshotted from Config at creation (immutable after)
+    /// Fixed stake (snapshotted from config)
+    pub stake: u64,
+    /// House fee in basis points (snapshotted from config)
+    pub house_fee_bps: u16,
+    /// Matches per player K (snapshotted from config)
+    pub matches_per_player: u16,
+    
+    /// Total prize pool (lamports)
+    pub pool: u64,
+    /// Number of active participants (excludes refunded)
+    pub participant_count: u32,
+    /// Registration deadline (Unix timestamp)
+    pub registration_ends: i64,
+    /// Number of matches completed
+    pub matches_completed: u32,
+    /// Total matches to run
+    pub matches_total: u32,
+    /// Randomness seed (set at registration close)
+    pub randomness_seed: [u8; 32],
+    /// Minimum score to be a winner (set at finalization)
+    pub min_winning_score: u32,
+    /// Number of winners (top 25%)
+    pub winner_count: u32,
+    /// Prize pool after house fee (for payout calculation)
+    pub winner_pool: u64,
+    /// Number of payouts claimed
+    pub claims_processed: u32,
+    /// Timestamp when payout state started (for claim expiry)
+    pub payout_started_at: i64,
+    /// Ordered list of player pubkeys (index = entry order, default = refunded)
+    pub players: Vec<Pubkey>,
+    /// Scores indexed by entry.index (source of truth for finalization)
+    pub scores: Vec<u32>,
+    /// PDA bump seed
+    pub bump: u8,
+}
+
+/// Bytes added per player (32-byte pubkey + 4-byte score)
+pub const BYTES_PER_PLAYER: usize = 36;
+
+impl Tournament {
+    /// Base space for tournament with empty vecs (used for initial allocation)
+    pub const BASE_SPACE: usize = 8 + // discriminator
+        4 +   // id
+        1 +   // state
+        8 +   // stake (snapshotted)
+        2 +   // house_fee_bps (snapshotted)
+        2 +   // matches_per_player (snapshotted)
+        8 +   // pool
+        4 +   // participant_count
+        8 +   // registration_ends
+        4 +   // matches_completed
+        4 +   // matches_total
+        32 +  // randomness_seed
+        4 +   // min_winning_score
+        4 +   // winner_count
+        8 +   // winner_pool
+        4 +   // claims_processed
+        8 +   // payout_started_at
+        4 +   // players vec len (empty)
+        4 +   // scores vec len (empty)
+        1 +   // bump
+        32;   // padding
+
+    /// Calculate space needed for a tournament with given number of participants
+    pub fn space(participant_count: u16) -> usize {
+        Self::BASE_SPACE + (participant_count as usize * BYTES_PER_PLAYER)
+    }
+    
+    /// Calculate space needed to add one more player
+    pub fn space_for_next_player(&self) -> usize {
+        Self::BASE_SPACE + ((self.players.len() + 1) * BYTES_PER_PLAYER)
+    }
+}
+
+/// Strategy types (parameters deferred to v2)
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Strategy {
+    #[default]
+    TitForTat,
+    AlwaysDefect,
+    AlwaysCooperate,
+    GrimTrigger,
+    Pavlov,
+    SuspiciousTitForTat,
+    Random,
+    TitForTwoTats,
+    Gradual,
+}
+
+/// Player entry in a tournament
+#[account]
+#[derive(Default)]
+pub struct Entry {
+    /// Parent tournament
+    pub tournament: Pubkey,
+    /// Player wallet
+    pub player: Pubkey,
+    /// Anonymous index for matching (position in tournament.players[])
+    pub index: u32,
+    /// Player's strategy
+    pub strategy: Strategy,
+    /// Accumulated score (synced with tournament.scores[index] during run_matches)
+    pub score: u32,
+    /// Number of matches played
+    pub matches_played: u16,
+    /// Whether payout has been claimed
+    pub paid_out: bool,
+    /// Timestamp when entry was created
+    pub created_at: i64,
+    /// PDA bump seed
+    pub bump: u8,
+}
+
+impl Entry {
+    pub const LEN: usize = 8 + // discriminator
+        32 +  // tournament
+        32 +  // player
+        4 +   // index
+        1 +   // strategy (enum)
+        4 +   // score
+        2 +   // matches_played
+        1 +   // paid_out
+        8 +   // created_at
+        1 +   // bump
+        16;   // padding
+}
+
+// Conversion from on-chain Strategy to match-logic Strategy
+impl From<Strategy> for match_logic::Strategy {
+    fn from(s: Strategy) -> Self {
+        let base = match s {
+            Strategy::TitForTat => match_logic::StrategyBase::TitForTat,
+            Strategy::AlwaysDefect => match_logic::StrategyBase::AlwaysDefect,
+            Strategy::AlwaysCooperate => match_logic::StrategyBase::AlwaysCooperate,
+            Strategy::GrimTrigger => match_logic::StrategyBase::GrimTrigger,
+            Strategy::Pavlov => match_logic::StrategyBase::Pavlov,
+            Strategy::SuspiciousTitForTat => match_logic::StrategyBase::SuspiciousTitForTat,
+            Strategy::Random => match_logic::StrategyBase::Random,
+            Strategy::TitForTwoTats => match_logic::StrategyBase::TitForTwoTats,
+            Strategy::Gradual => match_logic::StrategyBase::Gradual,
+        };
+        match_logic::Strategy::new(base)
+    }
+}

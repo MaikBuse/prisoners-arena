@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Wallet adapter button overrides */
+.wallet-adapter-button {
+  @apply bg-primary-600 hover:bg-primary-700 transition-colors;
+}
+
+/* Animation utilities */
+@layer utilities {
+  .animate-flip {
+    animation: flip 0.5s ease-in-out;
+  }
+  
+  .animate-score-pop {
+    animation: score-pop 0.3s ease-out;
+  }
+  
+  .animate-glow-green {
+    animation: glow-green 0.3s ease-out;
+  }
+  
+  .animate-glow-red {
+    animation: glow-red 0.3s ease-out;
+  }
+}
+
+@keyframes flip {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+@keyframes score-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes glow-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 20px 10px rgba(34, 197, 94, 0.3); }
+}
+
+@keyframes glow-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 20px 10px rgba(239, 68, 68, 0.3); }
+}

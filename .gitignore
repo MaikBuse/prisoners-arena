@@ -1,0 +1,24 @@
+# Build artifacts
+/target/
+/dist/
+/build/
+node_modules/
+
+# Environment
+.env
+.env.local
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
