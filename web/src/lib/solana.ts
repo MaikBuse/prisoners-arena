@@ -184,6 +184,7 @@ export interface TournamentAccount {
   winnerPool: string;
   claimsProcessed: number;
   payoutStartedAt: string;
+  entriesRemaining: number;
   players: string[];
   scores: number[];
   bump: number;
@@ -212,6 +213,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const winnerPool = readU64LE(data, offset).toString(); offset += 8;
   const claimsProcessed = readU32LE(data, offset); offset += 4;
   const payoutStartedAt = readI64LE(data, offset).toString(); offset += 8;
+  const entriesRemaining = readU32LE(data, offset); offset += 4;
 
   const playersLen = readU32LE(data, offset); offset += 4;
   const players: string[] = [];
@@ -227,7 +229,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
 
   const bump = readU8(data, offset);
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, players, scores, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, players, scores, bump, address };
 }
 
 export interface EntryAccount {
@@ -336,8 +338,12 @@ export async function fetchTournamentList(limit = 10, offset = 0): Promise<Tourn
   const end = Math.max(0, start - limit);
 
   for (let i = start; i >= end; i--) {
-    const t = await fetchTournament(i);
-    if (t) tournaments.push(t);
+    try {
+      const t = await fetchTournament(i);
+      if (t) tournaments.push(t);
+    } catch {
+      // Skip tournaments that fail to deserialize (e.g. closed/zeroed accounts)
+    }
   }
   return tournaments;
 }
