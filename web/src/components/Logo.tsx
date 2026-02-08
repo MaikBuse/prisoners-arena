@@ -1,40 +1,45 @@
 export function Logo({ size = 80 }: { size?: number }) {
+  // Clean 2x2 payoff matrix inside a hexagon
+  const s = size;
+  const cellSize = s * 0.2;
+  const gap = s * 0.02;
+  const cx = s / 2;
+  const cy = s / 2;
+  const gridOffset = cellSize + gap / 2;
+
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer hexagon */}
-      <path
-        d="M50 5L93.3 27.5V72.5L50 95L6.7 72.5V27.5L50 5Z"
+    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Hexagon */}
+      <polygon
+        points={hexPoints(cx, cy, s * 0.46)}
         stroke="#10b981"
-        strokeWidth="2"
-        fill="rgba(16, 185, 129, 0.05)"
+        strokeWidth={s * 0.02}
+        fill="rgba(16, 185, 129, 0.04)"
       />
-      {/* Inner grid - game theory matrix */}
-      <rect x="30" y="30" width="18" height="18" rx="2" fill="rgba(16, 185, 129, 0.3)" stroke="#10b981" strokeWidth="1" />
-      <rect x="52" y="30" width="18" height="18" rx="2" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" strokeWidth="1" />
-      <rect x="30" y="52" width="18" height="18" rx="2" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" strokeWidth="1" />
-      <rect x="52" y="52" width="18" height="18" rx="2" fill="rgba(107, 114, 128, 0.3)" stroke="#6b7280" strokeWidth="1" />
-      {/* C and D labels */}
-      <text x="39" y="43" textAnchor="middle" fill="#10b981" fontSize="10" fontWeight="bold" fontFamily="monospace">C</text>
-      <text x="61" y="43" textAnchor="middle" fill="#ef4444" fontSize="10" fontWeight="bold" fontFamily="monospace">D</text>
-      <text x="39" y="65" textAnchor="middle" fill="#ef4444" fontSize="10" fontWeight="bold" fontFamily="monospace">D</text>
-      <text x="61" y="65" textAnchor="middle" fill="#6b7280" fontSize="10" fontWeight="bold" fontFamily="monospace">1</text>
-      {/* Scores */}
-      <text x="39" y="43" textAnchor="middle" fill="#10b981" fontSize="8" fontWeight="bold" fontFamily="monospace" dy="0">3</text>
-      <text x="61" y="43" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="bold" fontFamily="monospace" dy="0">5</text>
-      <text x="39" y="65" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="bold" fontFamily="monospace" dy="0">5</text>
-      <text x="61" y="65" textAnchor="middle" fill="#6b7280" fontSize="8" fontWeight="bold" fontFamily="monospace" dy="0">1</text>
+      {/* 2x2 grid centered */}
+      {/* Top-left: CC (green) */}
+      <rect x={cx - gridOffset} y={cy - gridOffset} width={cellSize} height={cellSize} rx={s * 0.02}
+        fill="rgba(16, 185, 129, 0.25)" stroke="#10b981" strokeWidth={s * 0.01} />
+      {/* Top-right: CD (red) */}
+      <rect x={cx + gap / 2} y={cy - gridOffset} width={cellSize} height={cellSize} rx={s * 0.02}
+        fill="rgba(239, 68, 68, 0.25)" stroke="#ef4444" strokeWidth={s * 0.01} />
+      {/* Bottom-left: DC (red) */}
+      <rect x={cx - gridOffset} y={cy + gap / 2} width={cellSize} height={cellSize} rx={s * 0.02}
+        fill="rgba(239, 68, 68, 0.25)" stroke="#ef4444" strokeWidth={s * 0.01} />
+      {/* Bottom-right: DD (gray) */}
+      <rect x={cx + gap / 2} y={cy + gap / 2} width={cellSize} height={cellSize} rx={s * 0.02}
+        fill="rgba(107, 114, 128, 0.25)" stroke="#6b7280" strokeWidth={s * 0.01} />
     </svg>
   );
 }
 
 export function LogoSmall() {
-  return (
-    <svg width={32} height={32} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M50 5L93.3 27.5V72.5L50 95L6.7 72.5V27.5L50 5Z" stroke="#10b981" strokeWidth="3" fill="rgba(16, 185, 129, 0.08)" />
-      <rect x="28" y="28" width="20" height="20" rx="2" fill="rgba(16, 185, 129, 0.4)" />
-      <rect x="52" y="28" width="20" height="20" rx="2" fill="rgba(239, 68, 68, 0.4)" />
-      <rect x="28" y="52" width="20" height="20" rx="2" fill="rgba(239, 68, 68, 0.4)" />
-      <rect x="52" y="52" width="20" height="20" rx="2" fill="rgba(107, 114, 128, 0.4)" />
-    </svg>
-  );
+  return <Logo size={32} />;
+}
+
+function hexPoints(cx: number, cy: number, r: number): string {
+  return Array.from({ length: 6 }, (_, i) => {
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
+    return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+  }).join(' ');
 }
