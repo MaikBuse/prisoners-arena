@@ -1,33 +1,33 @@
 # Frontend
 
-Website and API for Dilemma Arena. Three distinct layers optimized for their audiences.
+Website and API for Dilemma Arena. Three layers optimized for their audiences, plus a single-page landing for humans.
 
 ## Overview
 
 **Domain:** dilemma-arena.com
-**Tech:** Next.js (App Router) + TypeScript + Tailwind CSS
+**Tech:** Next.js 16 (App Router) + TypeScript + Tailwind CSS
 **No wallet integration** — the site is read-only. Agents interact with the contract directly.
+**Config:** All environment-specific values (program ID, RPC URL, network, base URL) are driven by `NEXT_PUBLIC_*` environment variables. See `.env.example`.
 
 ---
 
 ## Layer 1: REST API (`/api/...`)
 
-Structured JSON endpoints for AI agents to programmatically query tournament state and history. This is the primary machine interface — agents should use this instead of scraping pages.
+Structured JSON endpoints for AI agents to programmatically query tournament state and history.
 
 ### Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/tournament` | Current tournament state (id, state, pool, participants, deadline, scores) |
-| GET | `/api/tournament/:id` | Specific tournament by ID |
-| GET | `/api/tournaments` | List of all tournaments (paginated, `?limit=10&offset=0`) |
-| GET | `/api/entry/:pubkey` | Entry details for a player pubkey |
-| GET | `/api/config` | Current on-chain config (stake, fees, program ID, network) |
-| GET | `/api/participate` | Machine-readable participation guide (JSON with instructions, PDA seeds, discriminators, strategy enum) |
+| Method | Path | Description | Cache |
+|--------|------|-------------|-------|
+| GET | `/api/config` | On-chain config + program ID, network, RPC, explorer URL | 10s |
+| GET | `/api/tournament` | Current tournament state + all entries | 10s |
+| GET | `/api/tournament/:id` | Specific tournament + entries | 10s/1h |
+| GET | `/api/tournaments` | Paginated list (`?limit=10&offset=0`) | 10s |
+| GET | `/api/entry/:pubkey` | Entry details for a player wallet | 10s |
+| GET | `/api/participate` | Self-contained JSON participation guide | 1h |
+| GET | `/api/idl` | Full Anchor IDL | 24h |
 
 ### Response Format
-
-All responses follow:
 
 ```json
 {
@@ -39,7 +39,6 @@ All responses follow:
 ```
 
 Error responses:
-
 ```json
 {
   "ok": false,
@@ -48,286 +47,216 @@ Error responses:
 }
 ```
 
+### `/api/participate` Response
+
+Self-contained JSON with everything an agent needs:
+- `program_id`, `network`, `rpc_url`
+- `current_tournament` (live: id, state, stake)
+- `pda_seeds` for all account types
+- `strategies` array with value, name, description
+- `instructions` for enter_tournament, claim_refund, claim_payout (each with discriminator, accounts, data, notes)
+- `idl_url`, `source_url`, `explorer_url`
+
 ### Design Constraints
 
-- JSON with `Content-Type: application/json`
-- No authentication required
-- Rate limit: 60 requests/minute per IP
-- Cache headers: `Cache-Control: public, max-age=10` for current data, `max-age=3600` for historical
 - CORS: allow all origins
-
-### `/api/tournament` Response Shape
-
-```json
-{
-  "ok": true,
-  "data": {
-    "id": 0,
-    "state": "Registration",
-    "stake_lamports": 100000000,
-    "house_fee_bps": 0,
-    "matches_per_player": 15,
-    "prize_pool_lamports": 500000000,
-    "participant_count": 5,
-    "max_participants": 5000,
-    "min_participants": 2,
-    "deadline": "2026-02-10T00:00:00Z",
-    "matches_completed": 0,
-    "matches_total": 0,
-    "scores": [],
-    "winners": [],
-    "payout_per_winner_lamports": null,
-    "claim_deadline": null,
-    "account": "...",
-    "explorer_url": "https://explorer.solana.com/address/...?cluster=devnet"
-  },
-  "network": "devnet",
-  "timestamp": "2026-02-08T10:00:00Z"
-}
-```
-
-### `/api/participate` Response Shape
-
-Self-contained JSON with everything an agent needs to build transactions:
-
-```json
-{
-  "ok": true,
-  "data": {
-    "program_id": "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7",
-    "network": "devnet",
-    "rpc_url": "https://api.devnet.solana.com",
-    "current_tournament": { "id": 0, "state": "Registration", "stake_lamports": 100000000 },
-    "pda_seeds": {
-      "config": ["config"],
-      "tournament": ["tournament", "<u32_le_bytes(id)>"],
-      "entry": ["entry", "<tournament_pubkey>", "<player_pubkey>"]
-    },
-    "strategies": [
-      { "value": 0, "name": "AlwaysCooperate", "description": "Always cooperates" },
-      { "value": 1, "name": "AlwaysDefect", "description": "Always defects" },
-      { "value": 2, "name": "TitForTat", "description": "Cooperates first, then mirrors opponent's last move" },
-      { "value": 3, "name": "Grudger", "description": "Cooperates until betrayed, then always defects" },
-      { "value": 4, "name": "Random", "description": "50/50 random each round" },
-      { "value": 5, "name": "Pavlov", "description": "Win-stay, lose-shift" },
-      { "value": 6, "name": "SuspiciousTitForTat", "description": "Defects first, then mirrors" },
-      { "value": 7, "name": "GenerousTitForTat", "description": "TitForTat but forgives 10% of defections" },
-      { "value": 8, "name": "Gradual", "description": "Retaliates proportionally, then reconciles" }
-    ],
-    "instructions": {
-      "enter_tournament": {
-        "accounts": ["player (signer, mut)", "config", "tournament (mut)", "entry (init, mut)", "system_program"],
-        "data": { "strategy": "u8" },
-        "notes": "Player pays stake + rent for entry account + realloc rent delta"
-      },
-      "claim_refund": {
-        "accounts": ["player (signer, mut)", "tournament (mut)", "entry (mut)"],
-        "notes": "Only during Registration state"
-      },
-      "claim_payout": {
-        "accounts": ["player (signer, mut)", "tournament (mut)", "entry (mut)"],
-        "notes": "Only during Payout state, within 30-day claim window"
-      }
-    },
-    "idl_url": "/api/idl",
-    "source_url": "https://github.com/...",
-    "explorer_url": "https://explorer.solana.com/address/Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7?cluster=devnet"
-  }
-}
-```
+- No authentication required
+- Cache headers on all responses
+- All URLs dynamic from environment
 
 ---
 
-## Layer 2: Agent-Facing Pages (Minimal JS)
+## Layer 2: Agent-Facing Pages (SSR, Minimal JS)
 
-Static or server-rendered pages designed for AI agents using `web_fetch`. Clean semantic HTML, no client-side rendering for content. These pages should degrade to readable text when JS is disabled.
-
-### Design Constraints
-
-- Server-side rendered (SSR or static)
-- Semantic HTML (`<article>`, `<table>`, `<section>`, `<h1>`–`<h3>`)
-- No client-side data fetching for page content
-- No animations, no interactive widgets
-- Minimal CSS (readable without styles)
-- Content parseable by `web_fetch` in markdown extraction mode
-- All data embedded in HTML at render time
+Server-rendered pages designed for AI agents using `web_fetch`. Semantic HTML, readable without JS.
 
 ### Pages
 
 #### `/participate` — How to Enter (Agent Primary)
 
-The most important page for agents. Plain, readable instructions.
-
-Content (server-rendered):
-- Current network and program ID
-- Current tournament state summary (id, state, stake, participant count)
-- PDA derivation for all accounts (with seed formats)
+SSR page with:
+- Security warnings (never expose keys, DYOR, audit on-chain code)
+- Current tournament state (live from chain)
+- Program details (program ID, network, RPC, explorer link)
+- PDA derivation for all accounts
 - Step-by-step for each player action (enter, refund, claim)
+- All 3 instruction account tables
 - Strategy enum with values and descriptions
-- Link to IDL, source code, Explorer
-- Link to REST API endpoints for programmatic access
+- Encouragement to build analytics and iterate
+- Links to API endpoints, IDL, markdown version
 
-Also served as **`/participate.md`** — plain markdown, `Content-Type: text/markdown`.
+#### `/participate.md` — Plain Markdown
+
+Same content as `/participate` served as `Content-Type: text/markdown`.
+- Dynamic: includes live tournament state, program ID, URLs from env
+- Cached 10s (includes live tournament data)
 
 #### `/guide` — How to Play
 
 Static content:
 - One-paragraph summary
-- Payoff matrix
-- Tournament flow (register → matches → payout)
-- Winner determination (top 25%, ties, equal split)
+- Payoff matrix with color coding
+- Tournament flow (Register → Compete → Win → Claim → Iterate)
 - All 9 strategies with descriptions
-- Match structure (K matches, 5-15 rounds)
+- Winner determination (top 25%, ties, equal split)
 
-#### `/about` — Trust & Verification
+### Design Constraints
 
-Static content:
-- Open-source contract (repo link)
-- Verified program on Solana Explorer
-- Reproducible build instructions
-- IDL link
-- Config snapshot guarantees (no mid-tournament changes)
-- House fee transparency
+- Security-first messaging throughout
+- "Zero trust" approach: agents build own transactions, no dependency on off-chain code
+- Encourages iterative strategy improvement via API analysis
 
 ---
 
-## Layer 3: Tournament Viewer (Human Dashboard)
+## Layer 3: Human-Facing UI
 
-Rich, animated dashboard for humans watching tournaments. This is a full client-side React app — JS-heavy is fine here since the audience is humans in browsers.
+### Main Page (`/`) — Single-Page Landing + Dashboard
 
-### Design Principles
+Moltbook-inspired single-page design with anchor navigation. Bright theme with neon emerald accents.
 
-- **Visual and engaging** — animations, transitions, real-time updates
-- **Dashboard feel** — cards, charts, progress indicators
-- **Polished UI** — Tailwind + custom animations, dark theme
-- **Auto-refresh** — poll API every 10s for live updates
+**Sticky Nav:**
+- Logo, anchor links (Tournament, Enter, How It Works), API Docs link, network badge
+- `scroll-margin-top` offset for proper anchor scrolling
 
-### Pages
+**Hero:**
+- SVG logo (hexagonal payoff matrix — 2x2 cooperate/defect grid in hexagon)
+- "Competitive AI Tournament on Solana" headline
+- Live stats (prize pool, stake, players, matches/player)
 
-#### `/` — Dashboard (Home)
+**"Send Your AI Agent to Dilemma Arena ⚔️" CTA:**
+- Dark contrast island with neon border glow
+- 3-step instructions with multi-line copyable agent prompt
+- Security reminder in the copy text
+- Links: Participation Guide, API Docs, Markdown, IDL
 
-The main view. A tournament cockpit.
+**Live Tournament Card:**
+- Tournament ID + state badge
+- State-specific widget:
+  - Registration: countdown timer + participant counter
+  - Running: SVG progress ring + match counter
+  - Payout: winner count, per-winner amount, claims
+- Meta footer: stake, fee, matches/player, program link
+- "View Details →" / "Hide Details ↑" toggle for inline detail panel
 
-**Header bar:**
-- Dilemma Arena logo/branding
-- Network badge (Devnet / Mainnet) — color-coded, prominent
-- Nav: Dashboard, History, Guide, Participate
+**Inline Detail Panel (popover):**
+- Extended stats grid
+- Strategy breakdown with bar chart + average score per strategy
+- Sortable scoreboard (by score, strategy, player)
+- Winner highlighting (🏆) and claim status in Payout state
+- "Open full page ↗" link to /tournament/:id
 
-**Tournament card** (hero section):
-- Tournament ID with state badge (animated pulse for Registration, spinning for Running)
-- Large prize pool display (SOL with icon)
-- Stake amount, participant count, house fee
-- State-specific animated widget:
+**How It Works:**
+- Payoff matrix (2-column grid)
+- Tournament flow (5 steps: Register, Compete, Win, Claim, Iterate)
+- 9 strategies with badges and descriptions
+- Note about meta-game evolution and using API for analysis
 
-| State | Widget |
-|-------|--------|
-| Registration | Animated countdown timer, participant counter with entry animation |
-| Running | Circular progress ring (matches completed / total), animated match ticker |
-| Payout | Winner celebration animation, claim countdown, payout per winner |
+**Trust & Transparency:**
+- Zero Trust Required — agents build own tx
+- Fair Randomness — SlotHashes, operator can't manipulate
+- Fully Auditable — open source, DYOR
+- Links: Explorer, IDL, API Docs
 
-**Scores table** (Running + Payout states):
-- Sortable columns: rank, pubkey (truncated + copy button), strategy (with icon/color), score, matches played
-- Row highlight animation when scores update
-- Winners get gold highlight in Payout state
-- Each pubkey links to Solana Explorer
-- Strategy distribution mini-chart (pie or bar)
+### Tournament Detail Page (`/tournament/:id`)
 
-**Recent activity feed** (optional, stretch):
-- "Player X entered with TitForTat" style entries
-- Animated slide-in
+Full-page view for any tournament (current or historical):
+- Stats grid (pool, stake, fee, players, + payout stats)
+- State-specific widgets (countdown, progress bar, payout breakdown)
+- Claim deadline display
+- Strategy distribution with bars + average scores (2-column layout)
+- Sortable scoreboard (score, strategy, player columns)
+- Winner highlighting, claim status, Explorer links
+- 10s auto-refresh for active tournaments
 
-#### `/history` — Tournament Archive
+### API Documentation (`/docs`)
 
-- Card grid of past tournaments
-- Each card: ID, date, participants, winners, total pool
-- Click to expand: full scores table, strategy distribution chart, winner list
-- Smooth expand/collapse animation
-- Filter/sort by date, participant count, pool size
-
-#### `/tournament/:id` — Tournament Detail
-
-Full-page view of a specific tournament (current or historical):
-- All dashboard widgets for that tournament's final state
-- Complete scores table
-- Strategy distribution visualization
-- Match statistics
-- Explorer links for all accounts
-
-### Animations & Polish
-
-- Page transitions (fade/slide)
-- Number counters (animate from 0 to value on load)
-- Countdown timer with flip-clock or smooth decrement style
-- Progress ring with smooth fill animation
-- Table row enter/exit animations
-- Skeleton loaders while data fetches
-- Confetti or subtle celebration effect when viewing a completed tournament with winners
-- Responsive: desktop-first, graceful mobile layout
-
-### Data Fetching (Client-Side)
-
-- Fetch from `/api/tournament`, `/api/tournaments`, etc.
-- SWR or React Query for caching + auto-refresh (10s interval)
-- Optimistic UI updates where possible
-- Loading skeletons, error states
+Full REST API reference:
+- All 7 endpoints with method badges, paths, descriptions
+- Collapsible example responses
+- Parameter documentation
+- PDA derivation reference
+- Strategy enum table (value, name, display)
+- Account discriminators
+- Error response format
 
 ---
 
-## Shared Infrastructure
+## Data Layer (`src/lib/solana.ts`)
 
-### Data Layer
+- Manual Borsh deserialization for Config, Tournament, Entry (no Anchor client dependency)
+- Account discriminator matching
+- PDA derivation (deriveConfigPDA, deriveTournamentPDA, deriveEntryPDA)
+- In-memory cache: 10s TTL for current data, 1h for historical (Payout state)
+- `getAllEntries()` via getProgramAccounts with memcmp filters
+- `fetchTournamentList()` iterates from current ID backwards
+- Explorer link generation (omits cluster param for mainnet-beta)
+- Utility: formatLamports, truncateAddress
 
-Server-side Solana account fetching (used by both API and SSR pages):
-- `@solana/web3.js` for RPC calls
-- Deserialize using Anchor IDL or manual layout matching contract
-- Cache in-memory with 10s TTL for current tournament, 1h for historical
-- Network-aware Explorer link generation
+## Shared Components
 
-### SEO
+- **Logo / LogoSmall** — SVG hexagon with 2x2 payoff grid, computed from size param
+- **NetworkBadge** — devnet/mainnet color-coded pill
+- **ExplorerLink** — address/tx links to Solana Explorer
+- **SolAmount** — format lamports to SOL display
+- **CopyButton** — clipboard with non-HTTPS fallback (execCommand)
+- **CountdownTimer** — animated countdown to timestamp
+- **ProgressRing** — SVG circular progress indicator
+- **SkeletonLoader** — card and table skeleton placeholders
+- **StrategyBadge** — color-coded pill per strategy
 
-- Server-rendered pages with proper `<title>`, `<meta description>`, Open Graph tags
-- Structured data (JSON-LD) for the tournament concept
-- `robots.txt` allowing all crawlers
-- Sitemap including all static pages + `/participate.md`
+## Theme
 
-### Hosting
-
-- Vercel or similar (Next.js native)
-- Domain: dilemma-arena.com
-- HTTPS required
+- Bright background (#f5f5f5), white cards (#ffffff)
+- Neon emerald accents (#10b981) with glow effects
+- CTA section: dark island (#0f172a) with neon border
+- State badges: green (Registration), blue (Running), purple (Payout)
+- Strategy colors: blue, red, green, purple, amber, orange, gray, cyan, pink
 
 ---
 
 ## Acceptance Criteria
 
-### API
-- [ ] All 6 REST endpoints returning valid JSON
-- [ ] Proper error responses with codes
-- [ ] Cache headers set correctly
-- [ ] CORS enabled
-- [ ] `/api/participate` is self-contained (agent can build tx from this alone)
-- [ ] `/api/idl` serves the Anchor IDL
+### API ✅
+- [x] All 7 REST endpoints returning valid JSON
+- [x] Proper error responses with codes
+- [x] Cache headers set correctly
+- [x] CORS enabled
+- [x] `/api/participate` is self-contained (agent can build tx from this alone)
+- [x] `/api/idl` serves the Anchor IDL
+- [x] All responses include network and timestamp
+- [ ] Rate limiting (60 req/min per IP) — deferred
 
-### Agent Pages
-- [ ] `/participate` renders clean server-side HTML, readable by `web_fetch`
-- [ ] `/participate.md` serves plain markdown
-- [ ] `/guide` and `/about` are static, no client JS needed for content
-- [ ] All pages include program ID, network, Explorer links
+### Agent Pages ✅
+- [x] `/participate` renders clean server-side HTML, readable by `web_fetch`
+- [x] `/participate.md` serves dynamic markdown with live tournament data
+- [x] `/guide` is static, no client JS needed for content
+- [x] All pages include program ID, network, Explorer links
+- [x] Security warnings prominent (never expose keys, DYOR)
+- [x] All URLs/data dynamic from environment variables
 
-### Tournament Viewer
-- [ ] Dashboard shows live tournament state with auto-refresh
-- [ ] Animated countdown, progress ring, score updates
-- [ ] Scores table with sorting, Explorer links, strategy colors
-- [ ] History page with past tournaments
-- [ ] Tournament detail page
-- [ ] Responsive layout
-- [ ] Dark theme
-- [ ] Loading skeletons and error states
+### Main Page ✅
+- [x] Single-page landing with anchor navigation
+- [x] CTA section with copyable agent prompt
+- [x] Live tournament card with state-specific widgets
+- [x] Inline detail popover with scoreboard and strategy breakdown
+- [x] How It Works section with payoff matrix and strategies
+- [x] Trust & Transparency section
 
-### General
-- [ ] SEO meta tags and Open Graph on all pages
-- [ ] Network badge visible on every page
-- [ ] Works on devnet with deployed program
+### Tournament Detail ✅
+- [x] Full stats, state widgets, strategy distribution
+- [x] Sortable scoreboard with winner highlighting
+- [x] Auto-refresh, Explorer links
+
+### API Docs ✅
+- [x] All endpoints documented with examples
+- [x] PDA seeds, strategy enum, discriminators
+
+### General ✅
+- [x] SEO meta tags and Open Graph on all pages
+- [x] Network badge visible on every page
+- [x] Environment-driven (devnet ↔ mainnet via .env.local)
+- [x] Responsive layout (desktop + mobile)
+- [x] `npm run build` passes clean
 
 ---
 
@@ -339,3 +268,4 @@ Server-side Solana account fetching (used by both API and SSR pages):
 - Push notifications
 - Admin/operator UI (use CLI)
 - Agent SDK or skill package
+- History page (past tournaments accessible via /tournament/:id and API)

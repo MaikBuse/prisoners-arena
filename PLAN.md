@@ -1,6 +1,6 @@
 # PLAN.md - Dilemma Arena
 
-## Status: 🟡 In Progress — Frontend + Transparency
+## Status: 🟡 In Progress — Devnet Playtest
 
 **Program ID:** `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
 **Deployer Wallet:** `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
@@ -25,7 +25,7 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 | Smart Contract | Anchor 0.32 | 🟢 complete (dynamic sizing) |
 | Operator Bot | Rust | 🟢 complete |
 | Admin CLI | Rust | 🟢 complete |
-| Frontend | Next.js + TypeScript + Tailwind | 🟢 complete |
+| Frontend | Next.js 16 + TypeScript + Tailwind | 🟢 complete |
 
 ---
 
@@ -144,51 +144,74 @@ Tournament accounts now grow incrementally as players join.
 ### Frontend (`web/`) — dilemma-arena.com
 
 #### Project Setup
-- [x] Next.js App Router + TypeScript + Tailwind
-- [x] Server-side Solana data fetching (Config, Tournament, Entry deserialization)
-- [x] Shared data layer with 10s cache for current, 1h for historical
+- [x] Next.js 16 App Router + TypeScript + Tailwind CSS
+- [x] Environment-driven config (NEXT_PUBLIC_PROGRAM_ID, NEXT_PUBLIC_RPC_URL, NEXT_PUBLIC_NETWORK, NEXT_PUBLIC_BASE_URL)
+- [x] Manual Borsh deserialization for Config, Tournament, Entry accounts
+- [x] In-memory cache (10s current, 1h historical)
+- [x] PDA derivation helpers, Explorer link generation (devnet/mainnet aware)
 
 #### REST API (Layer 1 — Agent Interface)
-- [x] `GET /api/config` — on-chain config
-- [x] `GET /api/tournament` — current tournament state + scores
-- [x] `GET /api/tournament/:id` — specific tournament
-- [x] `GET /api/tournaments` — paginated list
-- [x] `GET /api/entry/:pubkey` — entry details
-- [x] `GET /api/participate` — self-contained JSON participation guide
-- [x] `GET /api/idl` — Anchor IDL
-- [x] CORS, cache headers, error format
+- [x] `GET /api/config` — on-chain config + program ID, network, RPC, explorer URL
+- [x] `GET /api/tournament` — current tournament state + entries
+- [x] `GET /api/tournament/:id` — specific tournament + entries
+- [x] `GET /api/tournaments` — paginated list (?limit, ?offset)
+- [x] `GET /api/entry/:pubkey` — entry details for player
+- [x] `GET /api/participate` — self-contained JSON guide (program ID, PDA seeds, all 3 player instructions with discriminators, strategies, live tournament state)
+- [x] `GET /api/idl` — Anchor IDL (24h cache)
+- [x] CORS headers on all routes
+- [x] Cache headers (10s current, 1h historical, 24h IDL)
+- [x] Standardized response format (`{ ok, data, network, timestamp }`)
 - [ ] Rate limiting (60 req/min per IP)
 
-#### Agent Pages (Layer 2 — Minimal JS)
-- [x] `/participate` — SSR, semantic HTML, readable by `web_fetch`
-- [x] `/participate.md` — plain markdown endpoint (`text/markdown`)
-- [x] `/guide` — static How to Play page
-- [x] `/about` — trust & verification page
+#### Agent Pages (Layer 2 — SSR, Minimal JS)
+- [x] `/participate` — SSR page with live tournament state, security warnings, PDA derivation, all 3 instructions, strategy list, API endpoint docs
+- [x] `/participate.md` — dynamic markdown with live tournament data (Content-Type: text/markdown)
+- [x] `/guide` — static How to Play (payoff matrix, tournament flow, strategies, winner determination)
+- [x] Security-first messaging: DYOR, audit on-chain code, never expose keys, use own Solana libraries
+- [x] All URLs/program IDs dynamic from environment variables
 
-#### Tournament Viewer (Layer 3 — Human Dashboard)
-- [x] `/` Dashboard — tournament card, state badge, prize pool display
-- [x] Animated countdown timer (Registration state)
-- [x] Progress ring + match ticker (Running state)
-- [x] Winner celebration + claim countdown (Payout state)
-- [x] Scores table — sortable, strategy colors, Explorer links
-- [x] Strategy distribution chart
-- [x] `/history` — card grid
-- [x] `/tournament/:id` — full detail view
-- [x] Dark theme, skeleton loaders
-- [x] Auto-refresh (10s polling)
+#### Main Page (Single-Page Landing + Dashboard)
+- [x] Hero with SVG logo (hexagonal payoff matrix), tagline, live stats
+- [x] "Send Your AI Agent to Dilemma Arena ⚔️" CTA section (dark contrast island with neon accents)
+- [x] Multi-line copyable agent prompt with security reminder
+- [x] Live tournament card with state-specific widgets (countdown / progress ring / payout)
+- [x] Inline detail popover: extended stats, strategy breakdown with avg scores, sortable scoreboard
+- [x] How It Works: payoff matrix, tournament flow (5 steps incl. Iterate), 9 strategies with descriptions
+- [x] Encouragement to build analytics and iterate on strategy choice
+- [x] Trust & Transparency section (zero trust, fair randomness, auditable)
+- [x] Sticky nav with anchor links + API Docs link
+- [x] Network badge (devnet/mainnet) throughout
+- [x] Bright theme with neon emerald accents and glowing borders
 
-#### General
-- [x] Network badge (devnet/mainnet) prominent throughout
-- [x] SEO: meta tags, Open Graph, server-side rendering
-- [x] Solana Explorer links throughout (program, accounts)
+#### Tournament Detail Page
+- [x] `/tournament/:id` — full detail view for any tournament
+- [x] Stats grid, state widgets, strategy distribution with avg scores
+- [x] Sortable scoreboard with winner highlighting (🏆), claim status
+- [x] 10s auto-refresh, Explorer links, claim deadline display
+
+#### API Documentation Page
+- [x] `/docs` — all 7 endpoints with method, path, description, parameters, example responses
+- [x] PDA derivation reference
+- [x] Strategy enum table
+- [x] Account discriminators
+- [x] Error response format
+
+#### Shared Components
+- [x] Logo (SVG hexagon with payoff matrix grid)
+- [x] NetworkBadge, ExplorerLink, SolAmount, CopyButton (with non-HTTPS fallback)
+- [x] CountdownTimer, ProgressRing, SkeletonLoader, StrategyBadge
+- [x] SEO: meta tags, Open Graph on all pages
+- [x] robots.txt, sitemap.xml
 - [x] Responsive layout (desktop + mobile)
+- [x] `scroll-margin-top` for anchor offset with sticky nav
 
 ### Transparency & Auditability
+- [x] Published IDL (accessible via /api/idl)
+- [x] Trust section on main page (zero trust, on-chain auditable, DYOR)
+- [x] Security warnings on participate pages (never expose keys, audit code)
 - [ ] Open-source contract repository (public GitHub)
 - [ ] Verified program on Solana Explorer (source upload)
 - [ ] Reproducible builds (documented build steps, deterministic output)
-- [ ] Published IDL (accessible from site + repo)
-- [ ] Trust page documenting all verification methods
 
 ---
 
@@ -213,13 +236,17 @@ Tournament accounts now grow incrementally as players join.
 | Config snapshotted to Tournament | Prevents mid-tournament rule changes |
 | 30-day claim expiry (constant) | Prevents indefinite rent burden |
 | Informational frontend | No wallet integration; agents build own transactions |
-| Three-layer frontend | REST API (agents), minimal-JS pages (web_fetch), rich dashboard (humans) |
+| Three-layer frontend | REST API (agents), SSR pages (web_fetch), rich dashboard (humans) |
+| Single-page landing | Moltbook-inspired; all content on one page with anchor nav |
+| Inline detail popover | Tournament details expand in-place, no page navigation needed |
+| Zero-trust messaging | Agents build own tx; no off-chain code touches funds |
+| Security-first participate guide | DYOR, audit on-chain code, never expose keys |
+| Iterative strategy improvement | Encourage analytics, simulations, meta-game evolution |
+| Environment-driven config | NEXT_PUBLIC_* env vars for program ID, RPC, network, base URL |
+| Bright theme with neon accents | Light background, dark CTA island, emerald glow borders |
 | REST API for agents | Structured JSON > scraping; self-contained `/api/participate` endpoint |
-| Target audience: AI agents | Via Moltbook + OpenClaw; API + SSR pages optimized for agent consumption |
+| `/participate.md` with live data | Dynamic markdown with current tournament state, not static |
 | Next.js over React SPA | SEO for discoverability + SSR for agent-readable pages |
-| `/participate.md` endpoint | Plain markdown fallback for agents using web_fetch |
-| Dashboard with animations | Humans watching tournaments get a polished, engaging experience |
-| Open-source + reproducible builds | Trust-first approach for human approval |
 
 ---
 
@@ -239,8 +266,8 @@ Tournament accounts now grow incrementally as players join.
 | WASM integration | ⚪ Planned |
 | Devnet deploy | 🟢 Complete (program + config initialized) |
 | Frontend (dilemma-arena.com) | 🟢 Complete |
-| Transparency & auditability | 🟡 Not started |
-| Devnet playtest | 🟡 Ready |
+| Transparency & auditability | 🟡 Partial (IDL published, trust messaging done; GitHub/verified builds pending) |
+| Devnet playtest | 🟡 Ready (awaiting test entries) |
 | Mainnet launch | ⚪ Planned |
 
 ---
@@ -253,24 +280,32 @@ Tournament accounts now grow incrementally as players join.
 - [x] Program ID set in lib.rs and Anchor.toml
 - [x] All 13 tests passing on localnet
 - [x] Anchor.toml configured for devnet
+- [x] Frontend builds clean (`npm run build` passes)
 
 ### Deployment Steps
 1. Fund wallet with ~2 SOL: `solana airdrop 2` or https://faucet.solana.com
 2. Deploy: `anchor deploy --provider.cluster devnet`
 3. Initialize config (creates Tournament #0)
 4. Start operator bot
+5. Run frontend: set `.env.local`, `npm run dev` (or deploy to Vercel)
 
 ### Completed
 - Wallet funded, program deployed, config initialized (2026-02-08)
+- Frontend running locally against devnet
 
 ---
 
 ## Current Focus
 
-Admin CLI ✅, Operator manual mode ✅. Next: build Frontend (dilemma-arena.com) + transparency tasks, then devnet playtest.
+Frontend ✅ complete. Next: devnet playtest with test entries to validate full lifecycle (enter → close registration → run matches → finalize → claim payout).
 
 ### Deployment Info (Devnet)
 - Program deployed: `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
 - Config initialized, Tournament #0 in Registration
 - Admin wallet: `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
 - Operator wallet: `2o7jVMvtjWQrnGP8f8RQ1k3AK4aB5chVj1QniDPP7KYc` (`~/.config/solana/operator.json`)
+
+### Frontend Config
+- `.env.local` with `NEXT_PUBLIC_PROGRAM_ID`, `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_NETWORK`, `NEXT_PUBLIC_BASE_URL`
+- `.env.example` documents all variables
+- Switch environments by changing `.env.local` (devnet → mainnet-beta)
