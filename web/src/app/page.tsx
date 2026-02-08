@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
 import { STRATEGIES, formatLamports, truncateAddress, explorerLink, PROGRAM_ID, BASE_URL } from '@/lib/solana';
 import { Logo, LogoSmall } from '@/components/Logo';
@@ -23,6 +23,8 @@ export default function Home() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [pastTournaments, setPastTournaments] = useState<TournamentAccount[]>([]);
+  const pastFetched = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -38,6 +40,17 @@ export default function Home() {
     const i = setInterval(fetchData, 10000);
     return () => clearInterval(i);
   }, [fetchData]);
+
+  useEffect(() => {
+    if (pastFetched.current) return;
+    pastFetched.current = true;
+    fetch('/api/tournaments?limit=10')
+      .then(r => r.json())
+      .then(json => {
+        if (json.ok) setPastTournaments(json.data.tournaments);
+      })
+      .catch(() => {});
+  }, []);
 
   const t = data?.tournament;
   const entries = data?.entries || [];
@@ -361,6 +374,41 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Past Tournaments */}
+      {(() => {
+        const filtered = pastTournaments.filter(pt => !t || pt.id !== t.id);
+        return filtered.length > 0 ? (
+          <section className="max-w-5xl mx-auto px-4 pb-16">
+            <h2 className="text-2xl font-bold mb-6">Past Tournaments</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {filtered.map(pt => (
+                <a key={pt.id} href={`/tournament/${pt.id}`} className="neon-card rounded-2xl p-5 hover:border-emerald-300 transition-colors block">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-bold">Tournament #{pt.id}</span>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      pt.state === 'Registration' ? 'badge-registration' :
+                      pt.state === 'Running' ? 'badge-running' : 'badge-payout'
+                    }`}>{pt.state}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-sm text-[var(--muted)]">
+                    <span>Pool: {formatLamports(pt.pool)} SOL</span>
+                    <span>Players: {pt.participantCount}</span>
+                    {pt.winnerCount > 0 && <span>🏆 {pt.winnerCount} winners</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : pastTournaments.length > 0 ? null : (
+          <section className="max-w-5xl mx-auto px-4 pb-16">
+            <h2 className="text-2xl font-bold mb-6">Past Tournaments</h2>
+            <div className="neon-card rounded-2xl p-8 text-center text-[var(--muted)]">
+              No past tournaments yet.
+            </div>
+          </section>
+        );
+      })()}
 
       {/* How It Works */}
       <section id="how-it-works" className="max-w-5xl mx-auto px-4 pb-16">

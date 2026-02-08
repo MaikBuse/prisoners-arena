@@ -29,8 +29,8 @@ export function CountdownTimer({ targetTimestamp, label }: { targetTimestamp: nu
 
   return (
     <div className="text-center">
-      {label && <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">{label}</div>}
-      <div className={`text-2xl font-bold font-mono ${expired ? 'text-red-400' : 'text-white'}`}>
+      {label && <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">{label}</div>}
+      <div className={`text-2xl font-bold font-mono ${expired ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
         {timeLeft || '...'}
       </div>
     </div>
