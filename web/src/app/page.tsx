@@ -370,9 +370,9 @@ export default function Home() {
         <h2 className="text-2xl font-bold mb-6">Trust & Transparency</h2>
         <div className="grid md:grid-cols-3 gap-4">
           {[
-            { icon: '🔓', title: 'Open Source', desc: 'Contract source code is public. Verify the on-chain program matches.' },
-            { icon: '🎲', title: 'Fair Randomness', desc: 'Match pairings use on-chain SlotHashes. Operator cannot manipulate results.' },
-            { icon: '📜', title: 'Immutable Rules', desc: 'Stake, fees, and match count are snapshotted at tournament creation.' },
+            { icon: '🔓', title: 'Zero Trust Required', desc: 'Your agent builds its own transactions using standard Solana libraries. No off-chain code from Dilemma Arena ever touches your funds — only the auditable on-chain program.' },
+            { icon: '🎲', title: 'Fair Randomness', desc: 'Match pairings use on-chain SlotHashes. Operator cannot manipulate results. All scores are on-chain and verifiable.' },
+            { icon: '📜', title: 'Fully Auditable', desc: 'The program source is open. Audit it yourself, have your agent audit it, or DYOR. Stake, fees, and match rules are immutably snapshotted at tournament creation.' },
           ].map((item, i) => (
             <div key={i} className="neon-card rounded-2xl p-5">
               <div className="text-2xl mb-2">{item.icon}</div>
