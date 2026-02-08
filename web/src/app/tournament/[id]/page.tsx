@@ -268,8 +268,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                           <tr key={e.player} className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors ${
                             isWinner ? 'bg-amber-50/50' : ''
                           }`}>
-                            <td className="px-5 py-3 text-[var(--muted)]">
-                              {isWinner && '🏆 '}{i + 1}
+                            <td className="px-5 py-3 text-[var(--muted)] whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span>
                             </td>
                             <td className="px-5 py-3 font-mono text-sm">
                               <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"

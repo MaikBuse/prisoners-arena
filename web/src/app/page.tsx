@@ -370,7 +370,7 @@ export default function Home() {
                                 const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
                                 return (
                                   <tr key={e.address} className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''}`}>
-                                    <td className="px-4 py-2 text-[var(--muted)]">{isWinner && '🏆'}{i + 1}</td>
+                                    <td className="px-4 py-2 text-[var(--muted)] whitespace-nowrap"><span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span></td>
                                     <td className="px-4 py-2 font-mono text-xs">
                                       <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
                                          className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(e.player, 5)}</a>
