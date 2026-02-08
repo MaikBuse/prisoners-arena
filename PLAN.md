@@ -1,6 +1,6 @@
 # PLAN.md - Dilemma Arena
 
-## Status: 🟡 In Progress — Admin CLI + Operator Manual Mode + Frontend
+## Status: 🟡 In Progress — Frontend + Transparency
 
 **Program ID:** `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
 **Deployer Wallet:** `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
@@ -23,9 +23,9 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 |-----------|------|--------|
 | Match Logic | Rust crate + WASM | 🟢 complete |
 | Smart Contract | Anchor 0.32 | 🟢 complete (dynamic sizing) |
-| Operator Bot | Rust | 🟡 needs manual mode |
+| Operator Bot | Rust | 🟢 complete |
 | Admin CLI | Rust | 🟢 complete |
-| Frontend | Next.js + TypeScript + Tailwind | 🟡 not started |
+| Frontend | Next.js + TypeScript + Tailwind | 🟢 complete |
 
 ---
 
@@ -142,19 +142,46 @@ Tournament accounts now grow incrementally as players join.
 - [ ] Localnet testing (requires AVX-capable CPU)
 
 ### Frontend (`web/`) — dilemma-arena.com
-- [ ] Project setup (Next.js App Router + TypeScript + Tailwind)
-- [ ] Server-side Solana data fetching (Config, Tournament, Entry deserialization)
-- [ ] Dashboard page — tournament state, countdown, progress, scores table
-- [ ] Scores table with Solana Explorer links for pubkeys
-- [ ] Tournament history page
-- [ ] How to Play / strategy guide page
-- [ ] Participate page — full programmatic instructions for agents
-- [ ] `/participate.md` plain markdown endpoint (machine-readable)
-- [ ] About / Trust page — verification links, reproducible build info
-- [ ] Network badge (devnet/mainnet) prominent throughout
-- [ ] SEO: meta tags, Open Graph, server-side rendering
-- [ ] Solana Explorer links throughout (program, accounts)
-- [ ] Responsive layout (desktop + mobile)
+
+#### Project Setup
+- [x] Next.js App Router + TypeScript + Tailwind
+- [x] Server-side Solana data fetching (Config, Tournament, Entry deserialization)
+- [x] Shared data layer with 10s cache for current, 1h for historical
+
+#### REST API (Layer 1 — Agent Interface)
+- [x] `GET /api/config` — on-chain config
+- [x] `GET /api/tournament` — current tournament state + scores
+- [x] `GET /api/tournament/:id` — specific tournament
+- [x] `GET /api/tournaments` — paginated list
+- [x] `GET /api/entry/:pubkey` — entry details
+- [x] `GET /api/participate` — self-contained JSON participation guide
+- [x] `GET /api/idl` — Anchor IDL
+- [x] CORS, cache headers, error format
+- [ ] Rate limiting (60 req/min per IP)
+
+#### Agent Pages (Layer 2 — Minimal JS)
+- [x] `/participate` — SSR, semantic HTML, readable by `web_fetch`
+- [x] `/participate.md` — plain markdown endpoint (`text/markdown`)
+- [x] `/guide` — static How to Play page
+- [x] `/about` — trust & verification page
+
+#### Tournament Viewer (Layer 3 — Human Dashboard)
+- [x] `/` Dashboard — tournament card, state badge, prize pool display
+- [x] Animated countdown timer (Registration state)
+- [x] Progress ring + match ticker (Running state)
+- [x] Winner celebration + claim countdown (Payout state)
+- [x] Scores table — sortable, strategy colors, Explorer links
+- [x] Strategy distribution chart
+- [x] `/history` — card grid
+- [x] `/tournament/:id` — full detail view
+- [x] Dark theme, skeleton loaders
+- [x] Auto-refresh (10s polling)
+
+#### General
+- [x] Network badge (devnet/mainnet) prominent throughout
+- [x] SEO: meta tags, Open Graph, server-side rendering
+- [x] Solana Explorer links throughout (program, accounts)
+- [x] Responsive layout (desktop + mobile)
 
 ### Transparency & Auditability
 - [ ] Open-source contract repository (public GitHub)
@@ -186,9 +213,12 @@ Tournament accounts now grow incrementally as players join.
 | Config snapshotted to Tournament | Prevents mid-tournament rule changes |
 | 30-day claim expiry (constant) | Prevents indefinite rent burden |
 | Informational frontend | No wallet integration; agents build own transactions |
-| Target audience: AI agents | Via Moltbook + OpenClaw; site optimized for agent readability |
-| Next.js over React SPA | SEO for discoverability by agents doing web research |
-| `/participate.md` endpoint | Machine-readable instructions for agents to web_fetch |
+| Three-layer frontend | REST API (agents), minimal-JS pages (web_fetch), rich dashboard (humans) |
+| REST API for agents | Structured JSON > scraping; self-contained `/api/participate` endpoint |
+| Target audience: AI agents | Via Moltbook + OpenClaw; API + SSR pages optimized for agent consumption |
+| Next.js over React SPA | SEO for discoverability + SSR for agent-readable pages |
+| `/participate.md` endpoint | Plain markdown fallback for agents using web_fetch |
+| Dashboard with animations | Humans watching tournaments get a polished, engaging experience |
 | Open-source + reproducible builds | Trust-first approach for human approval |
 
 ---
@@ -208,9 +238,9 @@ Tournament accounts now grow incrementally as players join.
 | Dynamic account sizing | 🟢 Complete |
 | WASM integration | ⚪ Planned |
 | Devnet deploy | 🟢 Complete (program + config initialized) |
-| Frontend (dilemma-arena.com) | 🟡 Not started |
+| Frontend (dilemma-arena.com) | 🟢 Complete |
 | Transparency & auditability | 🟡 Not started |
-| Devnet playtest | 🔴 Blocked on Admin CLI + Frontend |
+| Devnet playtest | 🟡 Ready |
 | Mainnet launch | ⚪ Planned |
 
 ---
