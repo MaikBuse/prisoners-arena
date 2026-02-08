@@ -1302,7 +1302,115 @@ describe("dilemma-arena", () => {
   });
 
   // ================================================================
-  // 12. PDA Derivation Correctness
+  // 12. Close Tournament — Full Flow (v1.2, requires testing feature)
+  // ================================================================
+  describe("Close Tournament Flow (v1.2)", () => {
+    // T1 is in Payout with 2 entries (players[4], players[5])
+    // With testing feature, claim expiry = 2s, closure delay = 2s
+
+    it("close_tournament fails when entries_remaining > 0", async () => {
+      const [t1Key] = deriveT(pid, 1);
+      // Wait for expiry (2s in testing mode)
+      await sleep(3000);
+
+      try {
+        await program.methods
+          .closeTournament()
+          .accounts({
+            config: configKey, tournament: t1Key,
+            operator: operator.publicKey,
+          })
+          .signers([operator])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("EntriesRemaining");
+      }
+    });
+
+    it("close expired entries for T1", async () => {
+      const [t1Key] = deriveT(pid, 1);
+      const t1 = await program.account.tournament.fetch(t1Key);
+      // Close all remaining entries
+      for (let i = 0; i < t1.players.length; i++) {
+        if (t1.players[i].toString() === PublicKey.default.toString()) continue;
+        const [eKey] = deriveE(pid, t1Key, t1.players[i]);
+        // Check if entry still exists
+        try {
+          await program.account.entry.fetch(eKey);
+        } catch {
+          continue; // Already closed (e.g. winner claimed)
+        }
+        await program.methods
+          .closeExpiredEntry()
+          .accounts({
+            config: configKey, tournament: t1Key, entry: eKey,
+            operator: operator.publicKey,
+          })
+          .signers([operator])
+          .rpc();
+      }
+
+      const t1After = await program.account.tournament.fetch(t1Key);
+      expect(t1After.entriesRemaining).to.equal(0);
+    });
+
+    it("close_tournament succeeds and routes all lamports to accumulated_fees", async () => {
+      const [t1Key] = deriveT(pid, 1);
+      const t1 = await program.account.tournament.fetch(t1Key);
+      const tournamentLamports = await conn.getBalance(t1Key);
+
+      const cfgBefore = await program.account.config.fetch(configKey);
+      const configBalBefore = await conn.getBalance(configKey);
+      const feesBefore = cfgBefore.accumulatedFees.toNumber();
+
+      await program.methods
+        .closeTournament()
+        .accounts({
+          config: configKey, tournament: t1Key,
+          operator: operator.publicKey,
+        })
+        .signers([operator])
+        .rpc();
+
+      // Tournament account should be gone (zeroed, 0 lamports)
+      const tournamentInfo = await conn.getAccountInfo(t1Key);
+      expect(tournamentInfo).to.be.null;
+
+      // All lamports went to config PDA
+      const configBalAfter = await conn.getBalance(configKey);
+      expect(configBalAfter).to.equal(configBalBefore + tournamentLamports);
+
+      // accumulated_fees increased by the tournament's lamports
+      const cfgAfter = await program.account.config.fetch(configKey);
+      expect(cfgAfter.accumulatedFees.toNumber()).to.equal(feesBefore + tournamentLamports);
+    });
+
+    it("admin can withdraw fees including tournament rent", async () => {
+      const cfg = await program.account.config.fetch(configKey);
+      const fees = cfg.accumulatedFees.toNumber();
+      expect(fees).to.be.greaterThan(0);
+
+      const balBefore = await conn.getBalance(admin.publicKey);
+      await program.methods
+        .withdrawFees()
+        .accounts({
+          config: configKey, admin: admin.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([admin])
+        .rpc();
+
+      const cfgAfter = await program.account.config.fetch(configKey);
+      expect(cfgAfter.accumulatedFees.toNumber()).to.equal(0);
+      const balAfter = await conn.getBalance(admin.publicKey);
+      // Admin received fees (minus tx fee)
+      expect(balAfter - balBefore).to.be.greaterThan(fees - 10000);
+    });
+  });
+
+  // ================================================================
+  // 13. PDA Derivation Correctness
   // ================================================================
   describe("PDA Derivation", () => {
     it("config PDA is deterministic", () => {
@@ -1336,7 +1444,7 @@ describe("dilemma-arena", () => {
   });
 
   // ================================================================
-  // 13. Account Sizing
+  // 14. Account Sizing
   // ================================================================
   describe("Account Sizing", () => {
     it("tournament account size accommodates player vecs", async () => {

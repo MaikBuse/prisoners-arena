@@ -1,6 +1,7 @@
 [features]
 seeds = false
 skip-lint = false
+testing = ["dilemma_arena/testing"]
 
 [programs.localnet]
 dilemma_arena = "6GhLrCuPioYDRquc9xW6mmEu3s9EfuXdwkEN5mFKcE56"

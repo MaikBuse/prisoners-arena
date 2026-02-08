@@ -507,14 +507,24 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     // If this was an unclaimed winner, add their share to accumulated fees
     if !entry.paid_out && entry.score >= tournament.min_winning_score {
         let unclaimed_share = tournament.winner_pool / tournament.winner_count as u64;
-        config.accumulated_fees += unclaimed_share;
 
-        // Transfer unclaimed prize lamports from tournament to config
-        **tournament.to_account_info().try_borrow_mut_lamports()? -= unclaimed_share;
-        **config.to_account_info().try_borrow_mut_lamports()? += unclaimed_share;
+        // Cap transfer to keep tournament above rent-exempt minimum
+        // (remaining surplus will be swept by close_tournament)
+        let rent = Rent::get()?;
+        let min_balance = rent.minimum_balance(tournament.to_account_info().data_len());
+        let max_transfer = tournament.to_account_info().lamports()
+            .saturating_sub(min_balance);
+        let transfer_amount = unclaimed_share.min(max_transfer);
+
+        if transfer_amount > 0 {
+            config.accumulated_fees += transfer_amount;
+            **tournament.to_account_info().try_borrow_mut_lamports()? -= transfer_amount;
+            **config.to_account_info().try_borrow_mut_lamports()? += transfer_amount;
+        }
 
         msg!(
-            "Added unclaimed prize {} lamports to accumulated fees",
+            "Added unclaimed prize {} lamports to accumulated fees (of {} owed)",
+            transfer_amount,
             unclaimed_share
         );
     }

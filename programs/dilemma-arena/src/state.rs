@@ -2,11 +2,17 @@
 
 use anchor_lang::prelude::*;
 
-/// Claim expiry in seconds (30 days)
+/// Claim expiry in seconds (30 days in production, 2s in testing)
+#[cfg(not(feature = "testing"))]
 pub const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
+#[cfg(feature = "testing")]
+pub const CLAIM_EXPIRY_SECONDS: i64 = 2;
 
-/// Tournament closure delay in seconds (30 days after payout start)
+/// Tournament closure delay in seconds (30 days after payout start, 2s in testing)
+#[cfg(not(feature = "testing"))]
 pub const TOURNAMENT_CLOSURE_SECONDS: i64 = 2_592_000;
+#[cfg(feature = "testing")]
+pub const TOURNAMENT_CLOSURE_SECONDS: i64 = 2;
 
 /// Winner percentage (top 25%) — used in finalize_tournament logic
 #[allow(dead_code)]
