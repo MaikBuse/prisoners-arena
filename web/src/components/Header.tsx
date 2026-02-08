@@ -1,41 +1,38 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { NetworkSelector } from "./NetworkSelector";
-import { WalletButton } from "./WalletButton";
+'use client';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { NetworkBadge } from './NetworkBadge';
 
 const NAV = [
-  { to: "/", label: "Dashboard" },
-  { to: "/entry", label: "My Entry" },
-  { to: "/history", label: "History" },
-  { to: "/guide", label: "How to Play" },
+  { href: '/', label: 'Dashboard' },
+  { href: '/history', label: 'History' },
+  { href: '/participate', label: 'Participate' },
+  { href: '/guide', label: 'Guide' },
+  { href: '/about', label: 'About' },
 ];
 
 export function Header() {
-  const { pathname } = useLocation();
-
+  const pathname = usePathname();
   return (
-    <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap">
-        <Link to="/" className="text-lg font-bold text-white mr-4">
-          ⚔ Dilemma Arena
-        </Link>
-        <nav className="flex gap-1">
-          {NAV.map((n) => (
+    <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-lg font-bold text-white">⚔️ Dilemma Arena</span>
+          </Link>
+          <NetworkBadge />
+        </div>
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV.map(({ href, label }) => (
             <Link
-              key={n.to}
-              to={n.to}
-              className={`px-3 py-1.5 rounded text-sm ${
-                pathname === n.to ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200"
-              }`}
+              key={href}
+              href={href}
+              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${pathname === href ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
-              {n.label}
+              {label}
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <NetworkSelector />
-          <WalletButton />
-        </div>
       </div>
     </header>
   );
