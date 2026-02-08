@@ -168,7 +168,11 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="neon-card rounded-2xl p-6">
+            <div className="neon-card rounded-2xl p-6 cursor-pointer" onClick={(e) => {
+              // Don't toggle if clicking a link or button inside
+              if ((e.target as HTMLElement).closest('a, button')) return;
+              setDetailOpen(!detailOpen);
+            }}>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold">Tournament #{t.id}</h3>
@@ -177,12 +181,13 @@ export default function Home() {
                     t.state === 'Running' ? 'badge-running' : 'badge-payout'
                   }`}>{t.state}</span>
                 </div>
-                <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
-                   className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Explorer ↗</a>
-                <button onClick={() => setDetailOpen(!detailOpen)}
-                   className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors font-medium cursor-pointer">
-                  {detailOpen ? 'Hide Details ↑' : 'View Details →'}
-                </button>
+                <div className="flex items-center gap-3">
+                  <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
+                     className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Explorer ↗</a>
+                  <span className="text-xs text-[var(--accent)] font-medium">
+                    {detailOpen ? 'Hide Details ↑' : 'View Details ↓'}
+                  </span>
+                </div>
               </div>
 
               {t.state === 'Registration' && (

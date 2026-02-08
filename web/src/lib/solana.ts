@@ -335,7 +335,7 @@ export async function fetchTournamentList(limit = 10, offset = 0): Promise<Tourn
   const start = Math.max(0, config.currentTournamentId - offset);
   const end = Math.max(0, start - limit);
 
-  for (let i = start; i > end; i--) {
+  for (let i = start; i >= end; i--) {
     const t = await fetchTournament(i);
     if (t) tournaments.push(t);
   }
