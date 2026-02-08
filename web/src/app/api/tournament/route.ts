@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { fetchCurrentTournament, getAllEntries } from '@/lib/solana';
+import { fetchCurrentTournament, fetchConfig, getAllEntries } from '@/lib/solana';
 import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
@@ -8,8 +8,11 @@ export async function GET(request: NextRequest) {
   try {
     const tournament = await fetchCurrentTournament();
     if (!tournament) return apiError('No tournament found', 'NOT_FOUND', 404);
-    const entries = await getAllEntries(tournament.address);
-    return apiSuccess({ tournament, entries });
+    const [entries, config] = await Promise.all([
+      getAllEntries(tournament.address),
+      fetchConfig(),
+    ]);
+    return apiSuccess({ tournament, entries, config });
   } catch (e) {
     return apiError((e as Error).message, 'FETCH_ERROR', 500);
   }

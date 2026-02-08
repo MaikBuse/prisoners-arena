@@ -136,7 +136,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               {t.state === 'Registration' && (
                 <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <CountdownTimer targetTimestamp={Number(t.registrationEnds)} label="Registration Ends" />
+                    <CountdownTimer
+                      targetTimestamp={Number(t.registrationEnds)}
+                      label="Registration Ends"
+                      expiredText={t.participantCount < 2 ? 'Waiting for players' : 'Starting soon'}
+                      expiredClassName={t.participantCount < 2 ? 'text-amber-500' : 'text-emerald-500'}
+                    />
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-4xl font-bold">{t.participantCount}</div>
                       <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>

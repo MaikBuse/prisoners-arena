@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import type { TournamentAccount, EntryAccount } from '@/lib/solana';
+import type { TournamentAccount, EntryAccount, ConfigAccount } from '@/lib/solana';
 import { STRATEGIES, formatLamports, truncateAddress, explorerLink, PROGRAM_ID, BASE_URL } from '@/lib/solana';
 import { Logo, LogoSmall } from '@/components/Logo';
 import { CountdownTimer } from '@/components/CountdownTimer';
@@ -15,6 +15,7 @@ const BAR_COLORS: Record<string, string> = {
 interface TournamentData {
   tournament: TournamentAccount;
   entries: EntryAccount[];
+  config?: ConfigAccount;
 }
 
 export default function Home() {
@@ -208,15 +209,29 @@ export default function Home() {
                 </div>
               </div>
 
-              {t.state === 'Registration' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <CountdownTimer targetTimestamp={Number(t.registrationEnds)} label="Registration Ends" />
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="text-4xl font-bold">{t.participantCount}</div>
-                    <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>
+              {t.state === 'Registration' && (() => {
+                const now = Math.floor(Date.now() / 1000);
+                const isExpired = now >= Number(t.registrationEnds);
+                const minPlayers = data?.config?.minParticipants ?? 2;
+                const needsMorePlayers = t.participantCount < minPlayers;
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CountdownTimer
+                      targetTimestamp={Number(t.registrationEnds)}
+                      label="Registration Ends"
+                      expiredText={needsMorePlayers ? 'Waiting for players' : 'Starting soon'}
+                      expiredClassName={needsMorePlayers ? 'text-amber-500' : 'text-emerald-500'}
+                    />
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="text-4xl font-bold">{t.participantCount}</div>
+                      <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>
+                      {isExpired && needsMorePlayers && (
+                        <div className="text-xs text-amber-500 mt-2">Deadline extends until minimum players join</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {t.state === 'Running' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
