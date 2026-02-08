@@ -1,5 +1,5 @@
 {
-  "address": "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7",
+  "address": "6GhLrCuPioYDRquc9xW6mmEu3s9EfuXdwkEN5mFKcE56",
   "metadata": {
     "name": "dilemma_arena",
     "version": "0.1.0",
@@ -380,6 +380,80 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_tournament",
+      "docs": [
+        "Close tournament account and recover rent (30 days after payout)"
+      ],
+      "discriminator": [
+        14,
+        80,
+        54,
+        9,
+        221,
+        239,
+        201,
+        35
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true
+        },
+        {
+          "name": "operator",
+          "signer": true
         }
       ],
       "args": []
@@ -1032,6 +1106,16 @@
       "code": 12018,
       "name": "TournamentActive",
       "msg": "Previous tournament still active"
+    },
+    {
+      "code": 12019,
+      "name": "EntriesRemaining",
+      "msg": "Tournament still has open entries"
+    },
+    {
+      "code": 12020,
+      "name": "TournamentNotCloseable",
+      "msg": "Tournament closure period not yet reached (30 days after payout)"
     }
   ],
   "types": [
@@ -1289,6 +1373,13 @@
             "type": "u16"
           },
           {
+            "name": "registration_duration",
+            "docs": [
+              "Registration duration in seconds (snapshotted from config)"
+            ],
+            "type": "i64"
+          },
+          {
             "name": "pool",
             "docs": [
               "Total prize pool (lamports)"
@@ -1369,6 +1460,13 @@
               "Timestamp when payout state started (for claim expiry)"
             ],
             "type": "i64"
+          },
+          {
+            "name": "entries_remaining",
+            "docs": [
+              "Number of open entry accounts (inc on enter, dec on claim/refund/expire)"
+            ],
+            "type": "u32"
           },
           {
             "name": "players",

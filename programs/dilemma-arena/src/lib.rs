@@ -12,7 +12,7 @@ mod error;
 use instructions::*;
 pub use state::Strategy;
 
-declare_id!("7F1tQjn9AKT4S5PB2Kifr8Ck9ZRE77y83HoDUBXRNox1");
+declare_id!("6GhLrCuPioYDRquc9xW6mmEu3s9EfuXdwkEN5mFKcE56");
 
 #[program]
 pub mod dilemma_arena {
