@@ -60,4 +60,10 @@ pub enum DilemmaError {
 
     #[msg("Previous tournament still active")]
     TournamentActive = 6018,
+
+    #[msg("Tournament still has open entries")]
+    EntriesRemaining = 6019,
+
+    #[msg("Tournament closure period not yet reached (30 days after payout)")]
+    TournamentNotCloseable = 6020,
 }

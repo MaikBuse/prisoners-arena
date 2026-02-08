@@ -172,6 +172,7 @@ export interface TournamentAccount {
   stake: string;
   houseFeeBps: number;
   matchesPerPlayer: number;
+  registrationDuration: string;
   pool: string;
   participantCount: number;
   registrationEnds: string;
@@ -199,6 +200,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const stake = readU64LE(data, offset).toString(); offset += 8;
   const houseFeeBps = readU16LE(data, offset); offset += 2;
   const matchesPerPlayer = readU16LE(data, offset); offset += 2;
+  const registrationDuration = readI64LE(data, offset).toString(); offset += 8;
   const pool = readU64LE(data, offset).toString(); offset += 8;
   const participantCount = readU32LE(data, offset); offset += 4;
   const registrationEnds = readI64LE(data, offset).toString(); offset += 8;
@@ -225,7 +227,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
 
   const bump = readU8(data, offset);
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, players, scores, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, players, scores, bump, address };
 }
 
 export interface EntryAccount {

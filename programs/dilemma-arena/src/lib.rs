@@ -104,4 +104,9 @@ pub mod dilemma_arena {
     pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
         instructions::tournament::close_expired_entry(ctx)
     }
+
+    /// Close tournament account and recover rent (30 days after payout)
+    pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
+        instructions::tournament::close_tournament(ctx)
+    }
 }

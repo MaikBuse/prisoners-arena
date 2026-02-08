@@ -5,6 +5,9 @@ use anchor_lang::prelude::*;
 /// Claim expiry in seconds (30 days)
 pub const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
 
+/// Tournament closure delay in seconds (30 days after payout start)
+pub const TOURNAMENT_CLOSURE_SECONDS: i64 = 2_592_000;
+
 /// Winner percentage (top 25%)
 pub const WINNER_PERCENTAGE: u32 = 25;
 
@@ -85,6 +88,8 @@ pub struct Tournament {
     pub house_fee_bps: u16,
     /// Matches per player K (snapshotted from config)
     pub matches_per_player: u16,
+    /// Registration duration in seconds (snapshotted from config)
+    pub registration_duration: i64,
     
     /// Total prize pool (lamports)
     pub pool: u64,
@@ -127,6 +132,7 @@ impl Tournament {
         8 +   // stake (snapshotted)
         2 +   // house_fee_bps (snapshotted)
         2 +   // matches_per_player (snapshotted)
+        8 +   // registration_duration (snapshotted)
         8 +   // pool
         4 +   // participant_count
         8 +   // registration_ends

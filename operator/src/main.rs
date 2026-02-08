@@ -114,8 +114,23 @@ async fn main() -> Result<()> {
                 }
             }
             Err(e) => {
-                error!("Cycle error: {}", e);
-                std::process::exit(2);
+                let err_str = format!("{}", e);
+                if is_state_conflict(&err_str) {
+                    warn!("State conflict, retrying in 3s...");
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                    match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+                        Ok(action_taken) => {
+                            std::process::exit(if action_taken { 0 } else { 1 });
+                        }
+                        Err(e2) => {
+                            error!("Retry failed: {}", e2);
+                            std::process::exit(2);
+                        }
+                    }
+                } else {
+                    error!("Cycle error: {}", e);
+                    std::process::exit(2);
+                }
             }
         }
     }
@@ -127,7 +142,18 @@ async fn main() -> Result<()> {
         match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
             Ok(_) => {}
             Err(e) => {
-                error!("Cycle error: {}", e);
+                let err_str = format!("{}", e);
+                if is_state_conflict(&err_str) {
+                    warn!("State conflict (stale RPC data), retrying in 3s...");
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                    // Retry once immediately after wait
+                    match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+                        Ok(_) => {}
+                        Err(e2) => error!("Retry failed: {}", e2),
+                    }
+                } else {
+                    error!("Cycle error: {}", e);
+                }
             }
         }
 
@@ -143,6 +169,13 @@ async fn main() -> Result<()> {
 
         tokio::time::sleep(poll_interval).await;
     }
+}
+
+/// Check if an error is a state conflict (InvalidState = error 6000, or stale data)
+fn is_state_conflict(err: &str) -> bool {
+    err.contains("0x1770") // 6000 in hex = InvalidState
+        || err.contains("InvalidState")
+        || err.contains("custom program error: 0x1770")
 }
 
 /// Returns Ok(true) if an action was taken, Ok(false) if nothing to do
@@ -246,6 +279,18 @@ async fn run_cycle(
                     if closed > 0 {
                         info!("Closed {} expired entries", closed);
                         return Ok(true);
+                    }
+                    
+                    // All entries closed — close the tournament account itself
+                    match actions::close_tournament(client, program_id, &tournament, operator, &config) {
+                        Ok(_) => {
+                            info!("Tournament {} account closed, rent recovered", tournament.id);
+                            return Ok(true);
+                        }
+                        Err(e) => {
+                            // May fail if entries still exist (closed by someone else this cycle)
+                            warn!("Could not close tournament account: {}", e);
+                        }
                     }
                 }
             }

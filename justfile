@@ -61,6 +61,14 @@ clean:
 dev-frontend:
     cd web && npm run dev
 
+# Build frontend for production
+build-web:
+    cd web && npm run build
+
+# Run frontend in production mode
+start-web:
+    cd web && npm start
+
 # Run operator
 dev-operator:
     cd operator && cargo run

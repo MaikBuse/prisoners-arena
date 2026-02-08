@@ -27,6 +27,7 @@ mod discriminator {
     pub const RUN_MATCHES: [u8; 8] = [231, 195, 232, 182, 30, 237, 182, 246];
     pub const FINALIZE_TOURNAMENT: [u8; 8] = [205, 30, 149, 11, 108, 122, 120, 11];
     pub const CLOSE_EXPIRED_ENTRY: [u8; 8] = [241, 64, 198, 246, 182, 114, 87, 149];
+    pub const CLOSE_TOURNAMENT: [u8; 8] = [14, 80, 54, 9, 221, 239, 201, 35];
 }
 
 /// Close registration and transition to Running state
@@ -272,6 +273,38 @@ pub fn close_expired_entries(
     }
     
     Ok(closed)
+}
+
+/// Close a tournament account and recover rent lamports
+pub fn close_tournament(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    tournament: &Tournament,
+    operator: &Keypair,
+    config: &Config,
+) -> Result<()> {
+    info!("Closing tournament {} account to recover rent", tournament.id);
+    
+    let (config_pda, _) = state::get_config_pda(program_id);
+    let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
+    
+    let accounts = vec![
+        AccountMeta::new_readonly(config_pda, false),
+        AccountMeta::new(tournament_pda, false),
+        AccountMeta::new(config.admin, false), // admin receives lamports
+        AccountMeta::new_readonly(operator.pubkey(), true),
+    ];
+    
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: discriminator::CLOSE_TOURNAMENT.to_vec(),
+    };
+    
+    send_transaction(client, &[instruction], operator)?;
+    info!("Tournament {} account closed, rent recovered", tournament.id);
+    
+    Ok(())
 }
 
 /// Send a transaction with retry logic

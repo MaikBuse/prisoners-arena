@@ -24,6 +24,7 @@ pub struct Tournament {
     pub stake: u64,
     pub house_fee_bps: u16,
     pub matches_per_player: u16,
+    pub registration_duration: i64,
     
     pub pool: u64,
     pub participant_count: u32,
@@ -147,6 +148,7 @@ impl Tournament {
     /// stake: u64 (8)
     /// house_fee_bps: u16 (2)
     /// matches_per_player: u16 (2)
+    /// registration_duration: i64 (8)
     /// pool: u64 (8)
     /// participant_count: u32 (4)
     /// registration_ends: i64 (8)
@@ -184,6 +186,9 @@ impl Tournament {
         
         let matches_per_player = u16::from_le_bytes(data[offset..offset + 2].try_into()?);
         offset += 2;
+        
+        let registration_duration = i64::from_le_bytes(data[offset..offset + 8].try_into()?);
+        offset += 8;
         
         let pool = u64::from_le_bytes(data[offset..offset + 8].try_into()?);
         offset += 8;
@@ -247,6 +252,7 @@ impl Tournament {
             stake,
             house_fee_bps,
             matches_per_player,
+            registration_duration,
             pool,
             participant_count,
             registration_ends,

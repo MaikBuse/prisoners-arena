@@ -70,6 +70,7 @@ pub fn initialize_config(
     tournament.stake = stake;
     tournament.house_fee_bps = 0;
     tournament.matches_per_player = matches_per_player;
+    tournament.registration_duration = registration_duration;
     tournament.pool = 0;
     tournament.participant_count = 0;
     tournament.registration_ends = clock.unix_timestamp + registration_duration;

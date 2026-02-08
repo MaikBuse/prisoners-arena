@@ -1,7 +1,7 @@
 //! Tournament lifecycle instructions
 
 use anchor_lang::prelude::*;
-use crate::state::{Config, Tournament, Entry, TournamentState, CLAIM_EXPIRY_SECONDS, MATCHES_PER_TX};
+use crate::state::{Config, Tournament, Entry, TournamentState, CLAIM_EXPIRY_SECONDS, TOURNAMENT_CLOSURE_SECONDS, MATCHES_PER_TX};
 use crate::error::DilemmaError;
 
 /// Close registration and start matches (or extend deadline)
@@ -56,8 +56,8 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
 
     // Check if minimum participants reached
     if tournament.participant_count < config.min_participants as u32 {
-        // Extend registration deadline (never cancel)
-        tournament.registration_ends = clock.unix_timestamp + config.registration_duration;
+        // Extend registration deadline using snapshotted duration (never cancel)
+        tournament.registration_ends = clock.unix_timestamp + tournament.registration_duration;
         msg!(
             "Tournament {} extended: only {} participants, need {}. New deadline: {}",
             tournament.id,
@@ -398,7 +398,13 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     let per_winner = winner_pool_raw / tournament.winner_count as u64;
     let dust = winner_pool_raw - (per_winner * tournament.winner_count as u64);
 
-    config.accumulated_fees += house_fee + dust;
+    let fee_total = house_fee + dust;
+    config.accumulated_fees += fee_total;
+
+    // Transfer fee lamports from tournament account to config account
+    **tournament.to_account_info().try_borrow_mut_lamports()? -= fee_total;
+    **config.to_account_info().try_borrow_mut_lamports()? += fee_total;
+
     tournament.winner_pool = per_winner * tournament.winner_count as u64;
     tournament.payout_started_at = clock.unix_timestamp;
     tournament.state = TournamentState::Payout;
@@ -411,6 +417,7 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.stake = config.stake;
     next_tournament.house_fee_bps = config.house_fee_bps;
     next_tournament.matches_per_player = config.matches_per_player;
+    next_tournament.registration_duration = config.registration_duration;
     next_tournament.pool = 0;
     next_tournament.participant_count = 0;
     next_tournament.registration_ends = clock.unix_timestamp + config.registration_duration;
@@ -495,6 +502,11 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     if !entry.paid_out && entry.score >= tournament.min_winning_score {
         let unclaimed_share = tournament.winner_pool / tournament.winner_count as u64;
         config.accumulated_fees += unclaimed_share;
+
+        // Transfer unclaimed prize lamports from tournament to config
+        **tournament.to_account_info().try_borrow_mut_lamports()? -= unclaimed_share;
+        **config.to_account_info().try_borrow_mut_lamports()? += unclaimed_share;
+
         msg!(
             "Added unclaimed prize {} lamports to accumulated fees",
             unclaimed_share
@@ -504,5 +516,60 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     // Entry account rent goes to operator (via close = operator)
     msg!("Closed expired entry for player {}", entry.player);
 
+    Ok(())
+}
+
+/// Close a tournament account and recover rent lamports
+#[derive(Accounts)]
+pub struct CloseTournament<'info> {
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        seeds = [b"tournament", tournament.id.to_le_bytes().as_ref()],
+        bump = tournament.bump,
+        close = admin
+    )]
+    pub tournament: Account<'info, Tournament>,
+
+    /// CHECK: Must match config.admin — receives remaining lamports
+    #[account(
+        mut,
+        constraint = admin.key() == config.admin @ DilemmaError::Unauthorized
+    )]
+    pub admin: AccountInfo<'info>,
+
+    #[account(
+        constraint = operator.key() == config.operator || operator.key() == config.admin @ DilemmaError::Unauthorized
+    )]
+    pub operator: Signer<'info>,
+}
+
+pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
+    let tournament = &ctx.accounts.tournament;
+    let clock = Clock::get()?;
+
+    // Must be in Payout state
+    require!(
+        tournament.state == TournamentState::Payout,
+        DilemmaError::InvalidState
+    );
+
+    // Must be past 30 days since payout started
+    require!(
+        clock.unix_timestamp >= tournament.payout_started_at + TOURNAMENT_CLOSURE_SECONDS,
+        DilemmaError::TournamentNotCloseable
+    );
+
+    msg!(
+        "Closed tournament {} account, recovering rent lamports to admin",
+        tournament.id
+    );
+
+    // Account closure handled by Anchor's `close = admin` attribute
     Ok(())
 }

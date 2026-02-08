@@ -26,9 +26,9 @@ pub fn generate_all_pairings(
     let n = participant_count as usize;
     let k = matches_per_player as usize;
     
-    // For small tournaments where n-1 <= k, do round-robin
+    // For small tournaments where n-1 <= k, use repeated round-robins
     if n <= k + 1 {
-        return generate_round_robin(n, seed);
+        return generate_repeated_round_robin(n, k, seed);
     }
     
     // Use circular pairing method:
@@ -78,14 +78,28 @@ pub fn generate_all_pairings(
     matches
 }
 
-/// Generate round-robin pairings for small tournaments
-fn generate_round_robin(n: usize, seed: &[u8; 32]) -> Vec<(u32, u32)> {
-    let mut pairings = Vec::with_capacity(n * (n - 1) / 2);
-    
+/// Generate repeated round-robin pairings for small tournaments
+/// 
+/// When n-1 < k (fewer unique opponents than desired matches), repeat full
+/// round-robins until every player has >= k matches. Each repeated pair gets
+/// a distinct match_index, producing a unique game seed via SeededRng.
+fn generate_repeated_round_robin(n: usize, k: usize, seed: &[u8; 32]) -> Vec<(u32, u32)> {
+    // Base round-robin: all unique pairs
+    let mut base_pairs = Vec::with_capacity(n * (n - 1) / 2);
     for i in 0..n {
         for j in (i + 1)..n {
-            pairings.push((i as u32, j as u32));
+            base_pairs.push((i as u32, j as u32));
         }
+    }
+    
+    // Each round-robin gives n-1 matches per player
+    // Need ceil(k / (n-1)) cycles (n >= 2 guaranteed by caller)
+    let matches_per_cycle = n - 1;
+    let cycles = (k + matches_per_cycle - 1) / matches_per_cycle;
+    
+    let mut pairings = Vec::with_capacity(base_pairs.len() * cycles);
+    for _ in 0..cycles {
+        pairings.extend_from_slice(&base_pairs);
     }
     
     let mut rng = SeededRng::new(seed, 0);
@@ -159,33 +173,31 @@ mod tests {
         let seed = [42u8; 32];
         let pairings = generate_all_pairings(2, 5, &seed);
         
-        // 2 players can only play each other once in round-robin
-        assert_eq!(pairings.len(), 1);
+        // 2 players, K=5: ceil(5/1) = 5 cycles × 1 pair = 5 matches
+        assert_eq!(pairings.len(), 5);
         
-        let mut sorted = pairings.clone();
-        sorted.sort();
-        assert_eq!(sorted[0], (0, 1));
+        // All pairs should be (0, 1)
+        for p in &pairings {
+            assert_eq!(*p, (0, 1));
+        }
     }
     
     #[test]
     fn test_small_tournament_round_robin() {
         let seed = [42u8; 32];
-        // 4 players, K=5 means everyone plays everyone (round-robin)
+        // 4 players, K=5: n-1=3, ceil(5/3)=2 cycles × 6 pairs = 12 matches
         let pairings = generate_all_pairings(4, 5, &seed);
+        assert_eq!(pairings.len(), 12);
         
-        // 4 players = 4*3/2 = 6 matches
-        assert_eq!(pairings.len(), 6);
-        
-        // All pairs should exist
-        let mut sorted = pairings.clone();
-        sorted.sort();
-        
-        assert!(sorted.contains(&(0, 1)));
-        assert!(sorted.contains(&(0, 2)));
-        assert!(sorted.contains(&(0, 3)));
-        assert!(sorted.contains(&(1, 2)));
-        assert!(sorted.contains(&(1, 3)));
-        assert!(sorted.contains(&(2, 3)));
+        // Each unique pair should appear exactly 2 times
+        let mut counts = std::collections::HashMap::new();
+        for p in &pairings {
+            *counts.entry(*p).or_insert(0u32) += 1;
+        }
+        assert_eq!(counts.len(), 6); // 6 unique pairs
+        for (_, count) in &counts {
+            assert_eq!(*count, 2);
+        }
     }
     
     #[test]
@@ -262,9 +274,9 @@ mod tests {
     fn test_match_count_round_robin() {
         let seed = [42u8; 32];
         
-        // Small tournament: round robin
+        // 4 players, K=10: n-1=3, ceil(10/3)=4 cycles × 6 pairs = 24 matches
         let count = calculate_match_count(4, 10, &seed);
-        assert_eq!(count, 6); // 4*3/2 = 6 (round robin)
+        assert_eq!(count, 24);
     }
     
     #[test]
@@ -340,5 +352,57 @@ mod tests {
         for (i, count) in counts.iter().enumerate() {
             assert!(*count >= k as u32, "Player {} has {} matches, expected >= {}", i, count, k);
         }
+    }
+
+    #[test]
+    fn test_two_players_k15() {
+        let seed = [42u8; 32];
+        let pairings = generate_all_pairings(2, 15, &seed);
+        
+        // N=2, K=15: ceil(15/1) = 15 cycles × 1 pair = 15 matches
+        assert_eq!(pairings.len(), 15);
+        for p in &pairings {
+            assert_eq!(*p, (0, 1));
+        }
+    }
+
+    #[test]
+    fn test_small_n_each_player_has_geq_k_matches() {
+        let seed = [42u8; 32];
+        let k = 15u16;
+        
+        for n in 2..=6u32 {
+            let pairings = generate_all_pairings(n, k, &seed);
+            
+            let mut counts = vec![0u32; n as usize];
+            for (a, b) in &pairings {
+                counts[*a as usize] += 1;
+                counts[*b as usize] += 1;
+            }
+            
+            for (i, count) in counts.iter().enumerate() {
+                assert!(
+                    *count >= k as u32,
+                    "N={}, Player {} has {} matches, expected >= {}",
+                    n, i, count, k
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_repeated_pairings_have_distinct_indices() {
+        let seed = [42u8; 32];
+        // N=2, K=15: 15 matches, all (0,1) but at different indices
+        let pairings = generate_all_pairings(2, 15, &seed);
+        assert_eq!(pairings.len(), 15);
+        
+        // Each match_index produces a different game via SeededRng::new(seed, match_index)
+        // Verify indices 0..15 all map to valid pairings
+        for i in 0..15u32 {
+            let p = get_pairing_for_match(2, 15, &seed, i);
+            assert_eq!(p, Some((0, 1)));
+        }
+        assert_eq!(get_pairing_for_match(2, 15, &seed, 15), None);
     }
 }
