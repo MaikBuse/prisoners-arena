@@ -82,6 +82,7 @@ pub fn initialize_config(
     tournament.winner_pool = 0;
     tournament.claims_processed = 0;
     tournament.payout_started_at = 0;
+    tournament.entries_remaining = 0;
     tournament.players = Vec::new();
     tournament.scores = Vec::new();
     tournament.bump = ctx.bumps.tournament;

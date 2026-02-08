@@ -199,9 +199,11 @@ Tournament accounts grow dynamically as players join, avoiding upfront allocatio
 
 ### Rent Handling
 
-- Rent delta paid by entering player (added to entry cost)
-- Rent is refundable when tournament account is closed
-- `claim_refund` does NOT shrink the account (realloc down not implemented for simplicity)
+- **Tournament account rent:** Delta paid by entering player (added to entry cost). Refunded when tournament account is closed via `close_tournament` — rent lamports go to admin (`close = admin`).
+- **Entry account rent:** Destination depends on how the entry is closed:
+  - `claim_payout` / `claim_refund`: rent goes to **player** (`close = player`) — player recovers their own entry rent.
+  - `close_expired_entry`: rent goes to **operator** (`close = operator`) — compensates operator for the transaction cost of cleaning up expired entries.
+- `claim_refund` does NOT shrink the tournament account (realloc down not implemented for simplicity).
 
 ---
 

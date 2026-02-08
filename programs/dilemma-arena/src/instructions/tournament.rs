@@ -105,10 +105,12 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
     }
 
     // Generate randomness seed from slot hash
+    // SlotHashes layout: 8-byte vec len + (8-byte slot + 32-byte hash) pairs
+    // Skip 8 (vec len) + 8 (first slot number) = 16 to reach first hash
     let slot_hashes_data = ctx.accounts.slot_hashes.try_borrow_data()?;
     let mut seed = [0u8; 32];
-    require!(slot_hashes_data.len() >= 32, DilemmaError::SlotHashUnavailable);
-    seed.copy_from_slice(&slot_hashes_data[..32]);
+    require!(slot_hashes_data.len() >= 48, DilemmaError::SlotHashUnavailable);
+    seed.copy_from_slice(&slot_hashes_data[16..48]);
     
     // Mix in tournament-specific data
     let tournament_bytes = tournament.id.to_le_bytes();
@@ -432,6 +434,7 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.winner_pool = 0;
     next_tournament.claims_processed = 0;
     next_tournament.payout_started_at = 0;
+    next_tournament.entries_remaining = 0;
     next_tournament.players = Vec::new();
     next_tournament.scores = Vec::new();
     next_tournament.bump = ctx.bumps.next_tournament;
@@ -485,7 +488,7 @@ pub struct CloseExpiredEntry<'info> {
 
 pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     let config = &mut ctx.accounts.config;
-    let tournament = &ctx.accounts.tournament;
+    let tournament = &mut ctx.accounts.tournament;
     let entry = &ctx.accounts.entry;
     let clock = Clock::get()?;
 
@@ -516,6 +519,9 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
         );
     }
 
+    // Decrement entries_remaining counter
+    tournament.entries_remaining -= 1;
+
     // Entry account rent goes to operator (via close = operator)
     msg!("Closed expired entry for player {}", entry.player);
 
@@ -526,6 +532,7 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
 #[derive(Accounts)]
 pub struct CloseTournament<'info> {
     #[account(
+        mut,
         seeds = [b"config"],
         bump = config.bump,
     )]
@@ -553,6 +560,7 @@ pub struct CloseTournament<'info> {
 }
 
 pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
+    let config = &mut ctx.accounts.config;
     let tournament = &ctx.accounts.tournament;
     let clock = Clock::get()?;
 
@@ -567,6 +575,26 @@ pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
         clock.unix_timestamp >= tournament.payout_started_at + TOURNAMENT_CLOSURE_SECONDS,
         DilemmaError::TournamentNotCloseable
     );
+
+    // All entries must be closed (claimed, refunded, or expired)
+    require!(
+        tournament.entries_remaining == 0,
+        DilemmaError::EntriesRemaining
+    );
+
+    // Sweep any remaining lamports (rounding dust, unclaimed funds) to accumulated_fees
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(tournament.to_account_info().data_len());
+    let surplus = tournament.to_account_info().lamports()
+        .saturating_sub(min_balance);
+    if surplus > 0 {
+        **tournament.to_account_info().try_borrow_mut_lamports()? -= surplus;
+        **config.to_account_info().try_borrow_mut_lamports()? += surplus;
+        config.accumulated_fees = config.accumulated_fees
+            .checked_add(surplus)
+            .ok_or(DilemmaError::Overflow)?;
+        msg!("Swept {} lamports of surplus to accumulated fees", surplus);
+    }
 
     msg!(
         "Closed tournament {} account, recovering rent lamports to admin",

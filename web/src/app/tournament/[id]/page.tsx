@@ -17,6 +17,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [tournament, setTournament] = useState<TournamentAccount | null>(null);
   const [entries, setEntries] = useState<EntryAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -27,8 +28,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       if (json.ok) {
         setTournament(json.data.tournament);
         setEntries(json.data.entries);
+        setError(null);
+      } else {
+        setError(json.error || 'Failed to fetch tournament');
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error — API unreachable');
+    }
     setLoading(false);
   }, [id]);
 
@@ -82,6 +88,16 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="h-8 bg-neutral-200 rounded w-1/3 mb-4" />
               <div className="h-24 bg-neutral-200 rounded" />
             </div>
+          </div>
+        ) : error && !t ? (
+          <div className="neon-card rounded-2xl p-8 text-center">
+            <p className="text-red-600 font-medium mb-3">⚠️ {error}</p>
+            <button
+              onClick={() => { setLoading(true); setError(null); fetchData(); }}
+              className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              Retry
+            </button>
           </div>
         ) : !t ? (
           <div className="neon-card rounded-2xl p-12 text-center">

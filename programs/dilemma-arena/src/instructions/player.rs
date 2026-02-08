@@ -96,6 +96,7 @@ pub fn enter_tournament(
     tournament.players.push(player.key());
     tournament.scores.push(0);
     tournament.participant_count += 1;
+    tournament.entries_remaining += 1;
     tournament.pool += stake;
 
     msg!(
@@ -156,6 +157,7 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
     // Mark player slot as refunded (set to default pubkey)
     tournament.players[entry.index as usize] = Pubkey::default();
     tournament.participant_count -= 1;
+    tournament.entries_remaining -= 1;
     tournament.pool -= refund_amount;
 
     // Note: scores[index] stays 0, entry is closed
@@ -235,6 +237,7 @@ pub fn claim_payout(ctx: Context<ClaimPayout>) -> Result<()> {
     // Mark as paid
     entry.paid_out = true;
     tournament.claims_processed += 1;
+    tournament.entries_remaining -= 1;
 
     msg!(
         "Paid {} lamports to player {} from tournament {}",

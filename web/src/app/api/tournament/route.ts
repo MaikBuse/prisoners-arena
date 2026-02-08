@@ -1,7 +1,10 @@
+import { NextRequest } from 'next/server';
 import { fetchCurrentTournament, getAllEntries } from '@/lib/solana';
-import { apiSuccess, apiError } from '@/lib/api';
+import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const limited = rateLimited(request);
+  if (limited) return limited;
   try {
     const tournament = await fetchCurrentTournament();
     if (!tournament) return apiError('No tournament found', 'NOT_FOUND', 404);

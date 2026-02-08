@@ -1,7 +1,10 @@
+import { NextRequest } from 'next/server';
 import { fetchConfig, PROGRAM_ID, NETWORK, RPC_URL, explorerLink } from '@/lib/solana';
-import { apiSuccess, apiError } from '@/lib/api';
+import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const limited = rateLimited(request);
+  if (limited) return limited;
   try {
     const config = await fetchConfig();
     if (!config) return apiError('Config not found', 'NOT_FOUND', 404);

@@ -1,7 +1,10 @@
+import { NextRequest } from 'next/server';
 import { PROGRAM_ID, NETWORK, RPC_URL, BASE_URL, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
-import { apiSuccess } from '@/lib/api';
+import { apiSuccess, rateLimited } from '@/lib/api';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const limited = rateLimited(request);
+  if (limited) return limited;
   let currentTournament: { id: number; state: string; stake_lamports: string } | null = null;
   try {
     const t = await fetchCurrentTournament();

@@ -158,7 +158,7 @@ Tournament accounts now grow incrementally as players join.
 - [x] CORS headers on all routes
 - [x] Cache headers (10s current, 1h historical, 24h IDL)
 - [x] Standardized response format (`{ ok, data, network, timestamp }`)
-- [ ] Rate limiting (60 req/min per IP)
+- [x] Rate limiting (60 req/min per IP)
 
 #### Agent Pages (Layer 2 — SSR, Minimal JS)
 - [x] `/participate` — SSR page with live tournament state, security warnings, PDA derivation, all 3 instructions, strategy list, API endpoint docs
@@ -265,6 +265,7 @@ Tournament accounts now grow incrementally as players join.
 | Transparency & auditability | 🟡 Partial (IDL published, trust messaging done; GitHub/verified builds pending) |
 | Devnet playtest | 🟢 Complete (6 bugs found & fixed, 2026-02-08) |
 | v1.1 — Stability & Correctness | 🟢 Implemented (see `releases/v1.1.md`) |
+| v1.2 — Hardening & Polish | 🟢 Implemented (see `releases/v1.2.md`) |
 | Mainnet launch | ⚪ Planned |
 
 ---

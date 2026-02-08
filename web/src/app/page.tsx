@@ -20,6 +20,7 @@ interface TournamentData {
 export default function Home() {
   const [data, setData] = useState<TournamentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -30,8 +31,15 @@ export default function Home() {
     try {
       const res = await fetch('/api/tournament');
       const json = await res.json();
-      if (json.ok) setData(json.data);
-    } catch { /* ignore */ }
+      if (json.ok) {
+        setData(json.data);
+        setError(null);
+      } else {
+        setError(json.error || 'Failed to fetch tournament data');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error — API unreachable');
+    }
     setLoading(false);
   }, []);
 
@@ -49,7 +57,7 @@ export default function Home() {
       .then(json => {
         if (json.ok) setPastTournaments(json.data.tournaments);
       })
-      .catch(() => {});
+      .catch(() => { /* past tournaments are non-critical */ });
   }, []);
 
   const t = data?.tournament;
@@ -161,6 +169,16 @@ export default function Home() {
               <div className="h-6 bg-neutral-200 rounded w-1/3" />
               <div className="h-20 bg-neutral-200 rounded" />
             </div>
+          </div>
+        ) : error && !data ? (
+          <div className="neon-card rounded-2xl p-8 text-center">
+            <p className="text-red-600 font-medium mb-3">⚠️ {error}</p>
+            <button
+              onClick={() => { setLoading(true); setError(null); fetchData(); }}
+              className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              Retry
+            </button>
           </div>
         ) : !t ? (
           <div className="neon-card rounded-2xl p-8 text-center text-[var(--muted)]">

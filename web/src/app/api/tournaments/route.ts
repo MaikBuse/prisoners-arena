@@ -1,8 +1,10 @@
 import { fetchTournamentList } from '@/lib/solana';
-import { apiSuccess, apiError } from '@/lib/api';
+import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
+  const limited = rateLimited(req);
+  if (limited) return limited;
   try {
     const url = new URL(req.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 50);

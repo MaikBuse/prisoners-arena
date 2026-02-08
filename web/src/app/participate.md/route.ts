@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { PROGRAM_ID, NETWORK, RPC_URL, BASE_URL, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
+import { rateLimited } from '@/lib/api';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const limited = rateLimited(request);
+  if (limited) return limited;
   const programId = PROGRAM_ID.toBase58();
   const explorerUrl = explorerLink(programId);
 

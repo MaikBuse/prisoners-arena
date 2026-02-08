@@ -276,7 +276,8 @@ fn execute_gradual(
     }
 }
 
-/// Get a human-readable description of a strategy
+/// Get a human-readable description of a strategy (used by WASM module)
+#[allow(dead_code)]
 pub fn describe_strategy(strategy: &Strategy) -> String {
     let base_desc = match strategy.base {
         StrategyBase::TitForTat => "Copies opponent's last move. Starts by cooperating.",

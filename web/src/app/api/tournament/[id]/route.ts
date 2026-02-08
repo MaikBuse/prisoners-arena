@@ -1,8 +1,10 @@
 import { fetchTournament, getAllEntries } from '@/lib/solana';
-import { apiSuccess, apiError } from '@/lib/api';
+import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 import { NextRequest } from 'next/server';
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const limited = rateLimited(req);
+  if (limited) return limited;
   try {
     const { id } = await params;
     const idNum = parseInt(id, 10);

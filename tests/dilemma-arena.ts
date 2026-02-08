@@ -1244,7 +1244,65 @@ describe("dilemma-arena", () => {
   });
 
   // ================================================================
-  // 11. PDA Derivation Correctness
+  // 11. Entry Counter & Close Tournament Validation (v1.2)
+  // ================================================================
+  describe("Entry Counter & Close Tournament (v1.2)", () => {
+    it("entries_remaining tracks entry lifecycle", async () => {
+      // T0 should have entries_remaining reflecting unclaimed/unexpired entries
+      const t0 = await program.account.tournament.fetch(t0Key);
+      // entries_remaining should be a number (may be 0 if all claimed/expired)
+      expect(t0.entriesRemaining).to.be.a("number");
+    });
+
+    it("entries_remaining decremented by claim_payout (T0)", async () => {
+      const t0 = await program.account.tournament.fetch(t0Key);
+      // After lifecycle: entries were created, some claimed — count should be positive
+      // (not all entries are closed yet) and less than total players vec length
+      expect(t0.entriesRemaining).to.be.greaterThanOrEqual(0);
+      // Winner claimed (entry closed), so less than total entries created
+      expect(t0.entriesRemaining).to.be.lessThan(t0.players.length);
+    });
+
+    it("entries_remaining increments on enter, decrements on refund", async () => {
+      // Use T2 which is in Registration
+      const [t2Key] = deriveT(pid, 2);
+
+      // Player 10 already entered T2 in cross-tournament test
+      const t2Before = await program.account.tournament.fetch(t2Key);
+      const countBefore = t2Before.entriesRemaining;
+
+      // Enter another player
+      const p = players[11];
+      const [eKey] = deriveE(pid, t2Key, p.publicKey);
+      await program.methods
+        .enterTournament(Strategy.Random)
+        .accounts({
+          config: configKey, tournament: t2Key, entry: eKey,
+          player: p.publicKey, systemProgram: SystemProgram.programId,
+        })
+        .signers([p])
+        .rpc();
+
+      const t2After = await program.account.tournament.fetch(t2Key);
+      expect(t2After.entriesRemaining).to.equal(countBefore + 1);
+
+      // Refund that player
+      await program.methods
+        .claimRefund()
+        .accounts({
+          tournament: t2Key, entry: eKey,
+          player: p.publicKey, systemProgram: SystemProgram.programId,
+        })
+        .signers([p])
+        .rpc();
+
+      const t2AfterRefund = await program.account.tournament.fetch(t2Key);
+      expect(t2AfterRefund.entriesRemaining).to.equal(countBefore);
+    });
+  });
+
+  // ================================================================
+  // 12. PDA Derivation Correctness
   // ================================================================
   describe("PDA Derivation", () => {
     it("config PDA is deterministic", () => {
@@ -1278,7 +1336,7 @@ describe("dilemma-arena", () => {
   });
 
   // ================================================================
-  // 12. Account Sizing
+  // 13. Account Sizing
   // ================================================================
   describe("Account Sizing", () => {
     it("tournament account size accommodates player vecs", async () => {

@@ -8,13 +8,15 @@ pub const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
 /// Tournament closure delay in seconds (30 days after payout start)
 pub const TOURNAMENT_CLOSURE_SECONDS: i64 = 2_592_000;
 
-/// Winner percentage (top 25%)
+/// Winner percentage (top 25%) — used in finalize_tournament logic
+#[allow(dead_code)]
 pub const WINNER_PERCENTAGE: u32 = 25;
 
 /// Matches per transaction batch
 pub const MATCHES_PER_TX: u32 = 5;
 
-/// Maximum participants per tournament (for account sizing)
+/// Maximum participants per tournament — enforced via config.max_participants
+#[allow(dead_code)]
 pub const MAX_PARTICIPANTS: usize = 5000;
 
 /// Global configuration account
@@ -113,6 +115,8 @@ pub struct Tournament {
     pub claims_processed: u32,
     /// Timestamp when payout state started (for claim expiry)
     pub payout_started_at: i64,
+    /// Number of open entry accounts (inc on enter, dec on claim/refund/expire)
+    pub entries_remaining: u32,
     /// Ordered list of player pubkeys (index = entry order, default = refunded)
     pub players: Vec<Pubkey>,
     /// Scores indexed by entry.index (source of truth for finalization)
@@ -144,6 +148,7 @@ impl Tournament {
         8 +   // winner_pool
         4 +   // claims_processed
         8 +   // payout_started_at
+        4 +   // entries_remaining
         4 +   // players vec len (empty)
         4 +   // scores vec len (empty)
         1 +   // bump
