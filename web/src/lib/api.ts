@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { NETWORK } from './solana';
+import { NETWORK, STRATEGIES } from './solana';
+import type { TournamentAccount, EntryAccount } from './solana';
 import { checkRateLimit } from './rate-limit';
 
 /**
@@ -56,4 +57,54 @@ export function apiError(error: string, code: string, status = 400) {
   }, { status });
   res.headers.set('Access-Control-Allow-Origin', '*');
   return res;
+}
+
+/** Default pubkey (all zeros) — indicates refunded slot */
+const DEFAULT_PUBKEY = '11111111111111111111111111111111';
+
+export interface ScoreboardEntry {
+  player: string;
+  score: number;
+  strategy: number;
+  strategyName: string;
+  matchesPlayed: number;
+  paidOut: boolean;
+  /** true if the entry account still exists on-chain */
+  entryExists: boolean;
+}
+
+/**
+ * Build a complete scoreboard by merging tournament vecs (players/scores)
+ * with entry account data. This ensures claimed/closed entries still appear.
+ */
+export function buildScoreboard(tournament: TournamentAccount, entries: EntryAccount[]): ScoreboardEntry[] {
+  // Index entries by player pubkey for fast lookup
+  const entryMap = new Map<string, EntryAccount>();
+  for (const e of entries) {
+    entryMap.set(e.player, e);
+  }
+
+  const scoreboard: ScoreboardEntry[] = [];
+
+  for (let i = 0; i < tournament.players.length; i++) {
+    const player = tournament.players[i];
+    if (player === DEFAULT_PUBKEY) continue; // refunded slot
+
+    const score = tournament.scores[i] ?? 0;
+    const entry = entryMap.get(player);
+
+    scoreboard.push({
+      player,
+      score,
+      strategy: entry?.strategy ?? -1,
+      strategyName: entry ? (STRATEGIES[entry.strategy]?.name ?? 'Unknown') : 'Unknown',
+      matchesPlayed: entry?.matchesPlayed ?? 0,
+      paidOut: entry?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore),
+      entryExists: !!entry,
+    });
+  }
+
+  // Sort by score descending
+  scoreboard.sort((a, b) => b.score - a.score);
+  return scoreboard;
 }

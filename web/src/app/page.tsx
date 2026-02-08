@@ -210,8 +210,6 @@ export default function Home() {
               </div>
 
               {t.state === 'Registration' && (() => {
-                const now = Math.floor(Date.now() / 1000);
-                const isExpired = now >= Number(t.registrationEnds);
                 const minPlayers = data?.config?.minParticipants ?? 2;
                 const needsMorePlayers = t.participantCount < minPlayers;
                 return (
@@ -225,9 +223,6 @@ export default function Home() {
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-4xl font-bold">{t.participantCount}</div>
                       <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>
-                      {isExpired && needsMorePlayers && (
-                        <div className="text-xs text-amber-500 mt-2">Deadline extends until minimum players join</div>
-                      )}
                     </div>
                   </div>
                 );

@@ -1,5 +1,5 @@
-import { fetchTournament, getAllEntries } from '@/lib/solana';
-import { apiSuccess, apiError, rateLimited } from '@/lib/api';
+import { fetchTournament, getAllEntries, STRATEGIES } from '@/lib/solana';
+import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -12,8 +12,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const tournament = await fetchTournament(idNum);
     if (!tournament) return apiError('Tournament not found', 'NOT_FOUND', 404);
     const entries = await getAllEntries(tournament.address);
+    const scoreboard = buildScoreboard(tournament, entries);
     const cacheSeconds = tournament.state === 'Payout' ? 3600 : 10;
-    return apiSuccess({ tournament, entries }, cacheSeconds);
+    return apiSuccess({ tournament, entries, scoreboard }, cacheSeconds);
   } catch (e) {
     return apiError((e as Error).message, 'FETCH_ERROR', 500);
   }

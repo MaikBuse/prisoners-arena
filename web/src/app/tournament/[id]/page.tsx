@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, use } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
+import type { ScoreboardEntry } from '@/lib/api';
 import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, PROGRAM_ID } from '@/lib/solana';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge } from '@/components/StrategyBadge';
@@ -16,6 +17,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const { id } = use(params);
   const [tournament, setTournament] = useState<TournamentAccount | null>(null);
   const [entries, setEntries] = useState<EntryAccount[]>([]);
+  const [scoreboard, setScoreboard] = useState<ScoreboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
@@ -28,6 +30,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       if (json.ok) {
         setTournament(json.data.tournament);
         setEntries(json.data.entries);
+        setScoreboard(json.data.scoreboard || []);
         setError(null);
       } else {
         setError(json.error || 'Failed to fetch tournament');
@@ -46,7 +49,17 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
   const t = tournament;
 
-  const sorted = [...entries].sort((a, b) => {
+  const displayBoard = scoreboard.length > 0 ? scoreboard : entries.map(e => ({
+    player: e.player,
+    score: e.score,
+    strategy: e.strategy,
+    strategyName: e.strategyName,
+    matchesPlayed: e.matchesPlayed,
+    paidOut: e.paidOut,
+    entryExists: true,
+  }));
+
+  const sorted = [...displayBoard].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
     if (sortField === 'score') return (a.score - b.score) * dir;
     if (sortField === 'strategy') return (a.strategy - b.strategy) * dir;
@@ -189,13 +202,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             {/* Strategy Distribution */}
-            {entries.length > 0 && (
+            {displayBoard.length > 0 && (
               <div className="neon-card rounded-2xl p-6">
                 <h2 className="text-lg font-bold mb-4">Strategy Distribution</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                   {(() => {
                     const dist = new Map<number, { count: number; totalScore: number }>();
-                    entries.forEach(e => {
+                    displayBoard.filter(e => e.strategy >= 0).forEach(e => {
                       const d = dist.get(e.strategy) || { count: 0, totalScore: 0 };
                       d.count++;
                       d.totalScore += e.score;
@@ -224,11 +237,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             )}
 
             {/* Scoreboard */}
-            {entries.length > 0 && (
+            {displayBoard.length > 0 && (
               <div className="neon-card rounded-2xl overflow-hidden">
                 <div className="p-5 border-b border-[var(--card-border)] flex items-center justify-between">
                   <h2 className="text-lg font-bold">Scoreboard</h2>
-                  <span className="text-xs text-[var(--muted)]">{entries.length} players</span>
+                  <span className="text-xs text-[var(--muted)]">{displayBoard.length} players</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -252,7 +265,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       {sorted.map((e, i) => {
                         const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
                         return (
-                          <tr key={e.address} className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors ${
+                          <tr key={e.player} className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors ${
                             isWinner ? 'bg-amber-50/50' : ''
                           }`}>
                             <td className="px-5 py-3 text-[var(--muted)]">
@@ -263,9 +276,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                                  className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(e.player, 6)}</a>
                               <CopyButton text={e.player} />
                             </td>
-                            <td className="px-5 py-3"><StrategyBadge strategy={e.strategy} /></td>
+                            <td className="px-5 py-3">
+                              {e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
+                            </td>
                             <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
-                            <td className="px-5 py-3 text-right text-[var(--muted)]">{e.matchesPlayed} / {t.matchesPerPlayer}</td>
+                            <td className="px-5 py-3 text-right text-[var(--muted)]">
+                              {e.matchesPlayed > 0 ? `${e.matchesPlayed} / ${t.matchesPerPlayer}` : '—'}
+                            </td>
                             {t.state === 'Payout' && (
                               <td className="px-5 py-3 text-center text-sm">
                                 {e.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : '—'}

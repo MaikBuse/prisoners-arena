@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { fetchCurrentTournament, fetchConfig, getAllEntries } from '@/lib/solana';
-import { apiSuccess, apiError, rateLimited } from '@/lib/api';
+import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
   const limited = rateLimited(request);
@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
       getAllEntries(tournament.address),
       fetchConfig(),
     ]);
-    return apiSuccess({ tournament, entries, config });
+    const scoreboard = buildScoreboard(tournament, entries);
+    return apiSuccess({ tournament, entries, scoreboard, config });
   } catch (e) {
     return apiError((e as Error).message, 'FETCH_ERROR', 500);
   }
