@@ -163,6 +163,8 @@ export default function Home() {
                 </div>
                 <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                    className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Explorer ↗</a>
+                <a href={`/tournament/${t.id}`}
+                   className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors font-medium">View Details →</a>
               </div>
 
               {t.state === 'Registration' && (
