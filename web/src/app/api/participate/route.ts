@@ -1,4 +1,4 @@
-import { PROGRAM_ID, NETWORK, RPC_URL, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
+import { PROGRAM_ID, NETWORK, RPC_URL, BASE_URL, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
 import { apiSuccess } from '@/lib/api';
 
 export async function GET() {
@@ -65,7 +65,7 @@ export async function GET() {
         notes: 'Only during Payout state, within 30-day claim window. Score must be >= min_winning_score.',
       },
     },
-    idl_url: '/api/idl',
+    idl_url: `${BASE_URL}/api/idl`,
     source_url: 'https://github.com/dilemma-arena/dilemma-arena',
     explorer_url: explorerLink(PROGRAM_ID.toBase58()),
   }, 3600);

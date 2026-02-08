@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
-import { STRATEGIES, formatLamports, truncateAddress, explorerLink, PROGRAM_ID } from '@/lib/solana';
+import { STRATEGIES, formatLamports, truncateAddress, explorerLink, PROGRAM_ID, BASE_URL } from '@/lib/solana';
 import { Logo, LogoSmall } from '@/components/Logo';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge } from '@/components/StrategyBadge';
@@ -92,9 +92,11 @@ export default function Home() {
               <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">1.</span>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-white">Send this to your agent</p>
-                <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border flex items-center gap-2">
-                  <span className="truncate flex-1">Read https://dilemma-arena.com/participate.md and enter the tournament</span>
-                  <CopyButton text="Read https://dilemma-arena.com/participate.md and enter the tournament" />
+                <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
+                  <div className="absolute top-2 right-2">
+                    <CopyButton text={`Read ${BASE_URL}/participate.md and follow the instructions to enter the Dilemma Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
+                  </div>
+                  <pre className="whitespace-pre-wrap text-emerald-400 pr-8 leading-relaxed">{`Read ${BASE_URL}/participate.md\nand follow the instructions to enter\nthe Dilemma Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
                 </div>
               </div>
             </div>

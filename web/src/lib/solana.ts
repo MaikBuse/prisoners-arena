@@ -1,8 +1,12 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 
-export const PROGRAM_ID = new PublicKey('Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7');
-export const RPC_URL = 'https://api.devnet.solana.com';
-export const NETWORK = 'devnet';
+// Environment-driven configuration
+export const PROGRAM_ID = new PublicKey(
+  process.env.NEXT_PUBLIC_PROGRAM_ID || 'Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7'
+);
+export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.devnet.solana.com';
+export const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'devnet';
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://dilemma-arena.com';
 export const EXPLORER_BASE = 'https://explorer.solana.com';
 
 const connection = new Connection(RPC_URL, 'confirmed');
@@ -52,6 +56,13 @@ export const STRATEGY_BAR_COLORS: Record<string, string> = {
   cyan: 'bg-cyan-500',
   pink: 'bg-pink-500',
 };
+
+// Explorer link — omit cluster param for mainnet-beta
+export function explorerLink(address: string, type: 'address' | 'tx' = 'address'): string {
+  const base = `${EXPLORER_BASE}/${type}/${address}`;
+  if (NETWORK === 'mainnet-beta') return base;
+  return `${base}?cluster=${NETWORK}`;
+}
 
 // Cache
 const cache = new Map<string, { data: unknown; ts: number }>();
@@ -121,10 +132,6 @@ export function deriveEntryPDA(tournamentPubkey: PublicKey, playerPubkey: Public
   );
 }
 
-export function explorerLink(address: string, type: 'address' | 'tx' = 'address'): string {
-  return `${EXPLORER_BASE}/${type}/${address}?cluster=${NETWORK}`;
-}
-
 // Deserialization
 export interface ConfigAccount {
   admin: string;
@@ -142,7 +149,7 @@ export interface ConfigAccount {
 }
 
 export function deserializeConfig(data: Buffer, address: string): ConfigAccount {
-  let offset = 8; // skip discriminator
+  let offset = 8;
   const admin = readPubkey(data, offset); offset += 32;
   const operator = readPubkey(data, offset); offset += 32;
   const houseFeeBps = readU16LE(data, offset); offset += 2;
@@ -189,7 +196,6 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const id = readU32LE(data, offset); offset += 4;
   const stateVal = readU8(data, offset); offset += 1;
   const state = STATE_MAP[stateVal] || 'Registration';
-  // 7 bytes padding for enum alignment? No - Anchor enums are 1 byte for simple enums
   const stake = readU64LE(data, offset).toString(); offset += 8;
   const houseFeeBps = readU16LE(data, offset); offset += 2;
   const matchesPerPlayer = readU16LE(data, offset); offset += 2;
@@ -205,14 +211,12 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const claimsProcessed = readU32LE(data, offset); offset += 4;
   const payoutStartedAt = readI64LE(data, offset).toString(); offset += 8;
 
-  // Vec<Pubkey> players
   const playersLen = readU32LE(data, offset); offset += 4;
   const players: string[] = [];
   for (let i = 0; i < playersLen; i++) {
     players.push(readPubkey(data, offset)); offset += 32;
   }
 
-  // Vec<u32> scores
   const scoresLen = readU32LE(data, offset); offset += 4;
   const scores: number[] = [];
   for (let i = 0; i < scoresLen; i++) {
@@ -269,7 +273,6 @@ export async function fetchConfig(): Promise<ConfigAccount | null> {
 
 export async function fetchTournament(id: number): Promise<TournamentAccount | null> {
   const cacheKey = `tournament-${id}`;
-  // Use short TTL for potentially active tournaments, long for historical
   const cached = getCached<TournamentAccount>(cacheKey, CACHE_TTL_CURRENT);
   if (cached) return cached;
 
@@ -278,12 +281,7 @@ export async function fetchTournament(id: number): Promise<TournamentAccount | n
   if (!info) return null;
 
   const tournament = deserializeTournament(Buffer.from(info.data), pda.toBase58());
-  const ttl = tournament.state === 'Payout' ? CACHE_TTL_HISTORICAL : CACHE_TTL_CURRENT;
   setCache(cacheKey, tournament);
-  // Update TTL-aware cache
-  if (ttl === CACHE_TTL_HISTORICAL) {
-    cache.set(cacheKey, { data: tournament, ts: Date.now() });
-  }
   return tournament;
 }
 
@@ -318,7 +316,6 @@ export async function fetchEntryByPlayer(playerPubkey: string): Promise<EntryAcc
   const config = await fetchConfig();
   if (!config) return null;
 
-  // Try current tournament first
   const [tournamentPda] = deriveTournamentPDA(config.currentTournamentId);
   const playerPk = new PublicKey(playerPubkey);
   const [entryPda] = deriveEntryPDA(tournamentPda, playerPk);

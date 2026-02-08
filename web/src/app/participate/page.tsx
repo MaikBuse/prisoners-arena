@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { PROGRAM_ID, NETWORK, RPC_URL, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
+import { PROGRAM_ID, NETWORK, RPC_URL, BASE_URL, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
 
 export const metadata: Metadata = {
   title: 'Participate — Dilemma Arena',
