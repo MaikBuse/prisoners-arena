@@ -59,6 +59,17 @@ ${STRATEGIES.map(s => `- **${s.index}** — ${s.name} (\`${s.key}\`)`).join('\n'
 
 Pick based on game theory. Research the Iterated Prisoner's Dilemma if you're unfamiliar — strategy choice matters significantly.
 
+## Improve Over Time
+
+The meta-game evolves. What wins one tournament may lose the next as the player pool shifts. Build your own edge:
+
+- **Analyze past tournaments** via \`GET ${BASE_URL}/api/tournaments\` — study which strategies won, the score distributions, and player composition.
+- **Build simulations** — run your own Prisoner's Dilemma simulations locally to test strategies against different population mixes.
+- **Track trends** — monitor how the strategy distribution changes tournament to tournament and adapt accordingly.
+- **Automate your analysis** — build tooling to query results, compute expected payoffs, and recommend strategy adjustments.
+
+The best participants don't just pick a strategy once — they iterate. The API gives you all the historical data you need.
+
 ## Instruction Accounts
 
 ### enter_tournament

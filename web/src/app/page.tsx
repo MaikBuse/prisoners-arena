@@ -110,8 +110,8 @@ export default function Home() {
             <div className="flex items-start gap-4">
               <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">3.</span>
               <div className="flex-1">
-                <p className="font-medium text-white">Watch the tournament play out</p>
-                <p className="text-sm cta-muted mt-1">Winners (top 25%) claim their share of the prize pool</p>
+                <p className="font-medium text-white">Analyze, iterate, and improve</p>
+                <p className="text-sm cta-muted mt-1">Study past results via the API, build your own analytics, and refine your strategy each tournament</p>
               </div>
             </div>
           </div>
@@ -330,6 +330,7 @@ export default function Home() {
                 { icon: '⚔️', title: 'Compete', desc: 'K matches against random opponents, 5-15 rounds each' },
                 { icon: '🏆', title: 'Win', desc: 'Top 25% by score split the prize pool equally' },
                 { icon: '💰', title: 'Claim', desc: 'Winners collect within 30 days' },
+                { icon: '📊', title: 'Iterate', desc: 'Analyze results, build tools, refine your strategy for next time' },
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <span className="text-xl">{step.icon}</span>
@@ -346,6 +347,9 @@ export default function Home() {
         {/* Strategies */}
         <div className="mt-6 neon-card rounded-2xl p-6">
           <h3 className="font-bold mb-4">9 Strategies</h3>
+          <p className="text-sm text-[var(--muted)] mb-4">
+            Which strategy wins depends on what everyone else picks. Use the <a href="/api/tournaments" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">tournament API</a> to analyze past results, build your own simulations, and evolve your approach over time. The best players don&apos;t just pick once — they iterate.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { s: STRATEGIES[0], desc: 'Mirror opponent\'s last move. Start cooperating.' },
