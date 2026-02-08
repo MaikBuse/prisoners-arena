@@ -20,6 +20,9 @@ interface TournamentData {
 export default function Home() {
   const [data, setData] = useState<TournamentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const fetchData = useCallback(async () => {
     try {
@@ -163,8 +166,10 @@ export default function Home() {
                 </div>
                 <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                    className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Explorer ↗</a>
-                <a href={`/tournament/${t.id}`}
-                   className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors font-medium">View Details →</a>
+                <button onClick={() => setDetailOpen(!detailOpen)}
+                   className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors font-medium cursor-pointer">
+                  {detailOpen ? 'Hide Details ↑' : 'View Details →'}
+                </button>
               </div>
 
               {t.state === 'Registration' && (
@@ -222,74 +227,137 @@ export default function Home() {
                 <span>K={t.matchesPerPlayer} matches/player</span>
                 <span>Program: <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(PROGRAM_ID.toBase58(), 6)}</a></span>
               </div>
+
+              {/* Detail Panel (inline popover) */}
+              {detailOpen && (
+                <div className="mt-6 pt-6 border-t border-[var(--card-border)] space-y-6 animate-count-up">
+                  {/* Extended Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <MiniStat label="Prize Pool" value={`${formatLamports(t.pool)} SOL`} />
+                    <MiniStat label="Stake" value={`${formatLamports(t.stake)} SOL`} />
+                    <MiniStat label="House Fee" value={`${t.houseFeeBps / 100}%`} />
+                    <MiniStat label="Players" value={String(t.participantCount)} />
+                    {t.state === 'Payout' && <>
+                      <MiniStat label="🏆 Winners" value={String(t.winnerCount)} />
+                      <MiniStat label="Per Winner" value={t.winnerCount > 0 ? `${formatLamports((BigInt(t.winnerPool) / BigInt(t.winnerCount)).toString())} SOL` : '—'} />
+                      <MiniStat label="Min Score" value={String(t.minWinningScore)} />
+                      <MiniStat label="Claimed" value={`${t.claimsProcessed} / ${t.winnerCount}`} />
+                    </>}
+                  </div>
+
+                  {/* Strategy Distribution with avg scores */}
+                  {entries.length > 0 && (() => {
+                    const dist = new Map<number, { count: number; totalScore: number }>();
+                    entries.forEach(e => {
+                      const d = dist.get(e.strategy) || { count: 0, totalScore: 0 };
+                      d.count++;
+                      d.totalScore += e.score;
+                      dist.set(e.strategy, d);
+                    });
+                    const maxCount = Math.max(...Array.from(dist.values()).map(d => d.count), 1);
+                    return (
+                      <div>
+                        <h4 className="text-sm font-bold mb-3">Strategy Breakdown</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                          {STRATEGIES.map(s => {
+                            const d = dist.get(s.index);
+                            if (!d) return null;
+                            const avg = d.count > 0 ? (d.totalScore / d.count).toFixed(1) : '—';
+                            return (
+                              <div key={s.index} className="flex items-center gap-2">
+                                <span className="text-xs text-[var(--muted)] w-24 truncate">{s.name}</span>
+                                <div className="flex-1 bg-neutral-100 rounded-full h-2.5 overflow-hidden">
+                                  <div className={`h-full rounded-full ${BAR_COLORS[s.color]}`}
+                                    style={{ width: `${(d.count / maxCount) * 100}%` }} />
+                                </div>
+                                <span className="text-xs text-[var(--muted)] w-5 text-right">{d.count}</span>
+                                <span className="text-xs text-[var(--muted)] w-14 text-right font-mono">avg {avg}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Scoreboard */}
+                  {entries.length > 0 && (() => {
+                    const toggleSort = (field: typeof sortField) => {
+                      if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                      else { setSortField(field); setSortDir('desc'); }
+                    };
+                    const sortIcon = (field: typeof sortField) =>
+                      sortField === field ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '';
+                    const sorted = [...entries].sort((a, b) => {
+                      const dir = sortDir === 'asc' ? 1 : -1;
+                      if (sortField === 'score') return (a.score - b.score) * dir;
+                      if (sortField === 'strategy') return (a.strategy - b.strategy) * dir;
+                      return a.player.localeCompare(b.player) * dir;
+                    });
+
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold">Scoreboard</h4>
+                          <span className="text-xs text-[var(--muted)]">{entries.length} players</span>
+                        </div>
+                        <div className="overflow-x-auto rounded-xl border border-[var(--card-border)]">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-[var(--muted)] text-xs border-b border-[var(--card-border)] bg-[var(--surface)]">
+                                <th className="px-4 py-2 text-left w-10">#</th>
+                                <th className="px-4 py-2 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('player')}>
+                                  Player{sortIcon('player')}
+                                </th>
+                                <th className="px-4 py-2 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('strategy')}>
+                                  Strategy{sortIcon('strategy')}
+                                </th>
+                                <th className="px-4 py-2 text-right cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('score')}>
+                                  Score{sortIcon('score')}
+                                </th>
+                                <th className="px-4 py-2 text-right">Matches</th>
+                                {t.state === 'Payout' && <th className="px-4 py-2 text-center">Status</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sorted.map((e, i) => {
+                                const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
+                                return (
+                                  <tr key={e.address} className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''}`}>
+                                    <td className="px-4 py-2 text-[var(--muted)]">{isWinner && '🏆'}{i + 1}</td>
+                                    <td className="px-4 py-2 font-mono text-xs">
+                                      <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
+                                         className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(e.player, 5)}</a>
+                                      <CopyButton text={e.player} />
+                                    </td>
+                                    <td className="px-4 py-2"><StrategyBadge strategy={e.strategy} /></td>
+                                    <td className="px-4 py-2 text-right font-mono font-bold">{e.score}</td>
+                                    <td className="px-4 py-2 text-right text-[var(--muted)]">{e.matchesPlayed}/{t.matchesPerPlayer}</td>
+                                    {t.state === 'Payout' && (
+                                      <td className="px-4 py-2 text-center text-xs">
+                                        {e.paidOut ? '✅' : isWinner ? '⏳' : '—'}
+                                      </td>
+                                    )}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Link to full page */}
+                  <div className="text-center">
+                    <a href={`/tournament/${t.id}`} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                      Open full page ↗
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Strategy Distribution */}
-            {entries.length > 0 && (
-              <div className="neon-card rounded-2xl p-6">
-                <h3 className="text-lg font-bold mb-4">Strategy Distribution</h3>
-                <div className="space-y-2">
-                  {(() => {
-                    const dist = new Map<number, number>();
-                    entries.forEach(e => dist.set(e.strategy, (dist.get(e.strategy) || 0) + 1));
-                    const max = Math.max(...dist.values(), 1);
-                    return STRATEGIES.map(s => {
-                      const count = dist.get(s.index) || 0;
-                      if (count === 0) return null;
-                      return (
-                        <div key={s.index} className="flex items-center gap-3">
-                          <span className="text-xs text-[var(--muted)] w-28 truncate">{s.name}</span>
-                          <div className="flex-1 bg-neutral-100 rounded-full h-3 overflow-hidden">
-                            <div className={`h-full rounded-full ${BAR_COLORS[s.color]} transition-all duration-500`}
-                              style={{ width: `${(count / max) * 100}%` }} />
-                          </div>
-                          <span className="text-xs text-[var(--muted)] w-6 text-right">{count}</span>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Leaderboard */}
-            {entries.length > 0 && (
-              <div className="neon-card rounded-2xl overflow-hidden">
-                <div className="p-5 border-b border-[var(--card-border)]">
-                  <h3 className="text-lg font-bold">Leaderboard</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-[var(--muted)] text-xs border-b border-[var(--card-border)]">
-                        <th className="px-5 py-3 text-left">#</th>
-                        <th className="px-5 py-3 text-left">Player</th>
-                        <th className="px-5 py-3 text-left">Strategy</th>
-                        <th className="px-5 py-3 text-right">Score</th>
-                        <th className="px-5 py-3 text-right">Matches</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entries.map((e, i) => (
-                        <tr key={e.address} className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors ${
-                          t.state === 'Payout' && e.score >= t.minWinningScore ? 'bg-amber-50/50' : ''
-                        }`}>
-                          <td className="px-5 py-3 text-[var(--muted)]">{i + 1}</td>
-                          <td className="px-5 py-3 font-mono text-sm">
-                            <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
-                               className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(e.player)}</a>
-                            <CopyButton text={e.player} />
-                          </td>
-                          <td className="px-5 py-3"><StrategyBadge strategy={e.strategy} /></td>
-                          <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
-                          <td className="px-5 py-3 text-right text-[var(--muted)]">{e.matchesPlayed}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </section>
@@ -427,6 +495,15 @@ function StatBox({ label, value }: { label: string; value: string }) {
     <div className="text-center animate-count-up">
       <div className="text-2xl md:text-3xl font-bold">{value}</div>
       <div className="text-xs text-[var(--muted)] mt-1">{label}</div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-[var(--surface)] rounded-lg px-3 py-2 border border-[var(--card-border)]">
+      <div className="text-xs text-[var(--muted)]">{label}</div>
+      <div className="font-bold text-sm mt-0.5">{value}</div>
     </div>
   );
 }
