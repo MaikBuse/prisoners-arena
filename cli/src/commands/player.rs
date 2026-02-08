@@ -67,12 +67,10 @@ pub fn refund(cfg: &ArenaConfig, wallet: &str, dry_run: bool) -> Result<()> {
     let player = cfg.load_keypair(wallet)?;
 
     let config = state::fetch_config(&client, &program_id)?;
-    let (config_pda, _) = state::get_config_pda(&program_id);
     let (tournament_pda, _) = state::get_tournament_pda(&program_id, config.current_tournament_id);
     let (entry_pda, _) = state::get_entry_pda(&program_id, &tournament_pda, &player.pubkey());
 
     let accounts = vec![
-        AccountMeta::new(config_pda, false),
         AccountMeta::new(tournament_pda, false),
         AccountMeta::new(entry_pda, false),
         AccountMeta::new(player.pubkey(), true),
@@ -96,15 +94,14 @@ pub fn claim(cfg: &ArenaConfig, wallet: &str, tournament_id: Option<u32>, dry_ru
         None => state::fetch_config(&client, &program_id)?.current_tournament_id,
     };
 
-    let (config_pda, _) = state::get_config_pda(&program_id);
     let (tournament_pda, _) = state::get_tournament_pda(&program_id, tid);
     let (entry_pda, _) = state::get_entry_pda(&program_id, &tournament_pda, &player.pubkey());
 
     let accounts = vec![
-        AccountMeta::new(config_pda, false),
         AccountMeta::new(tournament_pda, false),
         AccountMeta::new(entry_pda, false),
         AccountMeta::new(player.pubkey(), true),
+        AccountMeta::new_readonly(system_program::id(), false),
     ];
 
     let ix = Instruction { program_id, accounts, data: disc::CLAIM_PAYOUT.to_vec() };

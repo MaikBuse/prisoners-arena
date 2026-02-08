@@ -23,10 +23,10 @@ const MATCHES_PER_TX: u32 = 5;
 
 /// Instruction discriminators (first 8 bytes of sha256("global:<instruction_name>"))
 mod discriminator {
-    pub const CLOSE_REGISTRATION: [u8; 8] = [183, 185, 95, 223, 49, 172, 156, 116];
-    pub const RUN_MATCHES: [u8; 8] = [34, 84, 108, 27, 67, 202, 104, 110];
-    pub const FINALIZE_TOURNAMENT: [u8; 8] = [113, 70, 107, 14, 70, 238, 6, 95];
-    pub const CLOSE_EXPIRED_ENTRY: [u8; 8] = [154, 42, 203, 203, 45, 162, 17, 147];
+    pub const CLOSE_REGISTRATION: [u8; 8] = [44, 118, 178, 58, 21, 125, 102, 138];
+    pub const RUN_MATCHES: [u8; 8] = [231, 195, 232, 182, 30, 237, 182, 246];
+    pub const FINALIZE_TOURNAMENT: [u8; 8] = [205, 30, 149, 11, 108, 122, 120, 11];
+    pub const CLOSE_EXPIRED_ENTRY: [u8; 8] = [241, 64, 198, 246, 182, 114, 87, 149];
 }
 
 /// Close registration and transition to Running state
@@ -66,9 +66,9 @@ pub fn close_registration(
             bail!("Need to refund but couldn't find last player");
         }
     } else {
-        // Null accounts for optional refund
-        accounts.push(AccountMeta::new_readonly(system_program::id(), false)); // placeholder
-        accounts.push(AccountMeta::new_readonly(system_program::id(), false)); // placeholder
+        // Pass program ID for optional None accounts (Anchor convention)
+        accounts.push(AccountMeta::new_readonly(*program_id, false)); // refund_entry = None
+        accounts.push(AccountMeta::new_readonly(*program_id, false)); // refund_player = None
     }
     
     accounts.push(AccountMeta::new_readonly(operator.pubkey(), true)); // operator (signer)

@@ -208,11 +208,13 @@ pub fn run_matches<'info>(
         let entry_b = find_entry_account(remaining_accounts, &tournament.key(), player_b)?;
 
         // Deserialize entries
-        let mut entry_a_data = entry_a.try_borrow_mut_data()?;
-        let mut entry_b_data = entry_b.try_borrow_mut_data()?;
+        let entry_a_data = entry_a.try_borrow_data()?;
+        let entry_b_data = entry_b.try_borrow_data()?;
         
-        let entry_a_account: &mut Entry = bytemuck_workaround_deserialize(&mut entry_a_data)?;
-        let entry_b_account: &mut Entry = bytemuck_workaround_deserialize(&mut entry_b_data)?;
+        let mut entry_a_account = deserialize_entry(&entry_a_data)?;
+        let mut entry_b_account = deserialize_entry(&entry_b_data)?;
+        drop(entry_a_data);
+        drop(entry_b_data);
 
         // Verify indices match
         require!(entry_a_account.index == idx_a, DilemmaError::InvalidEntryAccount);
@@ -234,6 +236,14 @@ pub fn run_matches<'info>(
         entry_b_account.score += result.total_score_b;
         entry_a_account.matches_played += 1;
         entry_b_account.matches_played += 1;
+
+        // Write back
+        let mut entry_a_data = entry_a.try_borrow_mut_data()?;
+        let mut entry_b_data = entry_b.try_borrow_mut_data()?;
+        serialize_entry(&entry_a_account, &mut entry_a_data)?;
+        serialize_entry(&entry_b_account, &mut entry_b_data)?;
+        drop(entry_a_data);
+        drop(entry_b_data);
 
         tournament.scores[idx_a as usize] += result.total_score_a;
         tournament.scores[idx_b as usize] += result.total_score_b;
@@ -282,18 +292,19 @@ fn find_entry_account<'info>(
 }
 
 /// Workaround for deserializing Entry from account data
-fn bytemuck_workaround_deserialize<'a>(data: &'a mut [u8]) -> Result<&'a mut Entry> {
-    // Skip 8-byte discriminator
-    if data.len() < 8 + Entry::LEN - 8 {
+fn deserialize_entry(data: &[u8]) -> Result<Entry> {
+    if data.len() < 8 {
         return Err(DilemmaError::InvalidEntryAccount.into());
     }
-    
-    // This is a simplified approach - in production use proper anchor deserialization
-    let entry = unsafe {
-        &mut *(data.as_mut_ptr().add(8) as *mut Entry)
-    };
-    
-    Ok(entry)
+    Entry::try_deserialize(&mut &data[..])
+        .map_err(|_| DilemmaError::InvalidEntryAccount.into())
+}
+
+fn serialize_entry(entry: &Entry, data: &mut [u8]) -> Result<()> {
+    // try_serialize writes discriminator + borsh data, so write from offset 0
+    let mut writer = &mut data[..];
+    entry.try_serialize(&mut writer)
+        .map_err(|_| DilemmaError::InvalidEntryAccount.into())
 }
 
 /// Finalize tournament and determine winners, create next tournament
@@ -375,8 +386,15 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
         .checked_div(10000)
         .ok_or(DilemmaError::Overflow)?;
 
-    // Add dust from division to fees
-    let winner_pool_raw = tournament.pool - house_fee;
+    // Determine max distributable lamports (total - rent-exempt minimum)
+    let rent = Rent::get()?;
+    let tournament_info = tournament.to_account_info();
+    let min_balance = rent.minimum_balance(tournament_info.data_len());
+    let max_distributable = tournament_info.lamports()
+        .saturating_sub(min_balance);
+    
+    // Winner pool is the lesser of (pool - fees) and max distributable
+    let winner_pool_raw = (tournament.pool - house_fee).min(max_distributable);
     let per_winner = winner_pool_raw / tournament.winner_count as u64;
     let dust = winner_pool_raw - (per_winner * tournament.winner_count as u64);
 

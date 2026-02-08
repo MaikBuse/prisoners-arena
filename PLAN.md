@@ -21,7 +21,7 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 
 | Component | Tech | Status |
 |-----------|------|--------|
-| Match Logic | Rust crate + WASM | 🟢 complete |
+| Match Logic | Rust crate | 🟢 complete |
 | Smart Contract | Anchor 0.32 | 🟢 complete (dynamic sizing) |
 | Operator Bot | Rust | 🟢 complete |
 | Admin CLI | Rust | 🟢 complete |
@@ -37,10 +37,7 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 - [x] Match execution with history
 - [x] Seeded PRNG (deterministic)
 - [x] Pairing generation (deduplicated, circular method)
-- [x] WASM bindings (feature-gated)
 - [x] Fix Gradual strategy to match architecture spec
-- [ ] WASM vs native determinism test
-- [ ] npm package build config
 
 ### Smart Contract (`programs/dilemma-arena`)
 
@@ -263,7 +260,6 @@ Tournament accounts now grow incrementally as players join.
 | Admin CLI | 🟢 Complete |
 | Localnet demo | 🟢 Complete |
 | Dynamic account sizing | 🟢 Complete |
-| WASM integration | ⚪ Planned |
 | Devnet deploy | 🟢 Complete (program + config initialized) |
 | Frontend (dilemma-arena.com) | 🟢 Complete |
 | Transparency & auditability | 🟡 Partial (IDL published, trust messaging done; GitHub/verified builds pending) |

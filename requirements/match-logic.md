@@ -13,8 +13,7 @@ crates/match-logic/
 │   ├── lib.rs
 │   ├── strategy.rs    # Strategy execution
 │   ├── game.rs        # Match execution
-│   ├── pairing.rs     # Deterministic pairings
-│   └── wasm.rs        # WASM bindings (feature-gated)
+│   └── pairing.rs     # Deterministic pairings
 ```
 
 ---
@@ -48,13 +47,7 @@ crates/match-logic/
 
 ### Determinism
 - [ ] No floating-point math (integers only)
-- [ ] WASM output matches native output byte-for-byte
 - [ ] Same seed + inputs = same outputs always
-
-### WASM
-- [ ] `replay_match()` export for visualization
-- [ ] `get_strategy_description()` export for UI
-- [ ] Builds with wasm-pack
 
 ---
 
@@ -65,4 +58,3 @@ crates/match-logic/
 - [ ] Round distribution tests (statistical)
 - [ ] Pairing determinism tests
 - [ ] Pairing with gaps (refunded players) tests
-- [ ] WASM vs native comparison test

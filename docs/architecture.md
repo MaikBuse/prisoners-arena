@@ -577,27 +577,13 @@ match-logic/
 │   ├── lib.rs
 │   ├── strategy.rs    # Strategy execution
 │   ├── game.rs        # Match execution
-│   ├── pairing.rs     # Deterministic pairings
-│   └── wasm.rs        # WASM bindings (feature-gated)
+│   └── pairing.rs     # Deterministic pairings
 ```
 
 ### Determinism Requirements
 
 - **No floating-point math** — integers only
-- Same seeded PRNG for native and WASM
-- Test: identical byte-for-byte output for same inputs
-
-### WASM Exports
-
-```rust
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
-pub fn replay_match(strategy_a: u8, strategy_b: u8, seed: &[u8], match_index: u32) -> JsValue;
-
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
-pub fn get_strategy_description(strategy: u8) -> String;
-```
+- Same seeded PRNG across all consumers
 
 ---
 
@@ -760,6 +746,6 @@ All three layers share the same server-side data fetching and deserialization lo
 - Strategy parameters (forgiveness, noise tolerance, etc.)
 - Commit-reveal for strategy hiding
 - Switchboard VRF for secure randomness
-- Custom WASM strategies
+- Custom strategies (WASM-based)
 - Tournament history / player stats
 - Larger tournament support (off-chain sort + merkle proofs)

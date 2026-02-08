@@ -41,7 +41,7 @@ Nine base strategies available — see `requirements/match-logic.md` for the ful
 
 ```
 dilemma-arena/
-├── crates/match-logic/    # Shared game logic (Rust + WASM)
+├── crates/match-logic/    # Shared game logic (Rust)
 ├── programs/dilemma-arena/# Solana smart contract (Anchor)
 ├── operator/              # Tournament automation (Rust)
 ├── docs/                  # Technical specification
@@ -78,12 +78,9 @@ just build
 - Rust (via rustup)
 - Solana CLI 1.18+
 - Anchor Framework
-- wasm-pack (for WASM builds)
-
 ### Commands
 
 ```bash
 just test-match-logic  # Test game logic
-just build-wasm        # Build WASM for clients
 just test-contract     # Test smart contract
 ```
