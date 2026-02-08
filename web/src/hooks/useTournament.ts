@@ -1,63 +1,92 @@
-import { useState, useEffect } from 'react'
-import { useConnection } from '@solana/wallet-adapter-react'
-import { Tournament } from '../types'
+import { useState, useEffect, useCallback } from "react";
+import { useProgram, useProgramId, getConfigPda, getTournamentPda, getEntryPda } from "./useProgram";
+import type { ConfigAccount, TournamentAccount, EntryAccount } from "../types";
+import { PublicKey } from "@solana/web3.js";
 
-// Mock tournament data - replace with actual contract fetching
-const mockTournament: Tournament = {
-  id: 1,
-  state: 'Registration',
-  pool: 3_500_000_000, // 3.5 SOL
-  participant_count: 12,
-  registration_ends: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-  matches_completed: 0,
-  matches_total: 0,
-  winner_count: 0,
-}
+export function useConfig() {
+  const program = useProgram();
+  const programId = useProgramId();
+  const [config, setConfig] = useState<ConfigAccount | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export function useTournament() {
-  const { connection } = useConnection()
-  const [tournament, setTournament] = useState<Tournament | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // TODO: Fetch actual tournament data from contract
-    // For now, use mock data
-    const fetchTournament = async () => {
-      try {
-        setLoading(true)
-        // Simulate network delay
-        await new Promise((r) => setTimeout(r, 500))
-        setTournament(mockTournament)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetch = useCallback(async () => {
+    try {
+      const pda = getConfigPda(programId);
+      const acc = await (program.account as any).config.fetch(pda);
+      setConfig(acc as ConfigAccount);
+    } catch {
+      setConfig(null);
+    } finally {
+      setLoading(false);
     }
+  }, [program, programId]);
 
-    fetchTournament()
+  useEffect(() => { fetch(); }, [fetch]);
 
-    // Poll for updates
-    const interval = setInterval(fetchTournament, 10000)
-    return () => clearInterval(interval)
-  }, [connection])
-
-  return { tournament, loading, error }
+  return { config, loading, refetch: fetch };
 }
 
-// Hook for fetching entries
-export function useEntries(tournamentId?: number) {
-  const [entries, setEntries] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export function useTournament(id: number | null) {
+  const program = useProgram();
+  const programId = useProgramId();
+  const [tournament, setTournament] = useState<TournamentAccount | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  const fetch = useCallback(async () => {
+    if (id === null) { setLoading(false); return; }
+    try {
+      const pda = getTournamentPda(programId, id);
+      const acc = await (program.account as any).tournament.fetch(pda);
+      setTournament(acc as TournamentAccount);
+    } catch {
+      setTournament(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [program, programId, id]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { tournament, loading, refetch: fetch };
+}
+
+export function useEntry(tournamentId: number | null, player: PublicKey | null) {
+  const program = useProgram();
+  const programId = useProgramId();
+  const [entry, setEntry] = useState<EntryAccount | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    if (tournamentId === null || !player) { setEntry(null); setLoading(false); return; }
+    try {
+      const tournamentPda = getTournamentPda(programId, tournamentId);
+      const entryPda = getEntryPda(programId, tournamentPda, player);
+      const acc = await (program.account as any).entry.fetch(entryPda);
+      setEntry(acc as EntryAccount);
+    } catch {
+      setEntry(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [program, programId, tournamentId, player]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { entry, loading, refetch: fetch };
+}
+
+export function usePolling(
+  refetchConfig: () => Promise<void>,
+  refetchTournament: () => Promise<void>,
+  tournament: TournamentAccount | null
+) {
   useEffect(() => {
-    if (!tournamentId) return
-
-    // TODO: Fetch actual entries from contract
-    setLoading(false)
-    setEntries([])
-  }, [tournamentId])
-
-  return { entries, loading }
+    const isRunning = tournament?.state && "running" in tournament.state;
+    const interval = isRunning ? 5000 : 30000;
+    const id = setInterval(() => {
+      refetchConfig();
+      refetchTournament();
+    }, interval);
+    return () => clearInterval(id);
+  }, [refetchConfig, refetchTournament, tournament]);
 }

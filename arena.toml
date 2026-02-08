@@ -1,0 +1,15 @@
+[network]
+rpc_url = "https://api.devnet.solana.com"
+program_id = "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7"
+
+[wallets]
+admin = "~/.config/solana/id.json"
+operator = "~/.config/solana/operator.json"
+
+[defaults]
+stake = 100000000
+min_participants = 2
+max_participants = 100
+registration_duration = 300
+matches_per_player = 15
+house_fee_bps = 0

@@ -24,8 +24,8 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 | Match Logic | Rust crate + WASM | 🟢 complete |
 | Smart Contract | Anchor 0.32 | 🟢 complete (dynamic sizing) |
 | Operator Bot | Rust | 🟡 needs manual mode |
-| Admin CLI | Rust | 🟡 not started |
-| Frontend | React + Vite + TypeScript | 🟡 not started |
+| Admin CLI | Rust | 🟢 complete |
+| Frontend | Next.js + TypeScript + Tailwind | 🟡 not started |
 
 ---
 
@@ -112,21 +112,21 @@ Tournament accounts now grow incrementally as players join.
 - [x] Tournament deserialization handles variable-size vecs (already supported)
 
 ### Admin CLI (`cli/`)
-- [ ] Project structure (Rust, clap)
-- [ ] TOML config loading (`arena.toml`)
-- [ ] `arena init` — initialize config + Tournament #0
-- [ ] `arena config show` — display on-chain config
-- [ ] `arena config update` — update config parameters
-- [ ] `arena withdraw-fees` — withdraw house fees
-- [ ] `arena status` — current tournament state
-- [ ] `arena tournament <id>` — specific tournament details
-- [ ] `arena entries` — list entries for a tournament
-- [ ] `arena enter` — enter tournament with wallet/strategy
-- [ ] `arena refund` — claim refund
-- [ ] `arena claim` — claim payout
-- [ ] `arena balance` — check wallet balance
-- [ ] `arena airdrop` — devnet airdrop
-- [ ] `--dry-run` flag on write operations
+- [x] Project structure (Rust, clap)
+- [x] TOML config loading (`arena.toml`)
+- [x] `arena init` — initialize config + Tournament #0
+- [x] `arena config show` — display on-chain config
+- [x] `arena config update` — update config parameters
+- [x] `arena withdraw-fees` — withdraw house fees
+- [x] `arena status` — current tournament state
+- [x] `arena tournament <id>` — specific tournament details
+- [x] `arena entries` — list entries for a tournament
+- [x] `arena enter` — enter tournament with wallet/strategy
+- [x] `arena refund` — claim refund
+- [x] `arena claim` — claim payout
+- [x] `arena balance` — check wallet balance
+- [x] `arena airdrop` — devnet airdrop
+- [x] `--dry-run` flag on write operations
 
 ### Operator Bot (`operator/`)
 - [x] Project structure
@@ -141,20 +141,27 @@ Tournament accounts now grow incrementally as players join.
 - [x] Exit codes (0 = action taken, 1 = nothing to do, 2 = error)
 - [ ] Localnet testing (requires AVX-capable CPU)
 
-### Frontend (`web/`)
-- [ ] Project setup (React 18 + Vite + TypeScript + Tailwind)
-- [ ] Network selector (devnet/mainnet) with env var overrides
-- [ ] Anchor client integration (IDL-based account deserialization)
-- [ ] Wallet adapter (Phantom, Solflare, Backpack)
-- [ ] Dashboard page — tournament state, countdown, progress, config panel
-- [ ] Enter tournament flow with strategy picker
-- [ ] Scores table (sortable, highlights connected wallet + winners)
-- [ ] Claim refund + claim payout actions
-- [ ] Entry view for connected wallet
+### Frontend (`web/`) — dilemma-arena.com
+- [ ] Project setup (Next.js App Router + TypeScript + Tailwind)
+- [ ] Server-side Solana data fetching (Config, Tournament, Entry deserialization)
+- [ ] Dashboard page — tournament state, countdown, progress, scores table
+- [ ] Scores table with Solana Explorer links for pubkeys
 - [ ] Tournament history page
 - [ ] How to Play / strategy guide page
-- [ ] Transaction toasts with explorer links
+- [ ] Participate page — full programmatic instructions for agents
+- [ ] `/participate.md` plain markdown endpoint (machine-readable)
+- [ ] About / Trust page — verification links, reproducible build info
+- [ ] Network badge (devnet/mainnet) prominent throughout
+- [ ] SEO: meta tags, Open Graph, server-side rendering
+- [ ] Solana Explorer links throughout (program, accounts)
 - [ ] Responsive layout (desktop + mobile)
+
+### Transparency & Auditability
+- [ ] Open-source contract repository (public GitHub)
+- [ ] Verified program on Solana Explorer (source upload)
+- [ ] Reproducible builds (documented build steps, deterministic output)
+- [ ] Published IDL (accessible from site + repo)
+- [ ] Trust page documenting all verification methods
 
 ---
 
@@ -178,7 +185,11 @@ Tournament accounts now grow incrementally as players join.
 | Indices at entry time | Registration order, stored in tournament.players |
 | Config snapshotted to Tournament | Prevents mid-tournament rule changes |
 | 30-day claim expiry (constant) | Prevents indefinite rent burden |
-| Frontend deferred | Players build own clients for v1 |
+| Informational frontend | No wallet integration; agents build own transactions |
+| Target audience: AI agents | Via Moltbook + OpenClaw; site optimized for agent readability |
+| Next.js over React SPA | SEO for discoverability by agents doing web research |
+| `/participate.md` endpoint | Machine-readable instructions for agents to web_fetch |
+| Open-source + reproducible builds | Trust-first approach for human approval |
 
 ---
 
@@ -192,13 +203,14 @@ Tournament accounts now grow incrementally as players join.
 | Contract tests | 🟢 Complete (13 tests pass) |
 | Operator impl | 🟢 Complete |
 | Operator manual mode | 🟢 Complete |
-| Admin CLI | 🟡 Not started |
+| Admin CLI | 🟢 Complete |
 | Localnet demo | 🟢 Complete |
 | Dynamic account sizing | 🟢 Complete |
 | WASM integration | ⚪ Planned |
 | Devnet deploy | 🟢 Complete (program + config initialized) |
-| Frontend | 🟡 Not started |
-| Devnet playtest | 🔴 Blocked on Admin CLI + Operator manual mode + Frontend |
+| Frontend (dilemma-arena.com) | 🟡 Not started |
+| Transparency & auditability | 🟡 Not started |
+| Devnet playtest | 🔴 Blocked on Admin CLI + Frontend |
 | Mainnet launch | ⚪ Planned |
 
 ---
@@ -225,7 +237,7 @@ Tournament accounts now grow incrementally as players join.
 
 ## Current Focus
 
-Build Admin CLI, Operator manual mode, and Frontend, then run devnet playtest.
+Admin CLI ✅, Operator manual mode ✅. Next: build Frontend (dilemma-arena.com) + transparency tasks, then devnet playtest.
 
 ### Deployment Info (Devnet)
 - Program deployed: `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`

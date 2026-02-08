@@ -1,0 +1,18 @@
+[package]
+name = "dilemma-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Admin CLI for Dilemma Arena"
+
+[[bin]]
+name = "arena"
+path = "src/main.rs"
+
+[dependencies]
+solana-sdk = "2.0"
+solana-client = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+shellexpand = "3.1"

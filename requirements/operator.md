@@ -54,9 +54,48 @@ struct OperatorConfig {
 
 ---
 
+## Modes
+
+### Auto (default)
+Continuous loop — polls state, executes actions, sleeps, repeats. Current behavior.
+
+```bash
+operator --rpc-url https://api.devnet.solana.com --program-id <id>
+```
+
+### Manual (`--manual`)
+Single-step mode. Runs exactly one cycle, prints what it did (or would do), then exits.
+
+```bash
+operator --manual --rpc-url https://api.devnet.solana.com --program-id <id>
+```
+
+Behavior:
+- Fetches current state
+- Determines what action the bot *would* take
+- Executes that one action (or prints it with `--dry-run`)
+- Exits with code 0 (action taken) or 1 (nothing to do)
+
+Useful for:
+- Testing the bot's decision logic step by step
+- Scripting a full tournament lifecycle in sequence
+- Debugging specific state transitions
+
+Combines with `--dry-run` to inspect without executing.
+
+### Acceptance Criteria (Manual Mode)
+- [ ] `--manual` flag runs one cycle and exits
+- [ ] Prints action taken (or "nothing to do") to stdout
+- [ ] Exit code 0 = action executed, 1 = nothing to do, 2 = error
+- [ ] Works with `--dry-run` (print what would happen without sending tx)
+- [ ] Same decision logic as auto mode (no separate code path)
+
+---
+
 ## Testing
 
 - [ ] Unit tests for pairing algorithm (uses match-logic)
 - [ ] Unit tests for PDA derivation
 - [ ] Mock contract for integration testing
 - [ ] Localnet end-to-end test
+- [ ] Manual mode used in integration test scripts

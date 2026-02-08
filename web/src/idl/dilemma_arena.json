@@ -1,0 +1,1422 @@
+{
+  "address": "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7",
+  "metadata": {
+    "name": "dilemma_arena",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Iterated Prisoner's Dilemma tournament on Solana"
+  },
+  "instructions": [
+    {
+      "name": "claim_payout",
+      "docs": [
+        "Claim payout if winner (within 30 days)"
+      ],
+      "discriminator": [
+        127,
+        240,
+        132,
+        62,
+        227,
+        198,
+        146,
+        133
+      ],
+      "accounts": [
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          },
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_refund",
+      "docs": [
+        "Claim refund during registration (allowed anytime)"
+      ],
+      "discriminator": [
+        15,
+        16,
+        30,
+        161,
+        255,
+        228,
+        97,
+        60
+      ],
+      "accounts": [
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          },
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_expired_entry",
+      "docs": [
+        "Close expired entry after 30-day claim window"
+      ],
+      "discriminator": [
+        241,
+        64,
+        198,
+        246,
+        182,
+        114,
+        87,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          },
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament"
+              },
+              {
+                "kind": "account",
+                "path": "entry.player",
+                "account": "Entry"
+              }
+            ]
+          }
+        },
+        {
+          "name": "operator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_registration",
+      "docs": [
+        "Close registration and transition to Running state (or extend deadline)"
+      ],
+      "discriminator": [
+        44,
+        118,
+        178,
+        58,
+        21,
+        125,
+        102,
+        138
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "refund_entry",
+          "docs": [
+            "Optional: Entry to refund if odd participant count",
+            "Only needed when participant_count is odd"
+          ],
+          "optional": true
+        },
+        {
+          "name": "refund_player",
+          "docs": [
+            "Player to receive refund if odd count"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "operator",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "enter_tournament",
+      "docs": [
+        "Enter the current tournament"
+      ],
+      "discriminator": [
+        19,
+        21,
+        109,
+        109,
+        227,
+        108,
+        232,
+        25
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          }
+        },
+        {
+          "name": "entry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "strategy",
+          "type": {
+            "defined": {
+              "name": "Strategy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "finalize_tournament",
+      "docs": [
+        "Finalize tournament and create next tournament"
+      ],
+      "discriminator": [
+        205,
+        30,
+        149,
+        11,
+        108,
+        122,
+        120,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          }
+        },
+        {
+          "name": "next_tournament",
+          "docs": [
+            "Next tournament to create (starts with base size, grows via realloc as players join)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "operator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_config",
+      "docs": [
+        "Initialize the global config and Tournament #0 (one-time setup)"
+      ],
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "docs": [
+            "Tournament #0 created on init with base size (grows via realloc as players join)"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "const",
+                "value": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "operator",
+          "type": "pubkey"
+        },
+        {
+          "name": "stake",
+          "type": "u64"
+        },
+        {
+          "name": "min_participants",
+          "type": "u16"
+        },
+        {
+          "name": "max_participants",
+          "type": "u16"
+        },
+        {
+          "name": "registration_duration",
+          "type": "i64"
+        },
+        {
+          "name": "matches_per_player",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "run_matches",
+      "docs": [
+        "Execute a batch of matches (up to 5 per tx)"
+      ],
+      "discriminator": [
+        231,
+        195,
+        232,
+        182,
+        30,
+        237,
+        182,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          }
+        },
+        {
+          "name": "operator",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_config",
+      "docs": [
+        "Update config parameters (admin only)"
+      ],
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "operator",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "house_fee_bps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "stake",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "min_participants",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "max_participants",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "registration_duration",
+          "type": {
+            "option": "i64"
+          }
+        },
+        {
+          "name": "matches_per_player",
+          "type": {
+            "option": "u16"
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_fees",
+      "docs": [
+        "Withdraw accumulated house fees (admin only)"
+      ],
+      "discriminator": [
+        198,
+        212,
+        171,
+        109,
+        144,
+        215,
+        174,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "Entry",
+      "discriminator": [
+        63,
+        18,
+        152,
+        113,
+        215,
+        246,
+        221,
+        250
+      ]
+    },
+    {
+      "name": "Tournament",
+      "discriminator": [
+        175,
+        139,
+        119,
+        242,
+        115,
+        194,
+        57,
+        92
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 12000,
+      "name": "InvalidState",
+      "msg": "Invalid tournament state for this action"
+    },
+    {
+      "code": 12001,
+      "name": "RegistrationClosed",
+      "msg": "Registration has closed"
+    },
+    {
+      "code": 12002,
+      "name": "AlreadyEntered",
+      "msg": "Player has already entered this tournament"
+    },
+    {
+      "code": 12003,
+      "name": "NotWinner",
+      "msg": "Score below min_winning_score — not a winner"
+    },
+    {
+      "code": 12004,
+      "name": "AlreadyPaid",
+      "msg": "Payout already claimed"
+    },
+    {
+      "code": 12005,
+      "name": "Unauthorized",
+      "msg": "Not authorized to perform this action"
+    },
+    {
+      "code": 12006,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient funds for operation"
+    },
+    {
+      "code": 12007,
+      "name": "MatchesIncomplete",
+      "msg": "Matches not yet complete"
+    },
+    {
+      "code": 12008,
+      "name": "NoFeesToWithdraw",
+      "msg": "No fees to withdraw"
+    },
+    {
+      "code": 12009,
+      "name": "ClaimExpired",
+      "msg": "Claim period has expired (30 days)"
+    },
+    {
+      "code": 12010,
+      "name": "NotExpired",
+      "msg": "Entry has not expired yet"
+    },
+    {
+      "code": 12011,
+      "name": "SlotHashUnavailable",
+      "msg": "SlotHashes sysvar unavailable"
+    },
+    {
+      "code": 12012,
+      "name": "TournamentFull",
+      "msg": "Tournament has reached maximum participants"
+    },
+    {
+      "code": 12013,
+      "name": "InvalidEntryAccount",
+      "msg": "Invalid entry account in remaining_accounts"
+    },
+    {
+      "code": 12014,
+      "name": "InvalidMinParticipants",
+      "msg": "min_participants must be even and >= 2"
+    },
+    {
+      "code": 12015,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 12016,
+      "name": "InvalidMatch",
+      "msg": "Invalid match index"
+    },
+    {
+      "code": 12017,
+      "name": "RegistrationOpen",
+      "msg": "Registration is still open"
+    },
+    {
+      "code": 12018,
+      "name": "TournamentActive",
+      "msg": "Previous tournament still active"
+    }
+  ],
+  "types": [
+    {
+      "name": "Config",
+      "docs": [
+        "Global configuration account"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Admin who can update config and withdraw fees"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "operator",
+            "docs": [
+              "Operator who can run tournament lifecycle (separate from admin)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "house_fee_bps",
+            "docs": [
+              "House fee in basis points (0-10000, where 100 = 1%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "stake",
+            "docs": [
+              "Fixed stake for all players (lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_participants",
+            "docs": [
+              "Minimum participants to start tournament (must be even, >= 2)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "max_participants",
+            "docs": [
+              "Maximum participants per tournament"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "registration_duration",
+            "docs": [
+              "Registration duration in seconds"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "matches_per_player",
+            "docs": [
+              "Number of matches each player plays (K)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "accumulated_fees",
+            "docs": [
+              "Accumulated fees pending withdrawal"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "current_tournament_id",
+            "docs": [
+              "Current tournament ID (increments each tournament)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Entry",
+      "docs": [
+        "Player entry in a tournament"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tournament",
+            "docs": [
+              "Parent tournament"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "player",
+            "docs": [
+              "Player wallet"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "docs": [
+              "Anonymous index for matching (position in tournament.players[])"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "strategy",
+            "docs": [
+              "Player's strategy"
+            ],
+            "type": {
+              "defined": {
+                "name": "Strategy"
+              }
+            }
+          },
+          {
+            "name": "score",
+            "docs": [
+              "Accumulated score (synced with tournament.scores[index] during run_matches)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "matches_played",
+            "docs": [
+              "Number of matches played"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "paid_out",
+            "docs": [
+              "Whether payout has been claimed"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Timestamp when entry was created"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Strategy",
+      "docs": [
+        "Strategy types (parameters deferred to v2)"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "TitForTat"
+          },
+          {
+            "name": "AlwaysDefect"
+          },
+          {
+            "name": "AlwaysCooperate"
+          },
+          {
+            "name": "GrimTrigger"
+          },
+          {
+            "name": "Pavlov"
+          },
+          {
+            "name": "SuspiciousTitForTat"
+          },
+          {
+            "name": "Random"
+          },
+          {
+            "name": "TitForTwoTats"
+          },
+          {
+            "name": "Gradual"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tournament",
+      "docs": [
+        "Tournament account",
+        "",
+        "Sized dynamically based on max_participants at creation."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "docs": [
+              "Tournament ID"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "state",
+            "docs": [
+              "Current state"
+            ],
+            "type": {
+              "defined": {
+                "name": "TournamentState"
+              }
+            }
+          },
+          {
+            "name": "stake",
+            "docs": [
+              "Fixed stake (snapshotted from config)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "house_fee_bps",
+            "docs": [
+              "House fee in basis points (snapshotted from config)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "matches_per_player",
+            "docs": [
+              "Matches per player K (snapshotted from config)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "Total prize pool (lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "participant_count",
+            "docs": [
+              "Number of active participants (excludes refunded)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "registration_ends",
+            "docs": [
+              "Registration deadline (Unix timestamp)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "matches_completed",
+            "docs": [
+              "Number of matches completed"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "matches_total",
+            "docs": [
+              "Total matches to run"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "randomness_seed",
+            "docs": [
+              "Randomness seed (set at registration close)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "min_winning_score",
+            "docs": [
+              "Minimum score to be a winner (set at finalization)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "winner_count",
+            "docs": [
+              "Number of winners (top 25%)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "winner_pool",
+            "docs": [
+              "Prize pool after house fee (for payout calculation)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claims_processed",
+            "docs": [
+              "Number of payouts claimed"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "payout_started_at",
+            "docs": [
+              "Timestamp when payout state started (for claim expiry)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "players",
+            "docs": [
+              "Ordered list of player pubkeys (index = entry order, default = refunded)"
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "scores",
+            "docs": [
+              "Scores indexed by entry.index (source of truth for finalization)"
+            ],
+            "type": {
+              "vec": "u32"
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TournamentState",
+      "docs": [
+        "Tournament state machine"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Registration"
+          },
+          {
+            "name": "Running"
+          },
+          {
+            "name": "Payout"
+          }
+        ]
+      }
+    }
+  ]
+}

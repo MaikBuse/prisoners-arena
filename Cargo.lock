@@ -1237,6 +1237,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dilemma-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde",
+ "shellexpand",
+ "solana-client",
+ "solana-sdk",
+ "toml 0.8.23",
+]
+
+[[package]]
 name = "dilemma-operator"
 version = "0.1.0"
 dependencies = [

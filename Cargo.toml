@@ -3,6 +3,7 @@ members = [
     "crates/match-logic",
     "programs/dilemma-arena",
     "operator",
+    "cli",
 ]
 resolver = "2"
 
