@@ -263,7 +263,8 @@ Tournament accounts now grow incrementally as players join.
 | Devnet deploy | 🟢 Complete (program + config initialized) |
 | Frontend (dilemma-arena.com) | 🟢 Complete |
 | Transparency & auditability | 🟡 Partial (IDL published, trust messaging done; GitHub/verified builds pending) |
-| Devnet playtest | 🟡 Ready (awaiting test entries) |
+| Devnet playtest | 🟢 Complete (6 bugs found & fixed, 2026-02-08) |
+| Post-playtest improvements | ⚪ Planned (see `docs/further-developments.md`) |
 | Mainnet launch | ⚪ Planned |
 
 ---
@@ -293,7 +294,7 @@ Tournament accounts now grow incrementally as players join.
 
 ## Current Focus
 
-Frontend ✅ complete. Next: devnet playtest with test entries to validate full lifecycle (enter → close registration → run matches → finalize → claim payout).
+Devnet playtest complete (2026-02-08). Full lifecycle validated: enter → close registration → run matches → finalize → claim payout. Six bugs found and fixed. Further improvements planned in `docs/further-developments.md`.
 
 ### Deployment Info (Devnet)
 - Program deployed: `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
