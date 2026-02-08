@@ -673,7 +673,7 @@ describe("dilemma-arena", () => {
           .closeTournament()
           .accounts({
             config: configKey, tournament: t0Key,
-            admin: admin.publicKey, operator: operator.publicKey,
+            operator: operator.publicKey,
           })
           .signers([operator])
           .rpc();

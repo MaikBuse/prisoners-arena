@@ -7,7 +7,7 @@ All notable changes to Dilemma Arena.
 ### Added
 - `entries_remaining` counter on Tournament struct — tracks open entry accounts across enter/claim/refund/expire
 - `close_tournament` now enforces `entries_remaining == 0` before allowing closure (prevents orphaned entries)
-- `close_tournament` sweeps remaining surplus lamports to `accumulated_fees` (catches rounding dust)
+- `close_tournament` transfers ALL lamports (rent + surplus) to `accumulated_fees` for consistent accounting
 - API rate limiting: 60 req/min per IP with token bucket, 429 responses with `Retry-After` header
 - Frontend error states with retry buttons on data fetch failures
 - React error boundary for component crash recovery
@@ -17,8 +17,9 @@ All notable changes to Dilemma Arena.
 - **SlotHash randomness extraction:** Was reading bytes 0..32 (includes predictable vec length + slot number). Now reads bytes 16..48 (actual hash data)
 
 ### Changed
+- `close_tournament` no longer uses Anchor's `close = admin` — manually closes account and routes all lamports through `accumulated_fees` (consistent with all other fee flows)
+- `close_tournament` no longer requires `admin` account (lamports go to config PDA, not admin directly)
 - `close_expired_entry` now decrements `entries_remaining` counter
-- `close_tournament` config account changed from immutable to mutable (needed for surplus sweep)
 
 ### Improved
 - Zero compiler warnings (was 22) — suppressed dead code for intentional constants, added Anchor cfg features

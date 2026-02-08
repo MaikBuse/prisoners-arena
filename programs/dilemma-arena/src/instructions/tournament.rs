@@ -528,7 +528,7 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     Ok(())
 }
 
-/// Close a tournament account and recover rent lamports
+/// Close a tournament account and recover all lamports to accumulated_fees
 #[derive(Accounts)]
 pub struct CloseTournament<'info> {
     #[account(
@@ -542,16 +542,8 @@ pub struct CloseTournament<'info> {
         mut,
         seeds = [b"tournament", tournament.id.to_le_bytes().as_ref()],
         bump = tournament.bump,
-        close = admin
     )]
     pub tournament: Account<'info, Tournament>,
-
-    /// CHECK: Must match config.admin — receives remaining lamports
-    #[account(
-        mut,
-        constraint = admin.key() == config.admin @ DilemmaError::Unauthorized
-    )]
-    pub admin: AccountInfo<'info>,
 
     #[account(
         constraint = operator.key() == config.operator || operator.key() == config.admin @ DilemmaError::Unauthorized
@@ -582,25 +574,28 @@ pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
         DilemmaError::EntriesRemaining
     );
 
-    // Sweep any remaining lamports (rounding dust, unclaimed funds) to accumulated_fees
-    let rent = Rent::get()?;
-    let min_balance = rent.minimum_balance(tournament.to_account_info().data_len());
-    let surplus = tournament.to_account_info().lamports()
-        .saturating_sub(min_balance);
-    if surplus > 0 {
-        **tournament.to_account_info().try_borrow_mut_lamports()? -= surplus;
-        **config.to_account_info().try_borrow_mut_lamports()? += surplus;
+    // Transfer ALL lamports (rent + any surplus) to config PDA → accumulated_fees
+    let tournament_info = tournament.to_account_info();
+    let total_lamports = tournament_info.lamports();
+    if total_lamports > 0 {
+        **tournament_info.try_borrow_mut_lamports()? = 0;
+        **config.to_account_info().try_borrow_mut_lamports()? += total_lamports;
         config.accumulated_fees = config.accumulated_fees
-            .checked_add(surplus)
+            .checked_add(total_lamports)
             .ok_or(DilemmaError::Overflow)?;
-        msg!("Swept {} lamports of surplus to accumulated fees", surplus);
+    }
+
+    // Zero out account data to mark as closed (Solana GCs 0-lamport accounts)
+    let mut data = tournament_info.try_borrow_mut_data()?;
+    for byte in data.iter_mut() {
+        *byte = 0;
     }
 
     msg!(
-        "Closed tournament {} account, recovering rent lamports to admin",
-        tournament.id
+        "Closed tournament {} — {} lamports transferred to accumulated fees",
+        tournament.id,
+        total_lamports
     );
 
-    // Account closure handled by Anchor's `close = admin` attribute
     Ok(())
 }
