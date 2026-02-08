@@ -175,11 +175,14 @@ pub fn run_matches<'info>(
         return Ok(());
     }
 
+    // Snapshot starting index before the loop mutates matches_completed
+    let start_index = tournament.matches_completed;
+
     // Build a map of player index -> remaining_account index for entry accounts
     let remaining_accounts = &ctx.remaining_accounts;
     
     for batch_idx in 0..matches_to_run {
-        let match_index = tournament.matches_completed + batch_idx;
+        let match_index = start_index + batch_idx;
         
         // Get pairing for this match
         let pairing = match_logic::get_pairing_for_match(

@@ -3,13 +3,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-dilemma_arena = "51xccEMJFyzSnPAt82UPKu7cjuFw7FcDL6ZUvr1U6PFf"
+dilemma_arena = "7F1tQjn9AKT4S5PB2Kifr8Ck9ZRE77y83HoDUBXRNox1"
 
 [programs.devnet]
-dilemma_arena = "51xccEMJFyzSnPAt82UPKu7cjuFw7FcDL6ZUvr1U6PFf"
+dilemma_arena = "7F1tQjn9AKT4S5PB2Kifr8Ck9ZRE77y83HoDUBXRNox1"
 
 [programs.mainnet]
-dilemma_arena = "51xccEMJFyzSnPAt82UPKu7cjuFw7FcDL6ZUvr1U6PFf"
+dilemma_arena = "7F1tQjn9AKT4S5PB2Kifr8Ck9ZRE77y83HoDUBXRNox1"
 
 [registry]
 url = "https://api.apr.dev"

@@ -20,6 +20,7 @@ All notable changes to Dilemma Arena.
 - **Critical:** `finalize_tournament` now transfers fee lamports from tournament PDA to config PDA (was only incrementing counter without moving SOL)
 - **Critical:** `close_expired_entry` now transfers unclaimed prize lamports from tournament to config (same root cause)
 - Operator retry-on-conflict: catches `InvalidState` errors from stale RPC reads, waits 3s, re-fetches state
+- **Critical:** `run_matches` batch loop double-counted match indices (`match_index = matches_completed + batch_idx` where `matches_completed` was mutated in-loop). Caused index skipping and `InvalidMatch` errors on batch 2+. Fixed by snapshotting `start_index` before the loop.
 
 ## [Unreleased]
 
