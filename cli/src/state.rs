@@ -28,6 +28,7 @@ pub struct Tournament {
     pub stake: u64,
     pub house_fee_bps: u16,
     pub matches_per_player: u16,
+    pub registration_duration: i64,
     pub pool: u64,
     pub participant_count: u32,
     pub registration_ends: i64,
@@ -103,6 +104,7 @@ impl Tournament {
         let stake = u64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let house_fee_bps = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
         let matches_per_player = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
+        let registration_duration = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let pool = u64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let participant_count = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let registration_ends = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
@@ -121,7 +123,7 @@ impl Tournament {
         let mut scores = Vec::with_capacity(scores_len);
         for _ in 0..scores_len { scores.push(u32::from_le_bytes(data[o..o + 4].try_into()?)); o += 4; }
         let bump = data[o];
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, players, scores, bump })
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, players, scores, bump })
     }
 }
 

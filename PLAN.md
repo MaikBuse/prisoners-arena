@@ -2,7 +2,7 @@
 
 ## Status: 🟡 In Progress — Devnet Playtest
 
-**Program ID:** `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
+**Program ID:** `51xccEMJFyzSnPAt82UPKu7cjuFw7FcDL6ZUvr1U6PFf`
 **Deployer Wallet:** `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
 **Required SOL:** ~2 SOL (434KB program + rent + tx fees)
 **Faucet:** https://faucet.solana.com (rate limited)
@@ -297,7 +297,7 @@ Tournament accounts now grow incrementally as players join.
 Devnet playtest complete (2026-02-08). Full lifecycle validated: enter → close registration → run matches → finalize → claim payout. Six bugs found and fixed. Next version planned in `releases/v1.1.md`.
 
 ### Deployment Info (Devnet)
-- Program deployed: `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
+- Program deployed: `51xccEMJFyzSnPAt82UPKu7cjuFw7FcDL6ZUvr1U6PFf`
 - Config initialized, Tournament #0 in Registration
 - Admin wallet: `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
 - Operator wallet: `2o7jVMvtjWQrnGP8f8RQ1k3AK4aB5chVj1QniDPP7KYc` (`~/.config/solana/operator.json`)

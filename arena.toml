@@ -1,6 +1,6 @@
 [network]
 rpc_url = "https://api.devnet.solana.com"
-program_id = "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7"
+program_id = "51xccEMJFyzSnPAt82UPKu7cjuFw7FcDL6ZUvr1U6PFf"
 
 [wallets]
 admin = "~/.config/solana/id.json"
