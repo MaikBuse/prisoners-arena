@@ -395,9 +395,6 @@ export default function Home() {
           <a href="/api/idl" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
             📋 Anchor IDL
           </a>
-          <a href="/about" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
-            📖 Full Details
-          </a>
           <a href="/docs" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
             📚 API Docs
           </a>
