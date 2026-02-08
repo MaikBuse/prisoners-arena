@@ -51,6 +51,11 @@ struct Args {
     /// Dry run mode (don't send transactions)
     #[arg(long, default_value = "false")]
     dry_run: bool,
+
+    /// Manual mode: run a single cycle then exit
+    /// Exit codes: 0 = action taken, 1 = nothing to do, 2 = error
+    #[arg(long)]
+    manual: bool,
 }
 
 #[tokio::main]
@@ -95,7 +100,27 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Main loop
+    if args.manual {
+        // Manual mode: single cycle, then exit with appropriate code
+        info!("Manual mode: running single cycle");
+        match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+            Ok(action_taken) => {
+                if action_taken {
+                    info!("Action taken, exiting");
+                    std::process::exit(0);
+                } else {
+                    info!("Nothing to do, exiting");
+                    std::process::exit(1);
+                }
+            }
+            Err(e) => {
+                error!("Cycle error: {}", e);
+                std::process::exit(2);
+            }
+        }
+    }
+
+    // Continuous loop mode
     let poll_interval = Duration::from_secs(args.poll_interval);
     
     loop {
@@ -120,12 +145,13 @@ async fn main() -> Result<()> {
     }
 }
 
+/// Returns Ok(true) if an action was taken, Ok(false) if nothing to do
 async fn run_cycle(
     client: &RpcClient,
     program_id: &Pubkey,
     operator: &Keypair,
     dry_run: bool,
-) -> Result<()> {
+) -> Result<bool> {
     // Fetch current state
     let config = state::fetch_config(client, program_id)?;
     
@@ -136,7 +162,7 @@ async fn run_cycle(
             config.operator,
             operator.pubkey()
         );
-        return Ok(());
+        return Ok(false);
     }
     
     let tournament = state::fetch_current_tournament(client, program_id)?;
@@ -161,6 +187,7 @@ async fn run_cycle(
                     if !dry_run {
                         actions::close_registration(client, program_id, &tournament, operator, &config)?;
                     }
+                    return Ok(true);
                 } else {
                     // Deadline passed but minimum not met - deadline will be extended by contract
                     info!(
@@ -172,6 +199,7 @@ async fn run_cycle(
                         // Call close_registration anyway - contract will extend deadline
                         actions::close_registration(client, program_id, &tournament, operator, &config)?;
                     }
+                    return Ok(true);
                 }
             }
         }
@@ -188,11 +216,13 @@ async fn run_cycle(
                 if !dry_run {
                     actions::run_matches(client, program_id, &tournament, operator, &config)?;
                 }
+                return Ok(true);
             } else {
                 info!("All matches complete, finalizing tournament");
                 if !dry_run {
                     actions::finalize_tournament(client, program_id, &tournament, operator, &config)?;
                 }
+                return Ok(true);
             }
         }
 
@@ -215,6 +245,7 @@ async fn run_cycle(
                     let closed = actions::close_expired_entries(client, program_id, &tournament, operator)?;
                     if closed > 0 {
                         info!("Closed {} expired entries", closed);
+                        return Ok(true);
                     }
                 }
             }
@@ -224,5 +255,5 @@ async fn run_cycle(
         }
     }
 
-    Ok(())
+    Ok(false)
 }

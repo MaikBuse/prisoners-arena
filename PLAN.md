@@ -1,6 +1,6 @@
 # PLAN.md - Dilemma Arena
 
-## Status: 🟡 Awaiting Devnet SOL
+## Status: 🟡 In Progress — Admin CLI + Operator Manual Mode + Frontend
 
 **Program ID:** `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
 **Deployer Wallet:** `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
@@ -23,8 +23,9 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 |-----------|------|--------|
 | Match Logic | Rust crate + WASM | 🟢 complete |
 | Smart Contract | Anchor 0.32 | 🟢 complete (dynamic sizing) |
-| Operator Bot | Rust | 🟢 complete |
-| Frontend | React + TypeScript | ⚪ deferred (v1 = API only) |
+| Operator Bot | Rust | 🟡 needs manual mode |
+| Admin CLI | Rust | 🟡 not started |
+| Frontend | React + Vite + TypeScript | 🟡 not started |
 
 ---
 
@@ -110,6 +111,23 @@ Tournament accounts now grow incrementally as players join.
 **Operator changes:**
 - [x] Tournament deserialization handles variable-size vecs (already supported)
 
+### Admin CLI (`cli/`)
+- [ ] Project structure (Rust, clap)
+- [ ] TOML config loading (`arena.toml`)
+- [ ] `arena init` — initialize config + Tournament #0
+- [ ] `arena config show` — display on-chain config
+- [ ] `arena config update` — update config parameters
+- [ ] `arena withdraw-fees` — withdraw house fees
+- [ ] `arena status` — current tournament state
+- [ ] `arena tournament <id>` — specific tournament details
+- [ ] `arena entries` — list entries for a tournament
+- [ ] `arena enter` — enter tournament with wallet/strategy
+- [ ] `arena refund` — claim refund
+- [ ] `arena claim` — claim payout
+- [ ] `arena balance` — check wallet balance
+- [ ] `arena airdrop` — devnet airdrop
+- [ ] `--dry-run` flag on write operations
+
 ### Operator Bot (`operator/`)
 - [x] Project structure
 - [x] State monitoring (fetch Config, Tournament, Entry)
@@ -118,10 +136,25 @@ Tournament accounts now grow incrementally as players join.
 - [x] Retry logic (via send_and_confirm)
 - [x] Wallet balance monitoring
 - [x] Build verification
+- [x] `--manual` mode (single cycle, exit)
+- [x] `--dry-run` support
+- [x] Exit codes (0 = action taken, 1 = nothing to do, 2 = error)
 - [ ] Localnet testing (requires AVX-capable CPU)
 
-### Frontend (`web/`) — Deferred
-V1 philosophy: players build their own clients. Contract is the API.
+### Frontend (`web/`)
+- [ ] Project setup (React 18 + Vite + TypeScript + Tailwind)
+- [ ] Network selector (devnet/mainnet) with env var overrides
+- [ ] Anchor client integration (IDL-based account deserialization)
+- [ ] Wallet adapter (Phantom, Solflare, Backpack)
+- [ ] Dashboard page — tournament state, countdown, progress, config panel
+- [ ] Enter tournament flow with strategy picker
+- [ ] Scores table (sortable, highlights connected wallet + winners)
+- [ ] Claim refund + claim payout actions
+- [ ] Entry view for connected wallet
+- [ ] Tournament history page
+- [ ] How to Play / strategy guide page
+- [ ] Transaction toasts with explorer links
+- [ ] Responsive layout (desktop + mobile)
 
 ---
 
@@ -158,10 +191,14 @@ V1 philosophy: players build their own clients. Contract is the API.
 | Contract impl | 🟢 Complete (dynamic sizing) |
 | Contract tests | 🟢 Complete (13 tests pass) |
 | Operator impl | 🟢 Complete |
+| Operator manual mode | 🟢 Complete |
+| Admin CLI | 🟡 Not started |
 | Localnet demo | 🟢 Complete |
 | Dynamic account sizing | 🟢 Complete |
 | WASM integration | ⚪ Planned |
-| Devnet deploy | 🟡 Awaiting SOL |
+| Devnet deploy | 🟢 Complete (program + config initialized) |
+| Frontend | 🟡 Not started |
+| Devnet playtest | 🔴 Blocked on Admin CLI + Operator manual mode + Frontend |
 | Mainnet launch | ⚪ Planned |
 
 ---
@@ -181,11 +218,17 @@ V1 philosophy: players build their own clients. Contract is the API.
 3. Initialize config (creates Tournament #0)
 4. Start operator bot
 
-### Blocked On
-- Devnet faucet rate limit (429 errors)
+### Completed
+- Wallet funded, program deployed, config initialized (2026-02-08)
 
 ---
 
 ## Current Focus
 
-Fund deployer wallet, then deploy to devnet.
+Build Admin CLI, Operator manual mode, and Frontend, then run devnet playtest.
+
+### Deployment Info (Devnet)
+- Program deployed: `Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7`
+- Config initialized, Tournament #0 in Registration
+- Admin wallet: `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
+- Operator wallet: `2o7jVMvtjWQrnGP8f8RQ1k3AK4aB5chVj1QniDPP7KYc` (`~/.config/solana/operator.json`)
