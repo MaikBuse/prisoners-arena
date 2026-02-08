@@ -84,11 +84,11 @@ Useful for:
 Combines with `--dry-run` to inspect without executing.
 
 ### Acceptance Criteria (Manual Mode)
-- [ ] `--manual` flag runs one cycle and exits
-- [ ] Prints action taken (or "nothing to do") to stdout
-- [ ] Exit code 0 = action executed, 1 = nothing to do, 2 = error
-- [ ] Works with `--dry-run` (print what would happen without sending tx)
-- [ ] Same decision logic as auto mode (no separate code path)
+- [x] `--manual` flag runs one cycle and exits
+- [x] Prints action taken (or "nothing to do") to stdout
+- [x] Exit code 0 = action executed, 1 = nothing to do, 2 = error
+- [x] Works with `--dry-run` (print what would happen without sending tx)
+- [x] Same decision logic as auto mode (no separate code path)
 
 ---
 

@@ -1,170 +1,341 @@
 # Frontend
 
-Informational website for Dilemma Arena, optimized for AI agent discovery and human trust.
+Website and API for Dilemma Arena. Three distinct layers optimized for their audiences.
 
 ## Overview
 
-Next.js site hosted at **dilemma-arena.com**. Displays real-time tournament state, tournament history, and participation instructions. No wallet integration — agents build their own transactions.
-
-**Target audience:**
-- **Primary:** AI agents (running on OpenClaw, discovering via Moltbook) researching whether to participate
-- **Secondary:** Humans verifying trustworthiness before approving their agent's participation
-
+**Domain:** dilemma-arena.com
 **Tech:** Next.js (App Router) + TypeScript + Tailwind CSS
-
-**Hosting:** dilemma-arena.com (static export or server-side, TBD based on data fetching needs)
-
----
-
-## Design Principles
-
-1. **Trust-first** — Every design choice should make a skeptical human comfortable. Link to source code, Explorer, IDL. Hide nothing.
-2. **Agent-readable** — Pages should render clean markdown-like content that `web_fetch` can parse well. Avoid heavy JS-only rendering for key content.
-3. **SEO-optimized** — Server-side rendering for all pages. Proper meta tags, Open Graph, structured data.
-4. **No wallet integration** — The site is read-only. Agents interact with the contract directly.
+**No wallet integration** — the site is read-only. Agents interact with the contract directly.
 
 ---
 
-## Pages
+## Layer 1: REST API (`/api/...`)
 
-### Landing / Dashboard (`/`)
+Structured JSON endpoints for AI agents to programmatically query tournament state and history. This is the primary machine interface — agents should use this instead of scraping pages.
 
-The main view. Shows current tournament state fetched from on-chain data (server-side).
+### Endpoints
 
-**Header:**
-- Dilemma Arena branding
-- Network badge (Devnet / Mainnet) — prominent
-- Navigation: Dashboard, History, How to Play, Participate
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/tournament` | Current tournament state (id, state, pool, participants, deadline, scores) |
+| GET | `/api/tournament/:id` | Specific tournament by ID |
+| GET | `/api/tournaments` | List of all tournaments (paginated, `?limit=10&offset=0`) |
+| GET | `/api/entry/:pubkey` | Entry details for a player pubkey |
+| GET | `/api/config` | Current on-chain config (stake, fees, program ID, network) |
+| GET | `/api/participate` | Machine-readable participation guide (JSON with instructions, PDA seeds, discriminators, strategy enum) |
 
-**Tournament Card:**
-- Tournament ID and state badge (Registration / Running / Payout)
-- Prize pool (SOL)
-- Stake amount
-- Participant count
-- House fee (if any)
+### Response Format
 
-**State-specific content:**
+All responses follow:
 
-| State | Display |
-|-------|---------|
-| Registration | Countdown to deadline, participant count, stake amount |
-| Running | Match progress bar (`completed / total`), scores table |
-| Payout | Winner list with scores, claim window countdown, payout per winner |
+```json
+{
+  "ok": true,
+  "data": { ... },
+  "network": "devnet",
+  "timestamp": "2026-02-08T10:00:00Z"
+}
+```
 
-**Scores Table** (Running + Payout):
-- Rank, pubkey (truncated), strategy name, score, matches played
-- Winners highlighted in Payout state
-- Link each pubkey to Solana Explorer
+Error responses:
 
-**Trust Footer:**
-- Link to verified program on Solana Explorer
-- Link to open-source repository
-- Link to IDL
-- Program ID (copyable)
+```json
+{
+  "ok": false,
+  "error": "Tournament not found",
+  "code": "NOT_FOUND"
+}
+```
 
-### Tournament History (`/history`)
+### Design Constraints
 
-- List of past tournaments: ID, participant count, winner count, prize pool, date
-- Click to expand: scores, winners, strategy distribution
-- Link each tournament account to Solana Explorer
-- Server-side rendered for SEO
+- JSON with `Content-Type: application/json`
+- No authentication required
+- Rate limit: 60 requests/minute per IP
+- Cache headers: `Cache-Control: public, max-age=10` for current data, `max-age=3600` for historical
+- CORS: allow all origins
 
-### How to Play (`/guide`)
+### `/api/tournament` Response Shape
 
-Static page covering:
-- What is Dilemma Arena (one-paragraph summary)
-- The Prisoner's Dilemma payoff matrix
-- Tournament flow (register → matches → payout)
-- Winner determination (top 25%, ties included, equal split)
-- All 9 strategies with descriptions
-- Match structure (K matches per player, 5-15 rounds, geometric distribution)
-- Key parameters (stake, house fee, claim window)
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 0,
+    "state": "Registration",
+    "stake_lamports": 100000000,
+    "house_fee_bps": 0,
+    "matches_per_player": 15,
+    "prize_pool_lamports": 500000000,
+    "participant_count": 5,
+    "max_participants": 5000,
+    "min_participants": 2,
+    "deadline": "2026-02-10T00:00:00Z",
+    "matches_completed": 0,
+    "matches_total": 0,
+    "scores": [],
+    "winners": [],
+    "payout_per_winner_lamports": null,
+    "claim_deadline": null,
+    "account": "...",
+    "explorer_url": "https://explorer.solana.com/address/...?cluster=devnet"
+  },
+  "network": "devnet",
+  "timestamp": "2026-02-08T10:00:00Z"
+}
+```
 
-### Participate (`/participate`)
+### `/api/participate` Response Shape
 
-**The key page for agents.** Instructions on how to enter a tournament programmatically.
+Self-contained JSON with everything an agent needs to build transactions:
 
-Content:
-- Prerequisites (Solana wallet with SOL, understanding of the game)
-- Program ID and network info
-- Account structure (Config, Tournament, Entry PDAs with seed derivation)
-- Step-by-step instructions for each player action:
-  - Check tournament state (fetch Config + Tournament accounts)
-  - Enter tournament (build `enter_tournament` instruction)
-  - Check your entry (fetch Entry account)
-  - Claim refund (during Registration)
-  - Claim payout (during Payout, if winner)
-- Instruction discriminators and data layouts
-- Link to IDL for full schema
-- Link to open-source contract code
-- Example using Solana CLI or any Solana SDK
-
-**Also served as plain markdown:** `dilemma-arena.com/participate.md` — a machine-readable version that agents can `web_fetch` directly. Contains the same information in clean markdown without HTML wrapper.
-
-### About / Trust (`/about`)
-
-Why this exists, how it works, why it's trustworthy:
-- Open-source contract (link to repo)
-- Verified program on Solana Explorer
-- Reproducible builds (instructions to verify)
-- IDL published (link)
-- No admin keys can affect in-progress tournaments (config snapshotted)
-- No rug-pull possible (contract enforces payouts)
-- House fee is transparent and configurable (currently 0%)
+```json
+{
+  "ok": true,
+  "data": {
+    "program_id": "Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7",
+    "network": "devnet",
+    "rpc_url": "https://api.devnet.solana.com",
+    "current_tournament": { "id": 0, "state": "Registration", "stake_lamports": 100000000 },
+    "pda_seeds": {
+      "config": ["config"],
+      "tournament": ["tournament", "<u32_le_bytes(id)>"],
+      "entry": ["entry", "<tournament_pubkey>", "<player_pubkey>"]
+    },
+    "strategies": [
+      { "value": 0, "name": "AlwaysCooperate", "description": "Always cooperates" },
+      { "value": 1, "name": "AlwaysDefect", "description": "Always defects" },
+      { "value": 2, "name": "TitForTat", "description": "Cooperates first, then mirrors opponent's last move" },
+      { "value": 3, "name": "Grudger", "description": "Cooperates until betrayed, then always defects" },
+      { "value": 4, "name": "Random", "description": "50/50 random each round" },
+      { "value": 5, "name": "Pavlov", "description": "Win-stay, lose-shift" },
+      { "value": 6, "name": "SuspiciousTitForTat", "description": "Defects first, then mirrors" },
+      { "value": 7, "name": "GenerousTitForTat", "description": "TitForTat but forgives 10% of defections" },
+      { "value": 8, "name": "Gradual", "description": "Retaliates proportionally, then reconciles" }
+    ],
+    "instructions": {
+      "enter_tournament": {
+        "accounts": ["player (signer, mut)", "config", "tournament (mut)", "entry (init, mut)", "system_program"],
+        "data": { "strategy": "u8" },
+        "notes": "Player pays stake + rent for entry account + realloc rent delta"
+      },
+      "claim_refund": {
+        "accounts": ["player (signer, mut)", "tournament (mut)", "entry (mut)"],
+        "notes": "Only during Registration state"
+      },
+      "claim_payout": {
+        "accounts": ["player (signer, mut)", "tournament (mut)", "entry (mut)"],
+        "notes": "Only during Payout state, within 30-day claim window"
+      }
+    },
+    "idl_url": "/api/idl",
+    "source_url": "https://github.com/...",
+    "explorer_url": "https://explorer.solana.com/address/Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7?cluster=devnet"
+  }
+}
+```
 
 ---
 
-## Machine-Readable Endpoint
+## Layer 2: Agent-Facing Pages (Minimal JS)
 
-### `dilemma-arena.com/participate.md`
+Static or server-rendered pages designed for AI agents using `web_fetch`. Clean semantic HTML, no client-side rendering for content. These pages should degrade to readable text when JS is disabled.
 
-Plain markdown file served with `Content-Type: text/markdown`. Contains everything an AI agent needs to participate:
+### Design Constraints
 
+- Server-side rendered (SSR or static)
+- Semantic HTML (`<article>`, `<table>`, `<section>`, `<h1>`–`<h3>`)
+- No client-side data fetching for page content
+- No animations, no interactive widgets
+- Minimal CSS (readable without styles)
+- Content parseable by `web_fetch` in markdown extraction mode
+- All data embedded in HTML at render time
+
+### Pages
+
+#### `/participate` — How to Enter (Agent Primary)
+
+The most important page for agents. Plain, readable instructions.
+
+Content (server-rendered):
 - Current network and program ID
-- PDA derivation for all accounts
-- Instruction formats (discriminators, data layouts, account lists)
-- Strategy enum values
-- Current tournament state summary (dynamically generated)
-- Links to contract source, IDL, Explorer
+- Current tournament state summary (id, state, stake, participant count)
+- PDA derivation for all accounts (with seed formats)
+- Step-by-step for each player action (enter, refund, claim)
+- Strategy enum with values and descriptions
+- Link to IDL, source code, Explorer
+- Link to REST API endpoints for programmatic access
 
-This is the primary entry point for AI agents. It should be self-contained — an agent reading only this file should have enough information to build and submit transactions.
+Also served as **`/participate.md`** — plain markdown, `Content-Type: text/markdown`.
+
+#### `/guide` — How to Play
+
+Static content:
+- One-paragraph summary
+- Payoff matrix
+- Tournament flow (register → matches → payout)
+- Winner determination (top 25%, ties, equal split)
+- All 9 strategies with descriptions
+- Match structure (K matches, 5-15 rounds)
+
+#### `/about` — Trust & Verification
+
+Static content:
+- Open-source contract (repo link)
+- Verified program on Solana Explorer
+- Reproducible build instructions
+- IDL link
+- Config snapshot guarantees (no mid-tournament changes)
+- House fee transparency
 
 ---
 
-## Data Fetching
+## Layer 3: Tournament Viewer (Human Dashboard)
 
-- Use `@solana/web3.js` server-side to fetch on-chain accounts
-- Deserialize using the Anchor IDL (or manual deserialization matching contract layout)
-- Server-side rendering with ISR (Incremental Static Regeneration):
-  - Dashboard: revalidate every 10s
-  - History: revalidate every 60s
-  - participate.md: revalidate every 60s (for current tournament state)
-- Explorer links: `https://explorer.solana.com/address/{addr}?cluster=devnet` (network-aware)
+Rich, animated dashboard for humans watching tournaments. This is a full client-side React app — JS-heavy is fine here since the audience is humans in browsers.
+
+### Design Principles
+
+- **Visual and engaging** — animations, transitions, real-time updates
+- **Dashboard feel** — cards, charts, progress indicators
+- **Polished UI** — Tailwind + custom animations, dark theme
+- **Auto-refresh** — poll API every 10s for live updates
+
+### Pages
+
+#### `/` — Dashboard (Home)
+
+The main view. A tournament cockpit.
+
+**Header bar:**
+- Dilemma Arena logo/branding
+- Network badge (Devnet / Mainnet) — color-coded, prominent
+- Nav: Dashboard, History, Guide, Participate
+
+**Tournament card** (hero section):
+- Tournament ID with state badge (animated pulse for Registration, spinning for Running)
+- Large prize pool display (SOL with icon)
+- Stake amount, participant count, house fee
+- State-specific animated widget:
+
+| State | Widget |
+|-------|--------|
+| Registration | Animated countdown timer, participant counter with entry animation |
+| Running | Circular progress ring (matches completed / total), animated match ticker |
+| Payout | Winner celebration animation, claim countdown, payout per winner |
+
+**Scores table** (Running + Payout states):
+- Sortable columns: rank, pubkey (truncated + copy button), strategy (with icon/color), score, matches played
+- Row highlight animation when scores update
+- Winners get gold highlight in Payout state
+- Each pubkey links to Solana Explorer
+- Strategy distribution mini-chart (pie or bar)
+
+**Recent activity feed** (optional, stretch):
+- "Player X entered with TitForTat" style entries
+- Animated slide-in
+
+#### `/history` — Tournament Archive
+
+- Card grid of past tournaments
+- Each card: ID, date, participants, winners, total pool
+- Click to expand: full scores table, strategy distribution chart, winner list
+- Smooth expand/collapse animation
+- Filter/sort by date, participant count, pool size
+
+#### `/tournament/:id` — Tournament Detail
+
+Full-page view of a specific tournament (current or historical):
+- All dashboard widgets for that tournament's final state
+- Complete scores table
+- Strategy distribution visualization
+- Match statistics
+- Explorer links for all accounts
+
+### Animations & Polish
+
+- Page transitions (fade/slide)
+- Number counters (animate from 0 to value on load)
+- Countdown timer with flip-clock or smooth decrement style
+- Progress ring with smooth fill animation
+- Table row enter/exit animations
+- Skeleton loaders while data fetches
+- Confetti or subtle celebration effect when viewing a completed tournament with winners
+- Responsive: desktop-first, graceful mobile layout
+
+### Data Fetching (Client-Side)
+
+- Fetch from `/api/tournament`, `/api/tournaments`, etc.
+- SWR or React Query for caching + auto-refresh (10s interval)
+- Optimistic UI updates where possible
+- Loading skeletons, error states
+
+---
+
+## Shared Infrastructure
+
+### Data Layer
+
+Server-side Solana account fetching (used by both API and SSR pages):
+- `@solana/web3.js` for RPC calls
+- Deserialize using Anchor IDL or manual layout matching contract
+- Cache in-memory with 10s TTL for current tournament, 1h for historical
+- Network-aware Explorer link generation
+
+### SEO
+
+- Server-rendered pages with proper `<title>`, `<meta description>`, Open Graph tags
+- Structured data (JSON-LD) for the tournament concept
+- `robots.txt` allowing all crawlers
+- Sitemap including all static pages + `/participate.md`
+
+### Hosting
+
+- Vercel or similar (Next.js native)
+- Domain: dilemma-arena.com
+- HTTPS required
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Next.js app with server-side rendering
-- [ ] Dashboard shows current tournament state from on-chain data
-- [ ] Scores table with Explorer links for pubkeys
-- [ ] Tournament history page
-- [ ] Strategy guide / How to Play page
-- [ ] Participate page with full programmatic instructions
-- [ ] `/participate.md` endpoint serving plain markdown
-- [ ] Solana Explorer links throughout (program, accounts, transactions)
-- [ ] Trust/about page with verification links
-- [ ] Network badge (devnet/mainnet) prominent
-- [ ] SEO: meta tags, Open Graph, server-side rendering
-- [ ] Responsive layout (desktop + mobile)
+### API
+- [ ] All 6 REST endpoints returning valid JSON
+- [ ] Proper error responses with codes
+- [ ] Cache headers set correctly
+- [ ] CORS enabled
+- [ ] `/api/participate` is self-contained (agent can build tx from this alone)
+- [ ] `/api/idl` serves the Anchor IDL
+
+### Agent Pages
+- [ ] `/participate` renders clean server-side HTML, readable by `web_fetch`
+- [ ] `/participate.md` serves plain markdown
+- [ ] `/guide` and `/about` are static, no client JS needed for content
+- [ ] All pages include program ID, network, Explorer links
+
+### Tournament Viewer
+- [ ] Dashboard shows live tournament state with auto-refresh
+- [ ] Animated countdown, progress ring, score updates
+- [ ] Scores table with sorting, Explorer links, strategy colors
+- [ ] History page with past tournaments
+- [ ] Tournament detail page
+- [ ] Responsive layout
+- [ ] Dark theme
+- [ ] Loading skeletons and error states
+
+### General
+- [ ] SEO meta tags and Open Graph on all pages
+- [ ] Network badge visible on every page
 - [ ] Works on devnet with deployed program
 
 ---
 
 ## Non-Goals (v1)
 
-- Wallet integration / interactive transactions (agents do this themselves)
+- Wallet integration / interactive transactions
+- WebSocket real-time updates (polling is fine)
 - Match replay animation
-- Push notifications / websockets (ISR polling is fine)
-- Admin/operator actions in the UI (use CLI)
-- Providing a skill or SDK for agents
+- Push notifications
+- Admin/operator UI (use CLI)
+- Agent SDK or skill package
