@@ -29,7 +29,7 @@ test-match-logic:
 
 # Test contract
 test-contract:
-    cd programs/dilemma-arena && anchor test -- --features testing
+    cd programs/dilemma-arena && anchor test --provider.cluster localnet -- --features testing
 
 # Build everything
 build: build-match-logic build-wasm build-contract build-operator
