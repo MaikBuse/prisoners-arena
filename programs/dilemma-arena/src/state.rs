@@ -127,12 +127,14 @@ pub struct Tournament {
     pub players: Vec<Pubkey>,
     /// Scores indexed by entry.index (source of truth for finalization)
     pub scores: Vec<u32>,
+    /// Strategies indexed by entry.index (persists after entry closure; 255 = refunded/invalid)
+    pub strategies: Vec<u8>,
     /// PDA bump seed
     pub bump: u8,
 }
 
-/// Bytes added per player (32-byte pubkey + 4-byte score)
-pub const BYTES_PER_PLAYER: usize = 36;
+/// Bytes added per player (32-byte pubkey + 4-byte score + 1-byte strategy)
+pub const BYTES_PER_PLAYER: usize = 37;
 
 impl Tournament {
     /// Base space for tournament with empty vecs (used for initial allocation)
@@ -157,6 +159,7 @@ impl Tournament {
         4 +   // entries_remaining
         4 +   // players vec len (empty)
         4 +   // scores vec len (empty)
+        4 +   // strategies vec len (empty)
         1 +   // bump
         32;   // padding
 

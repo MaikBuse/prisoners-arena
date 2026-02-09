@@ -479,6 +479,9 @@ describe("dilemma-arena", () => {
       expect(t.players.length).to.equal(9);
       expect(t.scores.length).to.equal(9);
       t.scores.forEach((s: number) => expect(s).to.equal(0));
+      expect(t.strategies.length).to.equal(9);
+      // Verify strategies match what players entered (strategies are 0-8 for the 9 base strategies)
+      t.strategies.forEach((s: number) => expect(s).to.be.at.most(8));
     });
 
     it("rejects duplicate entry", async () => {
@@ -499,9 +502,10 @@ describe("dilemma-arena", () => {
       }
     });
 
-    it("players and scores vecs have matching lengths", async () => {
+    it("players, scores, and strategies vecs have matching lengths", async () => {
       const t = await program.account.tournament.fetch(t0Key);
       expect(t.players.length).to.equal(t.scores.length);
+      expect(t.players.length).to.equal(t.strategies.length);
     });
 
     it("entry created_at is a valid recent timestamp", async () => {
@@ -551,6 +555,8 @@ describe("dilemma-arena", () => {
       expect(tAfter.participantCount).to.equal(tBefore.participantCount - 1);
       expect(tAfter.pool.toNumber()).to.equal(tBefore.pool.toNumber() - stake.toNumber());
       expect(tAfter.players[8].toString()).to.equal(PublicKey.default.toString());
+      // Strategy slot set to 255 (refunded/invalid)
+      expect(tAfter.strategies[8]).to.equal(255);
 
       try {
         await program.account.entry.fetch(eKey);
@@ -1030,6 +1036,10 @@ describe("dilemma-arena", () => {
 
       const tAfter = await program.account.tournament.fetch(t0Key);
       expect(tAfter.claimsProcessed).to.be.greaterThan(0);
+
+      // Strategies vec persists after entry closure
+      expect(tAfter.strategies.length).to.equal(tAfter.players.length);
+      expect(tAfter.strategies[winnerPlayerIdx]).to.be.at.most(8);
     });
 
     it("double claim_payout fails (entry already closed)", async () => {

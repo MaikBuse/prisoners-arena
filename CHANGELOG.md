@@ -2,6 +2,20 @@
 
 All notable changes to Dilemma Arena.
 
+## [1.3.0] - 2026-02-09
+
+### Added
+- `strategies: Vec<u8>` field on Tournament struct — persists player strategy choice after entry closure
+- Strategy populated on `enter_tournament`, set to 255 on refund/odd-player removal
+- Frontend scoreboard now shows strategy for claimed winners (no more "Unknown")
+- CLI `arena tournament` and `arena entries` display strategy from tournament vec when entry is closed
+- Test assertions for strategy persistence across entry lifecycle
+
+### Changed
+- `BYTES_PER_PLAYER` increased from 36 to 37 (additive, +1 byte per player)
+- `Tournament::BASE_SPACE` increased by 4 bytes (strategies vec length prefix)
+- **Breaking:** Requires contract redeployment (struct layout change)
+
 ## [1.2.0] - 2026-02-08
 
 ### Added

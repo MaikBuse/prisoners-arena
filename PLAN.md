@@ -266,7 +266,7 @@ Tournament accounts now grow incrementally as players join.
 | Devnet playtest | 🟢 Complete (6 bugs found & fixed, 2026-02-08) |
 | v1.1 — Stability & Correctness | 🟢 Implemented (see `releases/v1.1.md`) |
 | v1.2 — Hardening & Polish | 🟢 Implemented (see `releases/v1.2.md`) |
-| v1.3 — Persist Strategy in Tournament | ⚪ Planned (see `releases/v1.3.md`) |
+| v1.3 — Persist Strategy in Tournament | 🟢 Implemented (see `releases/v1.3.md`) |
 | Mainnet launch | ⚪ Planned |
 
 ---

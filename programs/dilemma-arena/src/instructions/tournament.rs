@@ -98,6 +98,7 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
         **refund_player.try_borrow_mut_lamports()? += refund_amount;
 
         tournament.players[last_index] = Pubkey::default();
+        tournament.strategies[last_index] = u8::MAX; // 255 = refunded/invalid
         tournament.participant_count -= 1;
         tournament.pool -= refund_amount;
 
@@ -437,6 +438,7 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.entries_remaining = 0;
     next_tournament.players = Vec::new();
     next_tournament.scores = Vec::new();
+    next_tournament.strategies = Vec::new();
     next_tournament.bump = ctx.bumps.next_tournament;
 
     msg!(

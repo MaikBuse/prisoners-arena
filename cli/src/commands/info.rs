@@ -71,9 +71,11 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
         println!("\n  Players:");
         for (i, player) in t.players.iter().enumerate() {
             let score = t.scores.get(i).copied().unwrap_or(0);
+            let strat = t.strategies.get(i).copied().unwrap_or(255);
+            let strat_str = if strat <= 8 { strategy_name(strat) } else { "N/A" };
             let default_pk = Pubkey::default();
             let status = if *player == default_pk { " (refunded)" } else { "" };
-            println!("    [{}] {} — score: {}{}", i, player, score, status);
+            println!("    [{}] {} — strategy: {}, score: {}{}", i, player, strat_str, score, status);
         }
     }
     Ok(())
@@ -117,7 +119,10 @@ pub fn entries(cfg: &ArenaConfig, tournament_id: Option<u32>) -> Result<()> {
                 );
             }
             Err(_) => {
-                println!("  [{}] {} — entry account closed", i, player);
+                let score = t.scores.get(i).copied().unwrap_or(0);
+                let strat = t.strategies.get(i).copied().unwrap_or(255);
+                let strat_str = if strat <= 8 { strategy_name(strat) } else { "Unknown" };
+                println!("  [{}] {} — strategy: {}, score: {} (entry closed)", i, player, strat_str, score);
             }
         }
     }

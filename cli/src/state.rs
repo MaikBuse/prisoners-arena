@@ -43,6 +43,7 @@ pub struct Tournament {
     pub entries_remaining: u32,
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
+    pub strategies: Vec<u8>,
     pub bump: u8,
 }
 
@@ -124,8 +125,11 @@ impl Tournament {
         let scores_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
         let mut scores = Vec::with_capacity(scores_len);
         for _ in 0..scores_len { scores.push(u32::from_le_bytes(data[o..o + 4].try_into()?)); o += 4; }
+        let strategies_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
+        let mut strategies = Vec::with_capacity(strategies_len);
+        for _ in 0..strategies_len { strategies.push(data[o]); o += 1; }
         let bump = data[o];
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, players, scores, bump })
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, players, scores, strategies, bump })
     }
 }
 

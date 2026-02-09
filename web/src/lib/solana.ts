@@ -187,6 +187,7 @@ export interface TournamentAccount {
   entriesRemaining: number;
   players: string[];
   scores: number[];
+  strategies: number[];
   bump: number;
   address: string;
 }
@@ -227,9 +228,15 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
     scores.push(readU32LE(data, offset)); offset += 4;
   }
 
+  const strategiesLen = readU32LE(data, offset); offset += 4;
+  const strategies: number[] = [];
+  for (let i = 0; i < strategiesLen; i++) {
+    strategies.push(readU8(data, offset)); offset += 1;
+  }
+
   const bump = readU8(data, offset);
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, players, scores, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, players, scores, strategies, bump, address };
 }
 
 export interface EntryAccount {

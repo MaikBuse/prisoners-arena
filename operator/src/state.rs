@@ -40,6 +40,7 @@ pub struct Tournament {
     pub entries_remaining: u32,
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
+    pub strategies: Vec<u8>,
     pub bump: u8,
 }
 
@@ -249,6 +250,16 @@ impl Tournament {
             offset += 4;
         }
         
+        // Vec<u8> strategies
+        let strategies_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
+        offset += 4;
+        
+        let mut strategies = Vec::with_capacity(strategies_len);
+        for _ in 0..strategies_len {
+            strategies.push(data[offset]);
+            offset += 1;
+        }
+        
         let bump = data[offset];
         
         Ok(Tournament {
@@ -272,6 +283,7 @@ impl Tournament {
             entries_remaining,
             players,
             scores,
+            strategies,
             bump,
         })
     }

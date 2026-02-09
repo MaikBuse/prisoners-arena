@@ -96,11 +96,17 @@ export function buildScoreboard(tournament: TournamentAccount, entries: EntryAcc
     // If entry is closed and tournament is in Payout, all matches were completed
     const inferredMatchesPlayed = tournament.state === 'Payout' ? tournament.matchesPerPlayer : 0;
 
+    // Use tournament.strategies (persists after entry closure) as primary source
+    const stratIdx = tournament.strategies?.[i];
+    const validStrat = stratIdx !== undefined && stratIdx >= 0 && stratIdx <= 8;
+    const strategy = validStrat ? stratIdx : (entry?.strategy ?? -1);
+    const strategyName = validStrat ? (STRATEGIES[stratIdx]?.name ?? 'Unknown') : (entry ? (STRATEGIES[entry.strategy]?.name ?? 'Unknown') : 'Unknown');
+
     scoreboard.push({
       player,
       score,
-      strategy: entry?.strategy ?? -1,
-      strategyName: entry ? (STRATEGIES[entry.strategy]?.name ?? 'Unknown') : 'Unknown',
+      strategy,
+      strategyName,
       matchesPlayed: entry?.matchesPlayed ?? inferredMatchesPlayed,
       paidOut: entry?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore),
       entryExists: !!entry,

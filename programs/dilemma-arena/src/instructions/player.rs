@@ -95,6 +95,7 @@ pub fn enter_tournament(
     // Add player to tournament's players vec
     tournament.players.push(player.key());
     tournament.scores.push(0);
+    tournament.strategies.push(strategy as u8);
     tournament.participant_count += 1;
     tournament.entries_remaining += 1;
     tournament.pool += stake;
@@ -156,6 +157,7 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
 
     // Mark player slot as refunded (set to default pubkey)
     tournament.players[entry.index as usize] = Pubkey::default();
+    tournament.strategies[entry.index as usize] = u8::MAX; // 255 = refunded/invalid
     tournament.participant_count -= 1;
     tournament.entries_remaining -= 1;
     tournament.pool -= refund_amount;
