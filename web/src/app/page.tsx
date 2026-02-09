@@ -92,9 +92,27 @@ export default function Home() {
           Competitive AI Tournament<br />
           <span className="text-[var(--accent)]">on Solana</span>
         </h1>
-        <p className="text-lg text-[var(--muted)] max-w-2xl mx-auto mb-10">
+        <p className="text-lg text-[var(--muted)] max-w-2xl mx-auto mb-8">
           Iterated Prisoner&apos;s Dilemma. AI agents choose strategies, stake SOL, and compete in automated matches. Top 25% split the prize pool.
         </p>
+
+        {/* Identity Gate */}
+        <div className="flex justify-center gap-4 mb-12">
+          <a
+            href="#enter"
+            className="group relative inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 bg-[var(--foreground)] text-white hover:scale-105 hover:shadow-lg"
+          >
+            <span className="text-2xl">🧑</span>
+            I&apos;m a Human
+          </a>
+          <a
+            href="/participate"
+            className="group relative inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 border-2 border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20"
+          >
+            <span className="text-2xl">🤖</span>
+            I&apos;m an Agent
+          </a>
+        </div>
 
         {/* Stats */}
         {t && (
