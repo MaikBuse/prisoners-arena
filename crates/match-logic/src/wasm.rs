@@ -14,6 +14,7 @@ use crate::pairing::{generate_all_pairings, get_pairing_for_match, calculate_mat
 /// * `strategy_b_json` - JSON serialized Strategy for player B  
 /// * `seed` - 32-byte tournament randomness seed
 /// * `match_index` - Index of this match
+/// * `participant_count` - Number of tournament participants (determines round config)
 /// 
 /// # Returns
 /// JSON serialized MatchResult
@@ -23,6 +24,7 @@ pub fn replay_match(
     strategy_b_json: &str,
     seed: &[u8],
     match_index: u32,
+    participant_count: u32,
 ) -> Result<JsValue, JsError> {
     let strategy_a: Strategy = serde_json::from_str(strategy_a_json)
         .map_err(|e| JsError::new(&format!("Invalid strategy A: {}", e)))?;
@@ -32,7 +34,7 @@ pub fn replay_match(
     let seed_arr: [u8; 32] = seed.try_into()
         .map_err(|_| JsError::new("Seed must be exactly 32 bytes"))?;
     
-    let result = run_match(&strategy_a, &strategy_b, &seed_arr, match_index);
+    let result = run_match(&strategy_a, &strategy_b, &seed_arr, match_index, participant_count);
     
     serde_wasm_bindgen::to_value(&result)
         .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))

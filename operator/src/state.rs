@@ -38,6 +38,7 @@ pub struct Tournament {
     pub claims_processed: u32,
     pub payout_started_at: i64,
     pub entries_remaining: u32,
+    pub round_tier: u8,
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
@@ -232,6 +233,9 @@ impl Tournament {
         let entries_remaining = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
         offset += 4;
         
+        let round_tier = data[offset];
+        offset += 1;
+        
         // Vec<Pubkey> players
         let players_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
         offset += 4;
@@ -294,6 +298,7 @@ impl Tournament {
             claims_processed,
             payout_started_at,
             entries_remaining,
+            round_tier,
             players,
             scores,
             strategies,

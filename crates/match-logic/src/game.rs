@@ -26,21 +26,34 @@ pub struct MatchResult {
     pub round_count: u8,
 }
 
+/// Configuration for round count distribution per match
+#[derive(Clone, Debug)]
+pub struct RoundConfig {
+    pub min_rounds: u8,
+    pub max_rounds: u8,
+    pub end_probability: u8, // % chance to end each round after min
+}
+
+impl RoundConfig {
+    /// Standard config for ≤1000 participants (Tier A & B)
+    pub fn standard() -> Self {
+        Self { min_rounds: 20, max_rounds: 50, end_probability: 5 }
+    }
+
+    /// Compressed config for >1000 participants (Tier C)
+    pub fn compressed() -> Self {
+        Self { min_rounds: 10, max_rounds: 30, end_probability: 7 }
+    }
+}
+
 /// Determine how many rounds this match will have
 /// 
-/// Uses geometric distribution: 10% chance to end each round after minimum
-/// - Minimum: 5 rounds
-/// - Maximum: 15 rounds  
-/// - Expected: ~10 rounds
-fn determine_round_count(rng: &mut SeededRng) -> u8 {
-    const MIN_ROUNDS: u8 = 5;
-    const MAX_ROUNDS: u8 = 15;
-    const END_PROBABILITY: u8 = 10; // 10% chance to end each round
+/// Uses geometric distribution with configurable parameters
+fn determine_round_count(rng: &mut SeededRng, config: &RoundConfig) -> u8 {
+    let mut rounds = config.min_rounds;
     
-    let mut rounds = MIN_ROUNDS;
-    
-    while rounds < MAX_ROUNDS {
-        if rng.next_percent() < END_PROBABILITY {
+    while rounds < config.max_rounds {
+        if rng.next_percent() < config.end_probability {
             break;
         }
         rounds += 1;
@@ -56,6 +69,7 @@ fn determine_round_count(rng: &mut SeededRng) -> u8 {
 /// * `strategy_b` - Second player's strategy
 /// * `seed` - Tournament randomness seed
 /// * `match_index` - Index of this match in the tournament
+/// * `participant_count` - Number of participants (determines round config tier)
 /// 
 /// # Returns
 /// Complete match result with round-by-round details
@@ -64,9 +78,15 @@ pub fn run_match(
     strategy_b: &Strategy,
     seed: &[u8; 32],
     match_index: u32,
+    participant_count: u32,
 ) -> MatchResult {
     let mut rng = SeededRng::new(seed, match_index);
-    let round_count = determine_round_count(&mut rng);
+    let round_config = if participant_count <= 1000 {
+        RoundConfig::standard()
+    } else {
+        RoundConfig::compressed()
+    };
+    let round_count = determine_round_count(&mut rng, &round_config);
     
     let mut history_a: Vec<Move> = Vec::with_capacity(round_count as usize);
     let mut history_b: Vec<Move> = Vec::with_capacity(round_count as usize);
@@ -118,30 +138,32 @@ mod tests {
     #[test]
     fn test_round_count_in_range() {
         let seed = [42u8; 32];
+        let config = RoundConfig::standard();
         
         for match_index in 0..100 {
             let mut rng = SeededRng::new(&seed, match_index);
-            let count = determine_round_count(&mut rng);
-            assert!(count >= 5, "Round count {} below minimum", count);
-            assert!(count <= 15, "Round count {} above maximum", count);
+            let count = determine_round_count(&mut rng, &config);
+            assert!(count >= 20, "Round count {} below minimum", count);
+            assert!(count <= 50, "Round count {} above maximum", count);
         }
     }
     
     #[test]
     fn test_round_count_distribution() {
         let seed = [42u8; 32];
+        let config = RoundConfig::standard();
         let mut total = 0u32;
         let samples = 1000;
         
         for match_index in 0..samples {
             let mut rng = SeededRng::new(&seed, match_index);
-            total += determine_round_count(&mut rng) as u32;
+            total += determine_round_count(&mut rng, &config) as u32;
         }
         
         let average = total as f64 / samples as f64;
-        // Expected is around 10, allow some variance
-        assert!(average > 8.0, "Average {} too low", average);
-        assert!(average < 12.0, "Average {} too high", average);
+        // Expected is around 35 for standard config
+        assert!(average > 30.0, "Average {} too low", average);
+        assert!(average < 40.0, "Average {} too high", average);
     }
     
     #[test]
@@ -150,8 +172,8 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::TitForTat);
         let strategy_b = Strategy::new(StrategyBase::Random);
         
-        let result1 = run_match(&strategy_a, &strategy_b, &seed, 0);
-        let result2 = run_match(&strategy_a, &strategy_b, &seed, 0);
+        let result1 = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
+        let result2 = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
         
         assert_eq!(result1.round_count, result2.round_count);
         assert_eq!(result1.total_score_a, result2.total_score_a);
@@ -169,8 +191,8 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::Random);
         let strategy_b = Strategy::new(StrategyBase::Random);
         
-        let result1 = run_match(&strategy_a, &strategy_b, &seed, 0);
-        let result2 = run_match(&strategy_a, &strategy_b, &seed, 1);
+        let result1 = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
+        let result2 = run_match(&strategy_a, &strategy_b, &seed, 1, 100);
         
         // Different match indices should produce different results
         // (not guaranteed but extremely likely with Random strategies)
@@ -186,7 +208,7 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::AlwaysCooperate);
         let strategy_b = Strategy::new(StrategyBase::AlwaysCooperate);
         
-        let result = run_match(&strategy_a, &strategy_b, &seed, 0);
+        let result = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
         
         // Both always cooperate, should get 3 points each per round
         for round in &result.rounds {
@@ -206,7 +228,7 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::AlwaysDefect);
         let strategy_b = Strategy::new(StrategyBase::AlwaysCooperate);
         
-        let result = run_match(&strategy_a, &strategy_b, &seed, 0);
+        let result = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
         
         // A always defects, B always cooperates
         for round in &result.rounds {
@@ -226,7 +248,7 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::TitForTat);
         let strategy_b = Strategy::new(StrategyBase::TitForTat);
         
-        let result = run_match(&strategy_a, &strategy_b, &seed, 0);
+        let result = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
         
         // TFT vs TFT: both start cooperating and continue cooperating
         for round in &result.rounds {
@@ -241,7 +263,7 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::TitForTat);
         let strategy_b = Strategy::new(StrategyBase::AlwaysDefect);
         
-        let result = run_match(&strategy_a, &strategy_b, &seed, 0);
+        let result = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
         
         // Round 0: TFT cooperates, AD defects
         assert_eq!(result.rounds[0].move_a, Move::Cooperate);
@@ -260,7 +282,7 @@ mod tests {
         let strategy_a = Strategy::new(StrategyBase::AlwaysCooperate);
         let strategy_b = Strategy::new(StrategyBase::AlwaysCooperate);
         
-        let result = run_match(&strategy_a, &strategy_b, &seed, 0);
+        let result = run_match(&strategy_a, &strategy_b, &seed, 0, 100);
         
         let mut expected_a = 0u32;
         let mut expected_b = 0u32;
@@ -270,6 +292,80 @@ mod tests {
             expected_b += round.score_b as u32;
             assert_eq!(round.cumulative_a, expected_a);
             assert_eq!(round.cumulative_b, expected_b);
+        }
+    }
+
+    #[test]
+    fn test_round_count_standard_range() {
+        let seed = [42u8; 32];
+        let config = RoundConfig::standard();
+        for i in 0..200 {
+            let mut rng = SeededRng::new(&seed, i);
+            let count = determine_round_count(&mut rng, &config);
+            assert!(count >= 20 && count <= 50, "Standard round count {} out of [20,50]", count);
+        }
+    }
+
+    #[test]
+    fn test_round_count_standard_expected() {
+        let seed = [42u8; 32];
+        let config = RoundConfig::standard();
+        let mut total = 0u32;
+        let samples = 1000;
+        for i in 0..samples {
+            let mut rng = SeededRng::new(&seed, i);
+            total += determine_round_count(&mut rng, &config) as u32;
+        }
+        let avg = total as f64 / samples as f64;
+        assert!(avg > 30.0 && avg < 40.0, "Standard average {} not ~35", avg);
+    }
+
+    #[test]
+    fn test_round_count_compressed_range() {
+        let seed = [42u8; 32];
+        let config = RoundConfig::compressed();
+        for i in 0..200 {
+            let mut rng = SeededRng::new(&seed, i);
+            let count = determine_round_count(&mut rng, &config);
+            assert!(count >= 10 && count <= 30, "Compressed round count {} out of [10,30]", count);
+        }
+    }
+
+    #[test]
+    fn test_round_count_compressed_expected() {
+        let seed = [42u8; 32];
+        let config = RoundConfig::compressed();
+        let mut total = 0u32;
+        let samples = 1000;
+        for i in 0..samples {
+            let mut rng = SeededRng::new(&seed, i);
+            total += determine_round_count(&mut rng, &config) as u32;
+        }
+        let avg = total as f64 / samples as f64;
+        assert!(avg > 16.0 && avg < 24.0, "Compressed average {} not ~20", avg);
+    }
+
+    #[test]
+    fn test_run_match_uses_standard_rounds() {
+        let seed = [42u8; 32];
+        let sa = Strategy::new(StrategyBase::AlwaysCooperate);
+        let sb = Strategy::new(StrategyBase::AlwaysCooperate);
+        for i in 0..50 {
+            let result = run_match(&sa, &sb, &seed, i, 100);
+            assert!(result.round_count >= 20 && result.round_count <= 50,
+                "participant_count=100: round_count {} not in [20,50]", result.round_count);
+        }
+    }
+
+    #[test]
+    fn test_run_match_uses_compressed_rounds() {
+        let seed = [42u8; 32];
+        let sa = Strategy::new(StrategyBase::AlwaysCooperate);
+        let sb = Strategy::new(StrategyBase::AlwaysCooperate);
+        for i in 0..50 {
+            let result = run_match(&sa, &sb, &seed, i, 2000);
+            assert!(result.round_count >= 10 && result.round_count <= 30,
+                "participant_count=2000: round_count {} not in [10,30]", result.round_count);
         }
     }
 }

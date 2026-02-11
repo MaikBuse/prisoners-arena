@@ -123,6 +123,8 @@ pub struct Tournament {
     pub payout_started_at: i64,
     /// Number of open entry accounts (inc on enter, dec on claim/refund/expire)
     pub entries_remaining: u32,
+    /// Round tier: 0 = standard (20-50 rounds), 1 = compressed (10-30 rounds)
+    pub round_tier: u8,
     /// Ordered list of player pubkeys (index = entry order, default = refunded)
     pub players: Vec<Pubkey>,
     /// Scores indexed by entry.index (source of truth for finalization)
@@ -159,6 +161,7 @@ impl Tournament {
         4 +   // claims_processed
         8 +   // payout_started_at
         4 +   // entries_remaining
+        1 +   // round_tier
         4 +   // players vec len (empty)
         4 +   // scores vec len (empty)
         4 +   // strategies vec len (empty)

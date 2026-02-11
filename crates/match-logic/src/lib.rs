@@ -15,8 +15,8 @@ mod wasm;
 
 pub use random::SeededRng;
 pub use strategy::{Move, Strategy, StrategyBase, StrategyParams};
-pub use game::{run_match, MatchResult, RoundResult};
-pub use pairing::{generate_all_pairings, get_pairing_for_match, calculate_match_count};
+pub use game::{run_match, MatchResult, RoundResult, RoundConfig};
+pub use pairing::{generate_all_pairings, get_pairing_for_match, calculate_match_count, effective_k};
 
 /// Payoff matrix for the Prisoner's Dilemma
 /// Returns (score_a, score_b)

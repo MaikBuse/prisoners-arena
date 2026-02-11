@@ -70,6 +70,7 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
     println!("  Stake:              {} lamports", t.stake);
     println!("  House Fee:          {} bps", t.house_fee_bps);
     println!("  Matches Per Player: {}", t.matches_per_player);
+    println!("  Round Tier:         {}", match t.round_tier { 0 => "Standard (20-50 rounds)", 1 => "Compressed (10-30 rounds)", _ => "Unknown" });
     println!("  Pool:               {} lamports", t.pool);
     println!("  Participants:       {}", t.participant_count);
     println!("  Registration Ends:  {}", t.registration_ends);

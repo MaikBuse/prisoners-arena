@@ -185,6 +185,7 @@ export interface TournamentAccount {
   claimsProcessed: number;
   payoutStartedAt: string;
   entriesRemaining: number;
+  roundTier: number;
   players: string[];
   scores: number[];
   strategies: number[];
@@ -216,6 +217,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const claimsProcessed = readU32LE(data, offset); offset += 4;
   const payoutStartedAt = readI64LE(data, offset).toString(); offset += 8;
   const entriesRemaining = readU32LE(data, offset); offset += 4;
+  const roundTier = readU8(data, offset); offset += 1;
 
   const playersLen = readU32LE(data, offset); offset += 4;
   const players: string[] = [];
@@ -250,7 +252,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
 
   const bump = readU8(data, offset);
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, players, scores, strategies, strategyParams, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, players, scores, strategies, strategyParams, bump, address };
 }
 
 export interface EntryAccount {
@@ -390,4 +392,12 @@ export function formatLamports(lamports: string | bigint): string {
 
 export function truncateAddress(addr: string, chars = 4): string {
   return `${addr.slice(0, chars)}...${addr.slice(-chars)}`;
+}
+
+export function getTierLabel(roundTier: number): string {
+  switch (roundTier) {
+    case 0: return 'Standard (20-50 rounds)';
+    case 1: return 'Compressed (10-30 rounds)';
+    default: return 'Unknown';
+  }
 }

@@ -2,6 +2,22 @@
 
 use crate::random::SeededRng;
 
+/// Calculate effective K (matches per player) based on participant count
+///
+/// - n < 2: return 0
+/// - n ≤ 200: full round-robin (n-1)
+/// - n > 200: clamp config_k to [49, 99]
+pub fn effective_k(participant_count: u32, config_k: u16) -> u16 {
+    if participant_count < 2 {
+        return 0;
+    }
+    if participant_count <= 200 {
+        (participant_count - 1) as u16
+    } else {
+        config_k.min(99).max(49)
+    }
+}
+
 /// Generate all match pairings for a tournament
 /// 
 /// Each participant plays exactly K matches (deduplicated — each match counted once).
@@ -404,5 +420,43 @@ mod tests {
             assert_eq!(p, Some((0, 1)));
         }
         assert_eq!(get_pairing_for_match(2, 15, &seed, 15), None);
+    }
+
+    #[test]
+    fn test_effective_k_tier_a() {
+        assert_eq!(effective_k(0, 99), 0);
+        assert_eq!(effective_k(1, 99), 0);
+        assert_eq!(effective_k(2, 99), 1);
+        assert_eq!(effective_k(10, 99), 9);
+        assert_eq!(effective_k(200, 99), 199);
+    }
+
+    #[test]
+    fn test_effective_k_tier_b_c() {
+        assert_eq!(effective_k(201, 99), 99);
+        assert_eq!(effective_k(500, 99), 99);
+        assert_eq!(effective_k(1000, 99), 99);
+        assert_eq!(effective_k(5000, 99), 99);
+        // config_k < 49 gets clamped up
+        assert_eq!(effective_k(500, 10), 49);
+        // config_k > 99 gets clamped down
+        assert_eq!(effective_k(500, 150), 99);
+        assert_eq!(effective_k(500, 50), 50);
+    }
+
+    #[test]
+    fn test_full_round_robin_all_pairs() {
+        let seed = [42u8; 32];
+        let n = 50u32;
+        let k = 49u16; // n-1 = full round-robin
+        let pairings = generate_all_pairings(n, k, &seed);
+        
+        let mut unique: std::collections::HashSet<(u32, u32)> = std::collections::HashSet::new();
+        for p in &pairings {
+            unique.insert(*p);
+        }
+        
+        let expected = (n * (n - 1) / 2) as usize;
+        assert_eq!(unique.len(), expected, "Expected {} unique pairs, got {}", expected, unique.len());
     }
 }

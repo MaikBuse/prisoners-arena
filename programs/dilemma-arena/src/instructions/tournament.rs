@@ -121,6 +121,11 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
     }
     tournament.randomness_seed = seed;
 
+    // Apply adaptive K based on participant count
+    let effective_k = match_logic::effective_k(tournament.participant_count, tournament.matches_per_player);
+    tournament.matches_per_player = effective_k;
+    tournament.round_tier = if tournament.participant_count <= 1000 { 0 } else { 1 };
+
     // Calculate total matches using match-logic crate
     tournament.matches_total = match_logic::calculate_match_count(
         tournament.participant_count,
@@ -236,6 +241,7 @@ pub fn run_matches<'info>(
             &strategy_b,
             &tournament.randomness_seed,
             match_index,
+            tournament.participant_count,
         );
 
         // Update scores (both entry and tournament)
@@ -437,6 +443,7 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.claims_processed = 0;
     next_tournament.payout_started_at = 0;
     next_tournament.entries_remaining = 0;
+    next_tournament.round_tier = 0;
     next_tournament.players = Vec::new();
     next_tournament.scores = Vec::new();
     next_tournament.strategies = Vec::new();
