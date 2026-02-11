@@ -267,7 +267,7 @@ Tournament accounts now grow incrementally as players join.
 | v1.1 — Stability & Correctness | 🟢 Implemented (see `releases/v1.1.md`) |
 | v1.2 — Hardening & Polish | 🟢 Implemented (see `releases/v1.2.md`) |
 | v1.3 — Persist Strategy in Tournament | 🟢 Implemented (see `releases/v1.3.md`) |
-| v1.4 — Strategy Parameters | ⚪ Planned (see `releases/v1.4.md`) |
+| v1.4 — Strategy Parameters | 🟢 Complete (see `releases/v1.4.md`) |
 | v1.5 — Matchmaking Overhaul | ⚪ Planned (see `releases/v1.5.md`) |
 | v1.6 — Strategy Configurator | ⚪ Planned (see `releases/v1.6.md`) |
 | v1.7 — Commit-Reveal Strategies | ⚪ Planned (see `releases/v1.7.md`) |
