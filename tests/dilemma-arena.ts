@@ -37,6 +37,14 @@ const ALL_STRATEGIES = [
   Strategy.Gradual,
 ];
 
+const DEFAULT_PARAMS = {
+  forgiveness: 0,
+  retaliationDelay: 0,
+  noiseTolerance: 0,
+  initialMoves: 0,
+  cooperateBias: 50,
+};
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 function deriveCfg(pid: PublicKey): [PublicKey, number] {
@@ -431,7 +439,7 @@ describe("dilemma-arena", () => {
       const balBefore = await conn.getBalance(p.publicKey);
 
       await program.methods
-        .enterTournament(Strategy.TitForTat)
+        .enterTournament(Strategy.TitForTat, DEFAULT_PARAMS)
         .accounts({
           config: configKey, tournament: t0Key, entry: eKey,
           player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -464,7 +472,7 @@ describe("dilemma-arena", () => {
         const p = players[i + 1];
         const [eKey] = deriveE(pid, t0Key, p.publicKey);
         await program.methods
-          .enterTournament(strats[i])
+          .enterTournament(strats[i], DEFAULT_PARAMS)
           .accounts({
             config: configKey, tournament: t0Key, entry: eKey,
             player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -489,7 +497,7 @@ describe("dilemma-arena", () => {
       const [eKey] = deriveE(pid, t0Key, p.publicKey);
       try {
         await program.methods
-          .enterTournament(Strategy.Random)
+          .enterTournament(Strategy.Random, DEFAULT_PARAMS)
           .accounts({
             config: configKey, tournament: t0Key, entry: eKey,
             player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -570,7 +578,7 @@ describe("dilemma-arena", () => {
       const p = players[8];
       const [eKey] = deriveE(pid, t0Key, p.publicKey);
       await program.methods
-        .enterTournament(Strategy.Gradual)
+        .enterTournament(Strategy.Gradual, DEFAULT_PARAMS)
         .accounts({
           config: configKey, tournament: t0Key, entry: eKey,
           player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -829,7 +837,7 @@ describe("dilemma-arena", () => {
       const [eKey] = deriveE(pid, t0Key, p.publicKey);
       try {
         await program.methods
-          .enterTournament(Strategy.Pavlov)
+          .enterTournament(Strategy.Pavlov, DEFAULT_PARAMS)
           .accounts({
             config: configKey, tournament: t0Key, entry: eKey,
             player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -885,13 +893,13 @@ describe("dilemma-arena", () => {
       }
 
       expect(t.matchesCompleted).to.equal(total);
-      // 2 players, K=6 → 6 matches via repeated round-robin
-      expect(total).to.equal(6);
+      // 2 players, adaptive K = n-1 = 1 → 1 match (full round-robin)
+      expect(total).to.equal(1);
       expect(t.scores.some((s: number) => s > 0)).to.be.true;
     });
 
     it("match indices were contiguous (start_index fix validated)", async () => {
-      // If the old double-counting bug were present, not all 6 matches
+      // If the old double-counting bug were present, not all matches
       // would have completed — it would have hit InvalidMatch.
       // The fact that matches_completed == matches_total proves contiguity.
       const t = await program.account.tournament.fetch(t0Key);
@@ -1114,7 +1122,7 @@ describe("dilemma-arena", () => {
         const p = players[i + 4]; // use players[4] and players[5]
         const [eKey] = deriveE(pid, t1Key, p.publicKey);
         await program.methods
-          .enterTournament(i === 0 ? Strategy.AlwaysCooperate : Strategy.AlwaysDefect)
+          .enterTournament(i === 0 ? Strategy.AlwaysCooperate : Strategy.AlwaysDefect, DEFAULT_PARAMS)
           .accounts({
             config: configKey, tournament: t1Key, entry: eKey,
             player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -1241,7 +1249,7 @@ describe("dilemma-arena", () => {
       const p = players[10];
       const [eKey] = deriveE(pid, t2Key, p.publicKey);
       await program.methods
-        .enterTournament(Strategy.Pavlov)
+        .enterTournament(Strategy.Pavlov, DEFAULT_PARAMS)
         .accounts({
           config: configKey, tournament: t2Key, entry: eKey,
           player: p.publicKey, systemProgram: SystemProgram.programId,
@@ -1285,7 +1293,7 @@ describe("dilemma-arena", () => {
       const p = players[11];
       const [eKey] = deriveE(pid, t2Key, p.publicKey);
       await program.methods
-        .enterTournament(Strategy.Random)
+        .enterTournament(Strategy.Random, DEFAULT_PARAMS)
         .accounts({
           config: configKey, tournament: t2Key, entry: eKey,
           player: p.publicKey, systemProgram: SystemProgram.programId,
