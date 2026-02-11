@@ -24,3 +24,5 @@ Thumbs.db
 logs/
 .anchor/test-ledger/
 wallets/
+test-ledger/
+arena-local.toml
