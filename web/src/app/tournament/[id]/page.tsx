@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, use } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
-import type { ScoreboardEntry } from '@/lib/api';
+import type { ScoreboardEntry, StrategyParams } from '@/lib/api';
 import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, PROGRAM_ID } from '@/lib/solana';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge } from '@/components/StrategyBadge';
@@ -54,6 +54,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     score: e.score,
     strategy: e.strategy,
     strategyName: e.strategyName,
+    strategyParams: e.strategyParams as StrategyParams | null,
     matchesPlayed: e.matchesPlayed,
     paidOut: e.paidOut,
     entryExists: true,
@@ -277,7 +278,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                               <CopyButton text={e.player} />
                             </td>
                             <td className="px-5 py-3">
-                              {e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
+                              {e.strategy >= 0 ? (
+                                <span className="relative group inline-block">
+                                  <StrategyBadge strategy={e.strategy} />
+                                  {e.strategyParams && <ParamsPopup params={e.strategyParams} />}
+                                </span>
+                              ) : <span className="text-xs text-[var(--muted)]">—</span>}
                             </td>
                             <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
                             <td className="px-5 py-3 text-right text-[var(--muted)]">
@@ -317,6 +323,38 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
       <div className="text-xs text-[var(--muted)]">{label}</div>
       <div className="font-bold mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function ParamsPopup({ params }: { params: StrategyParams }) {
+  const isDefault = params.forgiveness === 0 && params.retaliationDelay === 0 &&
+    params.noiseTolerance === 0 && params.initialMoves === 0 && params.cooperateBias === 50;
+
+  const rows: [string, number, string][] = [
+    ['Cooperate Bias', params.cooperateBias, '%'],
+    ['Forgiveness', params.forgiveness, '%'],
+    ['Retaliation Delay', params.retaliationDelay, ''],
+    ['Noise Tolerance', params.noiseTolerance, ''],
+    ['Initial Moves', params.initialMoves, ''],
+  ];
+
+  return (
+    <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block">
+      <div className="bg-white border border-[var(--card-border)] rounded-xl shadow-lg p-3 min-w-[200px]">
+        <div className="text-xs font-bold text-[var(--muted)] mb-2 flex items-center gap-1.5">
+          ⚙️ Strategy Parameters
+          {isDefault && <span className="text-[10px] font-normal opacity-60">(defaults)</span>}
+        </div>
+        <div className="space-y-1.5">
+          {rows.map(([label, value, unit]) => (
+            <div key={label} className="flex items-center justify-between text-xs">
+              <span className="text-[var(--muted)]">{label}</span>
+              <span className="font-mono font-medium">{value}{unit}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

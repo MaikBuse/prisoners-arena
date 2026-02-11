@@ -62,11 +62,20 @@ export function apiError(error: string, code: string, status = 400) {
 /** Default pubkey (all zeros) — indicates refunded slot */
 const DEFAULT_PUBKEY = '11111111111111111111111111111111';
 
+export interface StrategyParams {
+  forgiveness: number;
+  retaliationDelay: number;
+  noiseTolerance: number;
+  initialMoves: number;
+  cooperateBias: number;
+}
+
 export interface ScoreboardEntry {
   player: string;
   score: number;
   strategy: number;
   strategyName: string;
+  strategyParams: StrategyParams | null;
   matchesPlayed: number;
   paidOut: boolean;
   /** true if the entry account still exists on-chain */
@@ -102,11 +111,18 @@ export function buildScoreboard(tournament: TournamentAccount, entries: EntryAcc
     const strategy = validStrat ? stratIdx : (entry?.strategy ?? -1);
     const strategyName = validStrat ? (STRATEGIES[stratIdx]?.name ?? 'Unknown') : (entry ? (STRATEGIES[entry.strategy]?.name ?? 'Unknown') : 'Unknown');
 
+    // Strategy params from tournament vecs (persists after entry closure) or entry account
+    const rawParams = tournament.strategyParams?.[i];
+    const strategyParams: StrategyParams | null = rawParams
+      ? { forgiveness: rawParams[0], retaliationDelay: rawParams[1], noiseTolerance: rawParams[2], initialMoves: rawParams[3], cooperateBias: rawParams[4] }
+      : entry?.strategyParams ?? null;
+
     scoreboard.push({
       player,
       score,
       strategy,
       strategyName,
+      strategyParams,
       matchesPlayed: entry?.matchesPlayed ?? inferredMatchesPlayed,
       paidOut: entry?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore),
       entryExists: !!entry,

@@ -1,0 +1,15 @@
+[network]
+rpc_url = "http://127.0.0.1:8899"
+program_id = "5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW"
+
+[wallets]
+admin = "~/.config/solana/id.json"
+operator = "~/.config/solana/operator.json"
+
+[defaults]
+stake = 100000000
+min_participants = 2
+max_participants = 100
+registration_duration = 120
+matches_per_player = 15
+house_fee_bps = 250
