@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState, useCallback, use } from 'react';
+import { useEffect, useState, useCallback, use, Fragment } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
 import type { ScoreboardEntry, StrategyParams } from '@/lib/api';
 import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, PROGRAM_ID } from '@/lib/solana';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { StrategyBadge } from '@/components/StrategyBadge';
+import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { LogoSmall } from '@/components/Logo';
 
@@ -22,6 +22,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -265,36 +266,50 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     <tbody>
                       {sorted.map((e, i) => {
                         const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
+                        const isExpanded = expandedPlayer === e.player;
+                        const colCount = t.state === 'Payout' ? 6 : 5;
                         return (
-                          <tr key={e.player} className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors ${
-                            isWinner ? 'bg-amber-50/50' : ''
-                          }`}>
-                            <td className="px-5 py-3 text-[var(--muted)] whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span>
-                            </td>
-                            <td className="px-5 py-3 font-mono text-sm">
-                              <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
-                                 className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(e.player, 6)}</a>
-                              <CopyButton text={e.player} />
-                            </td>
-                            <td className="px-5 py-3">
-                              {e.strategy >= 0 ? (
-                                <span className="relative group inline-block">
-                                  <StrategyBadge strategy={e.strategy} />
-                                  {e.strategyParams && <ParamsPopup params={e.strategyParams} />}
-                                </span>
-                              ) : <span className="text-xs text-[var(--muted)]">—</span>}
-                            </td>
-                            <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
-                            <td className="px-5 py-3 text-right text-[var(--muted)]">
-                              {e.matchesPlayed > 0 ? `${e.matchesPlayed} / ${t.matchesPerPlayer}` : '—'}
-                            </td>
-                            {t.state === 'Payout' && (
-                              <td className="px-5 py-3 text-center text-sm">
-                                {e.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : '—'}
+                          <Fragment key={e.player}>
+                            <tr
+                              className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors cursor-pointer ${
+                                isWinner ? 'bg-amber-50/50' : ''
+                              } ${isExpanded ? 'bg-neutral-50' : ''}`}
+                              onClick={() => setExpandedPlayer(isExpanded ? null : e.player)}
+                            >
+                              <td className="px-5 py-3 text-[var(--muted)] whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span>
                               </td>
+                              <td className="px-5 py-3 font-mono text-sm">
+                                <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
+                                   className="text-[var(--accent)] hover:text-[var(--accent-hover)]"
+                                   onClick={(ev) => ev.stopPropagation()}>{truncateAddress(e.player, 6)}</a>
+                                <CopyButton text={e.player} />
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="inline-flex items-center flex-wrap gap-y-1">
+                                  {e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
+                                  <ParamPills params={e.strategyParams} />
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
+                              <td className="px-5 py-3 text-right text-[var(--muted)]">
+                                {e.matchesPlayed > 0 ? `${e.matchesPlayed} / ${t.matchesPerPlayer}` : '—'}
+                              </td>
+                              {t.state === 'Payout' && (
+                                <td className="px-5 py-3 text-center text-sm">
+                                  {e.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : '—'}
+                                </td>
+                              )}
+                            </tr>
+                            {isExpanded && e.strategyParams && (
+                              <tr className="border-b border-[var(--card-border)] bg-neutral-50/80">
+                                <td colSpan={colCount} className="px-5 py-4">
+                                  <div className="text-xs font-bold text-[var(--muted)] mb-2">⚙️ Strategy Parameters</div>
+                                  <ParamsDetail params={e.strategyParams} />
+                                </td>
+                              </tr>
                             )}
-                          </tr>
+                          </Fragment>
                         );
                       })}
                     </tbody>
@@ -327,34 +342,4 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ParamsPopup({ params }: { params: StrategyParams }) {
-  const isDefault = params.forgiveness === 0 && params.retaliationDelay === 0 &&
-    params.noiseTolerance === 0 && params.initialMoves === 0 && params.cooperateBias === 50;
-
-  const rows: [string, number, string][] = [
-    ['Cooperate Bias', params.cooperateBias, '%'],
-    ['Forgiveness', params.forgiveness, '%'],
-    ['Retaliation Delay', params.retaliationDelay, ''],
-    ['Noise Tolerance', params.noiseTolerance, ''],
-    ['Initial Moves', params.initialMoves, ''],
-  ];
-
-  return (
-    <div className="absolute left-0 bottom-full mb-2 z-50 hidden group-hover:block">
-      <div className="bg-white border border-[var(--card-border)] rounded-xl shadow-lg p-3 min-w-[200px]">
-        <div className="text-xs font-bold text-[var(--muted)] mb-2 flex items-center gap-1.5">
-          ⚙️ Strategy Parameters
-          {isDefault && <span className="text-[10px] font-normal opacity-60">(defaults)</span>}
-        </div>
-        <div className="space-y-1.5">
-          {rows.map(([label, value, unit]) => (
-            <div key={label} className="flex items-center justify-between text-xs">
-              <span className="text-[var(--muted)]">{label}</span>
-              <span className="font-mono font-medium">{value}{unit}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+/* ParamsPopup removed — replaced by inline ParamPills + expandable ParamsDetail */
