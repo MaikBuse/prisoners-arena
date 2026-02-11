@@ -41,6 +41,7 @@ pub struct Tournament {
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
+    pub strategy_params: Vec<[u8; 5]>,
     pub bump: u8,
 }
 
@@ -67,6 +68,7 @@ pub struct Entry {
     pub player: Pubkey,
     pub index: u32,
     pub strategy: u8, // Strategy enum as u8
+    pub strategy_params: [u8; 5],
     pub score: u32,
     pub matches_played: u16,
     pub paid_out: bool,
@@ -260,6 +262,17 @@ impl Tournament {
             offset += 1;
         }
         
+        // Vec<StrategyParams> (5 bytes each)
+        let params_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
+        offset += 4;
+        let mut strategy_params = Vec::with_capacity(params_len);
+        for _ in 0..params_len {
+            let mut p = [0u8; 5];
+            p.copy_from_slice(&data[offset..offset + 5]);
+            offset += 5;
+            strategy_params.push(p);
+        }
+        
         let bump = data[offset];
         
         Ok(Tournament {
@@ -284,6 +297,7 @@ impl Tournament {
             players,
             scores,
             strategies,
+            strategy_params,
             bump,
         })
     }
@@ -316,6 +330,10 @@ impl Entry {
         let strategy = data[offset];
         offset += 1;
         
+        let mut strategy_params = [0u8; 5];
+        strategy_params.copy_from_slice(&data[offset..offset + 5]);
+        offset += 5;
+        
         let score = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
         offset += 4;
         
@@ -335,6 +353,7 @@ impl Entry {
             player,
             index,
             strategy,
+            strategy_params,
             score,
             matches_played,
             paid_out,

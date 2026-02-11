@@ -14,6 +14,17 @@ fn strategy_name(id: u8) -> &'static str {
     STRATEGY_NAMES.get(id as usize).unwrap_or(&"Unknown")
 }
 
+fn format_params(params: [u8; 5]) -> String {
+    let [forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias] = params;
+    let mut parts = Vec::new();
+    if forgiveness > 0 { parts.push(format!("forgiveness: {}%", forgiveness)); }
+    if retaliation_delay > 0 { parts.push(format!("retaliation_delay: {}", retaliation_delay)); }
+    if noise_tolerance > 0 { parts.push(format!("noise_tolerance: {}", noise_tolerance)); }
+    if initial_moves > 0 { parts.push(format!("initial_moves: 0b{:08b}", initial_moves)); }
+    if cooperate_bias != 50 { parts.push(format!("cooperate_bias: {}%", cooperate_bias)); }
+    if parts.is_empty() { String::new() } else { format!(" ({})", parts.join(", ")) }
+}
+
 pub fn status(cfg: &ArenaConfig) -> Result<()> {
     let client = RpcClient::new(&cfg.network.rpc_url);
     let program_id = cfg.program_id()?;
@@ -73,9 +84,11 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
             let score = t.scores.get(i).copied().unwrap_or(0);
             let strat = t.strategies.get(i).copied().unwrap_or(255);
             let strat_str = if strat <= 8 { strategy_name(strat) } else { "N/A" };
+            let params = t.strategy_params.get(i).copied().unwrap_or([0; 5]);
+            let params_str = format_params(params);
             let default_pk = Pubkey::default();
             let status = if *player == default_pk { " (refunded)" } else { "" };
-            println!("    [{}] {} — strategy: {}, score: {}{}", i, player, strat_str, score, status);
+            println!("    [{}] {} — strategy: {}{}, score: {}{}", i, player, strat_str, params_str, score, status);
         }
     }
     Ok(())

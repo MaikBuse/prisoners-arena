@@ -66,4 +66,7 @@ pub enum DilemmaError {
 
     #[msg("Tournament closure period not yet reached (30 days after payout)")]
     TournamentNotCloseable = 6020,
+
+    #[msg("Invalid strategy parameters")]
+    InvalidParams = 6021,
 }

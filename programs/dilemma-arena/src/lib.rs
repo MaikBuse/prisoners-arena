@@ -11,6 +11,7 @@ mod error;
 
 use instructions::*;
 pub use state::Strategy;
+pub use state::StrategyParams;
 
 declare_id!("5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW");
 
@@ -71,8 +72,9 @@ pub mod dilemma_arena {
     pub fn enter_tournament(
         ctx: Context<EnterTournament>,
         strategy: state::Strategy,
+        params: state::StrategyParams,
     ) -> Result<()> {
-        instructions::player::enter_tournament(ctx, strategy)
+        instructions::player::enter_tournament(ctx, strategy, params)
     }
 
     /// Claim refund during registration (allowed anytime)

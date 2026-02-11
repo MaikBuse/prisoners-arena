@@ -2,7 +2,7 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use crate::state::{Config, Tournament, Entry, Strategy, TournamentState, CLAIM_EXPIRY_SECONDS, BYTES_PER_PLAYER};
+use crate::state::{Config, Tournament, Entry, Strategy, StrategyParams, TournamentState, CLAIM_EXPIRY_SECONDS, BYTES_PER_PLAYER};
 use crate::error::DilemmaError;
 
 /// Enter the current tournament
@@ -42,6 +42,7 @@ pub struct EnterTournament<'info> {
 pub fn enter_tournament(
     ctx: Context<EnterTournament>,
     strategy: Strategy,
+    params: StrategyParams,
 ) -> Result<()> {
     let config = &ctx.accounts.config;
     let tournament = &mut ctx.accounts.tournament;
@@ -66,6 +67,13 @@ pub fn enter_tournament(
         DilemmaError::TournamentFull
     );
 
+    // Validate strategy params
+    require!(params.forgiveness <= 100, DilemmaError::InvalidParams);
+    require!(params.retaliation_delay <= 10, DilemmaError::InvalidParams);
+    require!(params.noise_tolerance <= 5, DilemmaError::InvalidParams);
+    require!(params.cooperate_bias <= 100, DilemmaError::InvalidParams);
+    // initial_moves: any u8 is valid (bitmask)
+
     // Use snapshotted stake from tournament
     let stake = tournament.stake;
 
@@ -86,6 +94,7 @@ pub fn enter_tournament(
     entry.player = player.key();
     entry.index = tournament.players.len() as u32;
     entry.strategy = strategy;
+    entry.strategy_params = params;
     entry.score = 0;
     entry.matches_played = 0;
     entry.paid_out = false;
@@ -96,6 +105,7 @@ pub fn enter_tournament(
     tournament.players.push(player.key());
     tournament.scores.push(0);
     tournament.strategies.push(strategy as u8);
+    tournament.strategy_params.push(params);
     tournament.participant_count += 1;
     tournament.entries_remaining += 1;
     tournament.pool += stake;
@@ -158,6 +168,7 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
     // Mark player slot as refunded (set to default pubkey)
     tournament.players[entry.index as usize] = Pubkey::default();
     tournament.strategies[entry.index as usize] = u8::MAX; // 255 = refunded/invalid
+    tournament.strategy_params[entry.index as usize] = StrategyParams::default();
     tournament.participant_count -= 1;
     tournament.entries_remaining -= 1;
     tournament.pool -= refund_amount;

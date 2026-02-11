@@ -31,7 +31,7 @@ fn parse_strategy(name: &str) -> Result<u8> {
     }
 }
 
-pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, dry_run: bool) -> Result<()> {
+pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8, dry_run: bool) -> Result<()> {
     let client = RpcClient::new(&cfg.network.rpc_url);
     let program_id = cfg.program_id()?;
     let player = cfg.load_keypair(wallet)?;
@@ -44,6 +44,11 @@ pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, dry_run: bool) -> 
 
     let mut data = disc::ENTER_TOURNAMENT.to_vec();
     data.push(strategy_id);
+    data.push(forgiveness);
+    data.push(retaliation_delay);
+    data.push(noise_tolerance);
+    data.push(initial_moves);
+    data.push(cooperate_bias);
 
     let accounts = vec![
         AccountMeta::new(config_pda, false),
@@ -56,7 +61,17 @@ pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, dry_run: bool) -> 
     let ix = Instruction { program_id, accounts, data };
     send_transaction(&client, &[ix], &player, dry_run)?;
     if !dry_run {
-        println!("Entered tournament #{} with strategy {}", config.current_tournament_id, strategy);
+        let mut msg = format!("Entered tournament #{} with strategy {}", config.current_tournament_id, strategy);
+        let mut params_parts = Vec::new();
+        if forgiveness > 0 { params_parts.push(format!("forgiveness: {}%", forgiveness)); }
+        if retaliation_delay > 0 { params_parts.push(format!("retaliation_delay: {}", retaliation_delay)); }
+        if noise_tolerance > 0 { params_parts.push(format!("noise_tolerance: {}", noise_tolerance)); }
+        if initial_moves > 0 { params_parts.push(format!("initial_moves: 0b{:08b}", initial_moves)); }
+        if cooperate_bias != 50 { params_parts.push(format!("cooperate_bias: {}%", cooperate_bias)); }
+        if !params_parts.is_empty() {
+            msg.push_str(&format!(" ({})", params_parts.join(", ")));
+        }
+        println!("{}", msg);
     }
     Ok(())
 }

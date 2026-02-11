@@ -188,6 +188,7 @@ export interface TournamentAccount {
   players: string[];
   scores: number[];
   strategies: number[];
+  strategyParams: number[][];
   bump: number;
   address: string;
 }
@@ -234,9 +235,22 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
     strategies.push(readU8(data, offset)); offset += 1;
   }
 
+  const strategyParamsLen = readU32LE(data, offset); offset += 4;
+  const strategyParams: number[][] = [];
+  for (let i = 0; i < strategyParamsLen; i++) {
+    strategyParams.push([
+      readU8(data, offset),     // forgiveness
+      readU8(data, offset + 1), // retaliationDelay
+      readU8(data, offset + 2), // noiseTolerance
+      readU8(data, offset + 3), // initialMoves
+      readU8(data, offset + 4), // cooperateBias
+    ]);
+    offset += 5;
+  }
+
   const bump = readU8(data, offset);
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, players, scores, strategies, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, players, scores, strategies, strategyParams, bump, address };
 }
 
 export interface EntryAccount {
@@ -245,6 +259,13 @@ export interface EntryAccount {
   index: number;
   strategy: number;
   strategyName: string;
+  strategyParams: {
+    forgiveness: number;
+    retaliationDelay: number;
+    noiseTolerance: number;
+    initialMoves: number;
+    cooperateBias: number;
+  };
   score: number;
   matchesPlayed: number;
   paidOut: boolean;
@@ -260,12 +281,18 @@ export function deserializeEntry(data: Buffer, address: string): EntryAccount {
   const index = readU32LE(data, offset); offset += 4;
   const strategy = readU8(data, offset); offset += 1;
   const strategyName = STRATEGIES[strategy]?.name || 'Unknown';
+  const forgiveness = readU8(data, offset); offset += 1;
+  const retaliationDelay = readU8(data, offset); offset += 1;
+  const noiseTolerance = readU8(data, offset); offset += 1;
+  const initialMoves = readU8(data, offset); offset += 1;
+  const cooperateBias = readU8(data, offset); offset += 1;
+  const strategyParams = { forgiveness, retaliationDelay, noiseTolerance, initialMoves, cooperateBias };
   const score = readU32LE(data, offset); offset += 4;
   const matchesPlayed = readU16LE(data, offset); offset += 2;
   const paidOut = readBool(data, offset); offset += 1;
   const createdAt = readI64LE(data, offset).toString(); offset += 8;
   const bump = readU8(data, offset);
-  return { tournament, player, index, strategy, strategyName, score, matchesPlayed, paidOut, createdAt, bump, address };
+  return { tournament, player, index, strategy, strategyName, strategyParams, score, matchesPlayed, paidOut, createdAt, bump, address };
 }
 
 // Fetch functions

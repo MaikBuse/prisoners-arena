@@ -44,6 +44,7 @@ pub struct Tournament {
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
+    pub strategy_params: Vec<[u8; 5]>,
     pub bump: u8,
 }
 
@@ -68,6 +69,7 @@ pub struct Entry {
     pub player: Pubkey,
     pub index: u32,
     pub strategy: u8,
+    pub strategy_params: [u8; 5],
     pub score: u32,
     pub matches_played: u16,
     pub paid_out: bool,
@@ -128,8 +130,11 @@ impl Tournament {
         let strategies_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
         let mut strategies = Vec::with_capacity(strategies_len);
         for _ in 0..strategies_len { strategies.push(data[o]); o += 1; }
+        let params_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
+        let mut strategy_params = Vec::with_capacity(params_len);
+        for _ in 0..params_len { let mut p = [0u8; 5]; p.copy_from_slice(&data[o..o + 5]); o += 5; strategy_params.push(p); }
         let bump = data[o];
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, players, scores, strategies, bump })
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, players, scores, strategies, strategy_params, bump })
     }
 }
 
@@ -141,12 +146,13 @@ impl Entry {
         let player = Pubkey::try_from(&data[o..o + 32])?; o += 32;
         let index = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let strategy = data[o]; o += 1;
+        let mut strategy_params = [0u8; 5]; strategy_params.copy_from_slice(&data[o..o + 5]); o += 5;
         let score = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let matches_played = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
         let paid_out = data[o] != 0; o += 1;
         let created_at = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let bump = data[o];
-        Ok(Entry { tournament, player, index, strategy, score, matches_played, paid_out, created_at, bump })
+        Ok(Entry { tournament, player, index, strategy, strategy_params, score, matches_played, paid_out, created_at, bump })
     }
 }
 

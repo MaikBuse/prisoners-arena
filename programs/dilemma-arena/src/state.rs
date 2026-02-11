@@ -129,12 +129,14 @@ pub struct Tournament {
     pub scores: Vec<u32>,
     /// Strategies indexed by entry.index (persists after entry closure; 255 = refunded/invalid)
     pub strategies: Vec<u8>,
+    /// Strategy parameters indexed by entry.index
+    pub strategy_params: Vec<StrategyParams>,
     /// PDA bump seed
     pub bump: u8,
 }
 
 /// Bytes added per player (32-byte pubkey + 4-byte score + 1-byte strategy)
-pub const BYTES_PER_PLAYER: usize = 37;
+pub const BYTES_PER_PLAYER: usize = 42;
 
 impl Tournament {
     /// Base space for tournament with empty vecs (used for initial allocation)
@@ -160,6 +162,7 @@ impl Tournament {
         4 +   // players vec len (empty)
         4 +   // scores vec len (empty)
         4 +   // strategies vec len (empty)
+        4 +   // strategy_params vec len (empty)
         1 +   // bump
         32;   // padding
 
@@ -174,7 +177,7 @@ impl Tournament {
     }
 }
 
-/// Strategy types (parameters deferred to v2)
+/// Strategy types
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Strategy {
     #[default]
@@ -189,6 +192,28 @@ pub enum Strategy {
     Gradual,
 }
 
+/// Strategy parameters for fine-tuning behavior
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StrategyParams {
+    pub forgiveness: u8,
+    pub retaliation_delay: u8,
+    pub noise_tolerance: u8,
+    pub initial_moves: u8,
+    pub cooperate_bias: u8,
+}
+
+impl Default for StrategyParams {
+    fn default() -> Self {
+        Self {
+            forgiveness: 0,
+            retaliation_delay: 0,
+            noise_tolerance: 0,
+            initial_moves: 0,
+            cooperate_bias: 50,
+        }
+    }
+}
+
 /// Player entry in a tournament
 #[account]
 #[derive(Default)]
@@ -201,6 +226,8 @@ pub struct Entry {
     pub index: u32,
     /// Player's strategy
     pub strategy: Strategy,
+    /// Strategy parameters
+    pub strategy_params: StrategyParams,
     /// Accumulated score (synced with tournament.scores[index] during run_matches)
     pub score: u32,
     /// Number of matches played
@@ -219,6 +246,7 @@ impl Entry {
         32 +  // player
         4 +   // index
         1 +   // strategy (enum)
+        5 +   // strategy_params
         4 +   // score
         2 +   // matches_played
         1 +   // paid_out
@@ -227,20 +255,24 @@ impl Entry {
         16;   // padding
 }
 
-// Conversion from on-chain Strategy to match-logic Strategy
-impl From<Strategy> for match_logic::Strategy {
-    fn from(s: Strategy) -> Self {
-        let base = match s {
-            Strategy::TitForTat => match_logic::StrategyBase::TitForTat,
-            Strategy::AlwaysDefect => match_logic::StrategyBase::AlwaysDefect,
-            Strategy::AlwaysCooperate => match_logic::StrategyBase::AlwaysCooperate,
-            Strategy::GrimTrigger => match_logic::StrategyBase::GrimTrigger,
-            Strategy::Pavlov => match_logic::StrategyBase::Pavlov,
-            Strategy::SuspiciousTitForTat => match_logic::StrategyBase::SuspiciousTitForTat,
-            Strategy::Random => match_logic::StrategyBase::Random,
-            Strategy::TitForTwoTats => match_logic::StrategyBase::TitForTwoTats,
-            Strategy::Gradual => match_logic::StrategyBase::Gradual,
-        };
-        match_logic::Strategy::new(base)
-    }
+/// Convert on-chain strategy + params to match-logic types
+pub fn to_match_strategy(strategy: Strategy, params: &StrategyParams) -> match_logic::Strategy {
+    let base = match strategy {
+        Strategy::TitForTat => match_logic::StrategyBase::TitForTat,
+        Strategy::AlwaysDefect => match_logic::StrategyBase::AlwaysDefect,
+        Strategy::AlwaysCooperate => match_logic::StrategyBase::AlwaysCooperate,
+        Strategy::GrimTrigger => match_logic::StrategyBase::GrimTrigger,
+        Strategy::Pavlov => match_logic::StrategyBase::Pavlov,
+        Strategy::SuspiciousTitForTat => match_logic::StrategyBase::SuspiciousTitForTat,
+        Strategy::Random => match_logic::StrategyBase::Random,
+        Strategy::TitForTwoTats => match_logic::StrategyBase::TitForTwoTats,
+        Strategy::Gradual => match_logic::StrategyBase::Gradual,
+    };
+    match_logic::Strategy::with_params(base, match_logic::StrategyParams {
+        forgiveness: params.forgiveness,
+        retaliation_delay: params.retaliation_delay,
+        noise_tolerance: params.noise_tolerance,
+        initial_moves: params.initial_moves,
+        cooperate_bias: params.cooperate_bias,
+    })
 }

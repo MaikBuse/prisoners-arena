@@ -99,6 +99,7 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
 
         tournament.players[last_index] = Pubkey::default();
         tournament.strategies[last_index] = u8::MAX; // 255 = refunded/invalid
+        tournament.strategy_params[last_index] = crate::state::StrategyParams::default();
         tournament.participant_count -= 1;
         tournament.pool -= refund_amount;
 
@@ -227,8 +228,8 @@ pub fn run_matches<'info>(
         require!(entry_b_account.index == idx_b, DilemmaError::InvalidEntryAccount);
 
         // Run the match using match-logic crate
-        let strategy_a: match_logic::Strategy = entry_a_account.strategy.into();
-        let strategy_b: match_logic::Strategy = entry_b_account.strategy.into();
+        let strategy_a = crate::state::to_match_strategy(entry_a_account.strategy, &entry_a_account.strategy_params);
+        let strategy_b = crate::state::to_match_strategy(entry_b_account.strategy, &entry_b_account.strategy_params);
 
         let result = match_logic::run_match(
             &strategy_a,
@@ -439,6 +440,7 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.players = Vec::new();
     next_tournament.scores = Vec::new();
     next_tournament.strategies = Vec::new();
+    next_tournament.strategy_params = Vec::new();
     next_tournament.bump = ctx.bumps.next_tournament;
 
     msg!(

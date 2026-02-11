@@ -52,6 +52,16 @@ enum Commands {
         wallet: String,
         #[arg(long, default_value = "tit-for-tat")]
         strategy: String,
+        #[arg(long, default_value = "0")]
+        forgiveness: u8,
+        #[arg(long, default_value = "0")]
+        retaliation_delay: u8,
+        #[arg(long, default_value = "0")]
+        noise_tolerance: u8,
+        #[arg(long, default_value = "0")]
+        initial_moves: u8,
+        #[arg(long, default_value = "50")]
+        cooperate_bias: u8,
         #[arg(long)]
         dry_run: bool,
     },
@@ -132,7 +142,9 @@ fn main() -> Result<()> {
         Commands::Status => commands::info::status(&cfg),
         Commands::Tournament { id } => commands::info::tournament(&cfg, id),
         Commands::Entries { tournament } => commands::info::entries(&cfg, tournament),
-        Commands::Enter { wallet, strategy, dry_run } => commands::player::enter(&cfg, &wallet, &strategy, dry_run),
+        Commands::Enter { wallet, strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, dry_run } => {
+            commands::player::enter(&cfg, &wallet, &strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, dry_run)
+        }
         Commands::Refund { wallet, dry_run } => commands::player::refund(&cfg, &wallet, dry_run),
         Commands::Claim { wallet, tournament, dry_run } => commands::player::claim(&cfg, &wallet, tournament, dry_run),
         Commands::Balance { wallet } => commands::util::balance(&cfg, &wallet),
