@@ -13,11 +13,7 @@ use crate::tx::send_transaction;
 
 mod disc {
     pub const ENTER_TOURNAMENT: [u8; 8] = [19, 21, 109, 109, 227, 108, 232, 25];
-    pub const REVEAL_STRATEGY: [u8; 8] = {
-        // sha256("global:reveal_strategy")[:8]
-        // Computed offline
-        [168, 19, 91, 227, 42, 59, 12, 228]
-    };
+    pub const REVEAL_STRATEGY: [u8; 8] = [102, 15, 100, 245, 177, 6, 9, 198];
     pub const CLAIM_REFUND: [u8; 8] = [15, 16, 30, 161, 255, 228, 97, 60];
     pub const CLAIM_PAYOUT: [u8; 8] = [127, 240, 132, 62, 227, 198, 146, 133];
 }
