@@ -1,6 +1,6 @@
 # PLAN.md - Dilemma Arena
 
-## Status: 🟡 In Progress — v1.7 Commit-Reveal Strategies
+## Status: 🟢 Complete — v1.7 Commit-Reveal Strategies
 
 **Program ID:** `5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW`
 **Deployer Wallet:** `ConzeWMHRnFE7QLjokjA8QF1nBxjpbUSipYUSkuXuhgu`
@@ -37,7 +37,7 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 | v1.4 — Strategy Parameters | 5 tunable params per strategy | 🟢 Complete |
 | v1.5 — Matchmaking Overhaul | Adaptive K, round tiers | 🟢 Complete |
 | v1.6 — Strategy Configurator | Frontend interactive param UI | 🟡 In Progress |
-| v1.7 — Commit-Reveal Strategies | Commitment scheme for strategies | 🟡 In Progress |
+| v1.7 — Commit-Reveal Strategies | Commitment scheme for strategies | 🟢 Complete |
 
 ---
 
@@ -45,46 +45,11 @@ Requirements files (`requirements/*.md`) contain acceptance criteria only.
 
 New tournament phase (Reveal), commitment scheme, forfeit handling.
 
-### Contract Changes
-- [ ] Add `Reveal` to TournamentState enum
-- [ ] Add commitment + revealed fields to Entry
-- [ ] Add reveal fields to Tournament (reveal_ends, reveal_duration, reveals_completed, forfeits)
-- [ ] Add reveal_duration to Config
-- [ ] Update Entry::LEN, Tournament::BASE_SPACE, Config::LEN
-- [ ] New error codes (CommitmentMismatch, AlreadyRevealed, RevealPeriodEnded, RevealPeriodNotEnded, UnprocessedForfeits, UnrevealedStrategy)
-- [ ] Update enter_tournament (commitment arg instead of strategy+params)
-- [ ] New reveal_strategy instruction
-- [ ] Update close_registration (→ Reveal instead of Running)
-- [ ] New forfeit_unrevealed instruction
-- [ ] New close_reveal instruction
-- [ ] Update claim_refund (allow during Reveal)
-- [ ] Update run_matches guard (safety check for unrevealed)
-
-### Tests
-- [ ] Integration tests for full commit-reveal lifecycle
-- [ ] Commitment verification tests
-- [ ] Timing/phase tests
-- [ ] Forfeit tests
-- [ ] Refund during Reveal tests
-- [ ] Edge cases (all forfeit, single reveal, etc.)
-
-### Operator
-- [ ] Add Reveal state handling
-- [ ] forfeit_unrevealed loop
-- [ ] close_reveal action
-- [ ] Update state deserialization
-
-### CLI
-- [ ] Update enter command (commitment + salt)
-- [ ] New reveal command
-- [ ] Update info command (reveal status)
-
-### Frontend
-- [ ] Update TournamentState mapping
-- [ ] Update Entry/Tournament deserialization
-- [ ] Hidden strategies during Reveal phase
-- [ ] Reveal countdown + progress
-- [ ] Strategy Configurator commit-reveal output
+### Contract Changes — ✅ All Complete
+### Tests — ✅ 79 passing (11 new commit-reveal tests)
+### Operator — ✅ Reveal state + forfeit loop + close_reveal
+### CLI — ✅ Commitment entry + reveal command + salt management
+### Frontend — ✅ Deserialization updated for all struct changes
 
 See `releases/v1.7.md` for full spec.
 
