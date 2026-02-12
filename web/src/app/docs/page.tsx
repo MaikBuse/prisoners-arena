@@ -232,7 +232,7 @@ export default function DocsPage() {
         <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer"
            className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Solana Explorer ↗</a>
         <a href="/api/idl" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Download IDL</a>
-        <a href="/participate" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Participation Guide</a>
+        <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Participation Guide</a>
         <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Markdown Guide</a>
       </div>
     </div>

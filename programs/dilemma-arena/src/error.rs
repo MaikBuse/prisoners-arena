@@ -69,4 +69,23 @@ pub enum DilemmaError {
 
     #[msg("Invalid strategy parameters")]
     InvalidParams = 6021,
+
+    // v1.7 Commit-Reveal errors
+    #[msg("Commitment does not match revealed strategy")]
+    CommitmentMismatch = 6022,
+
+    #[msg("Strategy already revealed")]
+    AlreadyRevealed = 6023,
+
+    #[msg("Reveal period has ended")]
+    RevealPeriodEnded = 6024,
+
+    #[msg("Reveal period has not ended yet")]
+    RevealPeriodNotEnded = 6025,
+
+    #[msg("Unrevealed entries must be forfeited before closing reveal")]
+    UnprocessedForfeits = 6026,
+
+    #[msg("Unrevealed strategy in active player slot")]
+    UnrevealedStrategy = 6027,
 }

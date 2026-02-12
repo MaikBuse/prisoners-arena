@@ -40,6 +40,7 @@ pub fn initialize_config(
     max_participants: u16,
     registration_duration: i64,
     matches_per_player: u16,
+    reveal_duration: i64,
 ) -> Result<()> {
     // Validate min_participants is even and >= 2
     require!(
@@ -59,6 +60,7 @@ pub fn initialize_config(
     config.matches_per_player = matches_per_player;
     config.accumulated_fees = 0;
     config.current_tournament_id = 0;
+    config.reveal_duration = reveal_duration;
     config.bump = ctx.bumps.config;
 
     // Initialize Tournament #0
@@ -71,6 +73,7 @@ pub fn initialize_config(
     tournament.house_fee_bps = 0;
     tournament.matches_per_player = matches_per_player;
     tournament.registration_duration = registration_duration;
+    tournament.reveal_duration = reveal_duration;
     tournament.pool = 0;
     tournament.participant_count = 0;
     tournament.registration_ends = clock.unix_timestamp + registration_duration;
@@ -83,8 +86,14 @@ pub fn initialize_config(
     tournament.claims_processed = 0;
     tournament.payout_started_at = 0;
     tournament.entries_remaining = 0;
+    tournament.round_tier = 0;
+    tournament.reveal_ends = 0;
+    tournament.reveals_completed = 0;
+    tournament.forfeits = 0;
     tournament.players = Vec::new();
     tournament.scores = Vec::new();
+    tournament.strategies = Vec::new();
+    tournament.strategy_params = Vec::new();
     tournament.bump = ctx.bumps.tournament;
 
     msg!("Config initialized by {}, operator = {}", config.admin, config.operator);
@@ -116,6 +125,7 @@ pub fn update_config(
     max_participants: Option<u16>,
     registration_duration: Option<i64>,
     matches_per_player: Option<u16>,
+    reveal_duration: Option<i64>,
 ) -> Result<()> {
     let config = &mut ctx.accounts.config;
 
@@ -154,6 +164,11 @@ pub fn update_config(
     if let Some(k) = matches_per_player {
         require!(k > 0, DilemmaError::Overflow);
         config.matches_per_player = k;
+    }
+
+    if let Some(duration) = reveal_duration {
+        require!(duration > 0, DilemmaError::Overflow);
+        config.reveal_duration = duration;
     }
 
     msg!("Config updated");

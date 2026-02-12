@@ -5,7 +5,7 @@ use anchor_lang::system_program;
 use crate::state::{Config, Tournament, Entry, Strategy, StrategyParams, TournamentState, CLAIM_EXPIRY_SECONDS, BYTES_PER_PLAYER};
 use crate::error::DilemmaError;
 
-/// Enter the current tournament
+/// Enter the current tournament with a commitment hash
 #[derive(Accounts)]
 pub struct EnterTournament<'info> {
     #[account(
@@ -41,8 +41,7 @@ pub struct EnterTournament<'info> {
 
 pub fn enter_tournament(
     ctx: Context<EnterTournament>,
-    strategy: Strategy,
-    params: StrategyParams,
+    commitment: [u8; 32],
 ) -> Result<()> {
     let config = &ctx.accounts.config;
     let tournament = &mut ctx.accounts.tournament;
@@ -67,13 +66,6 @@ pub fn enter_tournament(
         DilemmaError::TournamentFull
     );
 
-    // Validate strategy params
-    require!(params.forgiveness <= 100, DilemmaError::InvalidParams);
-    require!(params.retaliation_delay <= 10, DilemmaError::InvalidParams);
-    require!(params.noise_tolerance <= 5, DilemmaError::InvalidParams);
-    require!(params.cooperate_bias <= 100, DilemmaError::InvalidParams);
-    // initial_moves: any u8 is valid (bitmask)
-
     // Use snapshotted stake from tournament
     let stake = tournament.stake;
 
@@ -89,39 +81,128 @@ pub fn enter_tournament(
         stake,
     )?;
 
-    // Initialize entry with index = current players count
+    // Initialize entry with commitment (strategy hidden until reveal)
     entry.tournament = tournament.key();
     entry.player = player.key();
     entry.index = tournament.players.len() as u32;
-    entry.strategy = strategy;
-    entry.strategy_params = params;
+    entry.commitment = commitment;
+    entry.strategy = Strategy::default();           // zeroed until reveal
+    entry.strategy_params = StrategyParams::default(); // zeroed until reveal
+    entry.revealed = false;
     entry.score = 0;
     entry.matches_played = 0;
     entry.paid_out = false;
     entry.created_at = clock.unix_timestamp;
     entry.bump = ctx.bumps.entry;
 
-    // Add player to tournament's players vec
+    // Add player to tournament's players vec (strategy sentinel until reveal)
     tournament.players.push(player.key());
     tournament.scores.push(0);
-    tournament.strategies.push(strategy as u8);
-    tournament.strategy_params.push(params);
+    tournament.strategies.push(u8::MAX);                  // sentinel: unrevealed
+    tournament.strategy_params.push(StrategyParams::default());
     tournament.participant_count += 1;
     tournament.entries_remaining += 1;
     tournament.pool += stake;
 
     msg!(
-        "Player {} entered tournament {} at index {} with strategy {:?}",
+        "Player {} entered tournament {} at index {} with commitment",
         player.key(),
         tournament.id,
         entry.index,
-        strategy
     );
 
     Ok(())
 }
 
-/// Claim refund during registration (allowed anytime)
+/// Reveal strategy during Reveal phase
+#[derive(Accounts)]
+pub struct RevealStrategy<'info> {
+    #[account(
+        mut,
+        has_one = tournament,
+        has_one = player,
+    )]
+    pub entry: Account<'info, Entry>,
+
+    #[account(mut)]
+    pub tournament: Account<'info, Tournament>,
+
+    #[account(mut)]
+    pub player: Signer<'info>,
+}
+
+pub fn reveal_strategy(
+    ctx: Context<RevealStrategy>,
+    strategy: Strategy,
+    params: StrategyParams,
+    salt: [u8; 16],
+) -> Result<()> {
+    let tournament = &mut ctx.accounts.tournament;
+    let entry = &mut ctx.accounts.entry;
+
+    let clock = Clock::get()?;
+
+    // State check
+    require!(
+        tournament.state == TournamentState::Reveal,
+        DilemmaError::InvalidState
+    );
+
+    // Deadline check
+    require!(
+        clock.unix_timestamp <= tournament.reveal_ends,
+        DilemmaError::RevealPeriodEnded
+    );
+
+    // Not already revealed
+    require!(!entry.revealed, DilemmaError::AlreadyRevealed);
+
+    // Validate params (same as v1.4 validation)
+    require!(params.forgiveness <= 100, DilemmaError::InvalidParams);
+    require!(params.retaliation_delay <= 10, DilemmaError::InvalidParams);
+    require!(params.noise_tolerance <= 5, DilemmaError::InvalidParams);
+    require!(params.cooperate_bias <= 100, DilemmaError::InvalidParams);
+
+    // Verify commitment: SHA256(strategy_byte || param_bytes[5] || salt[16])
+    let mut preimage = Vec::with_capacity(22);
+    preimage.push(strategy as u8);
+    preimage.push(params.forgiveness);
+    preimage.push(params.retaliation_delay);
+    preimage.push(params.noise_tolerance);
+    preimage.push(params.initial_moves);
+    preimage.push(params.cooperate_bias);
+    preimage.extend_from_slice(&salt);
+
+    let hash = solana_sha256_hasher::hash(&preimage);
+    require!(
+        hash.to_bytes() == entry.commitment,
+        DilemmaError::CommitmentMismatch
+    );
+
+    // Store revealed strategy
+    entry.strategy = strategy;
+    entry.strategy_params = params;
+    entry.revealed = true;
+
+    // Update tournament vecs
+    let idx = entry.index as usize;
+    tournament.strategies[idx] = strategy as u8;
+    tournament.strategy_params[idx] = params;
+
+    // Track progress
+    tournament.reveals_completed += 1;
+
+    msg!(
+        "Player {} revealed strategy {:?} in tournament {}",
+        entry.player,
+        strategy,
+        tournament.id,
+    );
+
+    Ok(())
+}
+
+/// Claim refund during Registration or Reveal (allowed anytime before Running)
 #[derive(Accounts)]
 pub struct ClaimRefund<'info> {
     #[account(
@@ -152,9 +233,10 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
     let entry = &ctx.accounts.entry;
     let player = &ctx.accounts.player;
 
-    // Refund allowed only during Registration state (anytime, no lock)
+    // Refund allowed during Registration or Reveal phase
     require!(
-        tournament.state == TournamentState::Registration,
+        tournament.state == TournamentState::Registration
+            || tournament.state == TournamentState::Reveal,
         DilemmaError::InvalidState
     );
 
@@ -173,7 +255,10 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
     tournament.entries_remaining -= 1;
     tournament.pool -= refund_amount;
 
-    // Note: scores[index] stays 0, entry is closed
+    // If player had already revealed, decrement reveals_completed
+    if entry.revealed {
+        tournament.reveals_completed -= 1;
+    }
 
     msg!(
         "Refunded {} lamports to player {} from tournament {}",

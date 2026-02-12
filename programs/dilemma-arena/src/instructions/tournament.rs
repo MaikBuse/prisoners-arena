@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 use crate::state::{Config, Tournament, Entry, TournamentState, CLAIM_EXPIRY_SECONDS, TOURNAMENT_CLOSURE_SECONDS, MATCHES_PER_TX};
 use crate::error::DilemmaError;
 
-/// Close registration and start matches (or extend deadline)
+/// Close registration and transition to Reveal phase (or extend deadline)
 #[derive(Accounts)]
 pub struct CloseRegistration<'info> {
     #[account(
@@ -21,19 +21,6 @@ pub struct CloseRegistration<'info> {
         bump = tournament.bump
     )]
     pub tournament: Account<'info, Tournament>,
-    
-    /// CHECK: SlotHashes sysvar for randomness
-    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::ID)]
-    pub slot_hashes: AccountInfo<'info>,
-
-    /// Optional: Entry to refund if odd participant count
-    /// Only needed when participant_count is odd
-    pub refund_entry: Option<Account<'info, Entry>>,
-
-    /// Player to receive refund if odd count
-    /// CHECK: Validated via refund_entry.player
-    #[account(mut)]
-    pub refund_player: Option<AccountInfo<'info>>,
 
     pub operator: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -68,9 +55,91 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
         return Ok(());
     }
 
-    // If odd participant count, refund the last registrant
-    if tournament.participant_count % 2 == 1 {
-        // Find the last valid (non-refunded) player
+    // Transition to Reveal phase (NOT Running — that happens after close_reveal)
+    tournament.state = TournamentState::Reveal;
+    tournament.reveal_ends = clock.unix_timestamp + tournament.reveal_duration;
+
+    msg!(
+        "Tournament {} registration closed with {} participants, reveal phase until {}",
+        tournament.id,
+        tournament.participant_count,
+        tournament.reveal_ends
+    );
+
+    Ok(())
+}
+
+/// Close the reveal phase and transition to Running
+/// Called by operator after reveal deadline + all forfeits processed
+#[derive(Accounts)]
+pub struct CloseReveal<'info> {
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        has_one = operator @ DilemmaError::Unauthorized
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        seeds = [b"tournament", tournament.id.to_le_bytes().as_ref()],
+        bump = tournament.bump
+    )]
+    pub tournament: Account<'info, Tournament>,
+
+    /// CHECK: SlotHashes sysvar for randomness
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::ID)]
+    pub slot_hashes: AccountInfo<'info>,
+
+    /// Optional: Entry to refund if odd active participant count
+    pub refund_entry: Option<Account<'info, Entry>>,
+
+    /// Player to receive refund if odd count
+    /// CHECK: Validated via refund_entry.player
+    #[account(mut)]
+    pub refund_player: Option<AccountInfo<'info>>,
+
+    pub operator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+pub fn close_reveal(ctx: Context<CloseReveal>) -> Result<()> {
+    let tournament = &mut ctx.accounts.tournament;
+    let clock = Clock::get()?;
+
+    require!(
+        tournament.state == TournamentState::Reveal,
+        DilemmaError::InvalidState
+    );
+
+    require!(
+        clock.unix_timestamp > tournament.reveal_ends,
+        DilemmaError::RevealPeriodNotEnded
+    );
+
+    // Verify all non-forfeited players have revealed
+    let active_count = tournament.participant_count - tournament.forfeits;
+    require!(
+        tournament.reveals_completed == active_count,
+        DilemmaError::UnprocessedForfeits
+    );
+
+    // Handle zero active players (all forfeited/refunded)
+    if active_count == 0 {
+        // Tournament effectively cancelled — transition to Payout with empty winner set
+        tournament.state = TournamentState::Payout;
+        tournament.payout_started_at = clock.unix_timestamp;
+        tournament.winner_count = 0;
+        tournament.winner_pool = 0;
+        tournament.matches_total = 0;
+        tournament.matches_completed = 0;
+        msg!("Tournament {} cancelled: no active players after reveal", tournament.id);
+        return Ok(());
+    }
+
+    // If odd participant count, refund the last active registrant
+    if active_count % 2 == 1 {
+        // Find the last valid (non-refunded/non-forfeited) player
         let last_index = tournament.players.iter()
             .rposition(|pk| *pk != Pubkey::default())
             .ok_or(DilemmaError::InvalidState)?;
@@ -98,17 +167,16 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
         **refund_player.try_borrow_mut_lamports()? += refund_amount;
 
         tournament.players[last_index] = Pubkey::default();
-        tournament.strategies[last_index] = u8::MAX; // 255 = refunded/invalid
+        tournament.strategies[last_index] = u8::MAX;
         tournament.strategy_params[last_index] = crate::state::StrategyParams::default();
         tournament.participant_count -= 1;
+        tournament.reveals_completed -= 1;
         tournament.pool -= refund_amount;
 
         msg!("Refunded last player {} to ensure even participant count", last_player);
     }
 
-    // Generate randomness seed from slot hash
-    // SlotHashes layout: 8-byte vec len + (8-byte slot + 32-byte hash) pairs
-    // Skip 8 (vec len) + 8 (first slot number) = 16 to reach first hash
+    // Generate randomness seed from slot hash (moved from close_registration)
     let slot_hashes_data = ctx.accounts.slot_hashes.try_borrow_data()?;
     let mut seed = [0u8; 32];
     require!(slot_hashes_data.len() >= 48, DilemmaError::SlotHashUnavailable);
@@ -121,14 +189,15 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
     }
     tournament.randomness_seed = seed;
 
-    // Apply adaptive K based on participant count
-    let effective_k = match_logic::effective_k(tournament.participant_count, tournament.matches_per_player);
+    // Apply adaptive K based on active participant count
+    let active = tournament.participant_count - tournament.forfeits;
+    let effective_k = match_logic::effective_k(active, tournament.matches_per_player);
     tournament.matches_per_player = effective_k;
-    tournament.round_tier = if tournament.participant_count <= 1000 { 0 } else { 1 };
+    tournament.round_tier = if active <= 1000 { 0 } else { 1 };
 
-    // Calculate total matches using match-logic crate
+    // Calculate total matches
     tournament.matches_total = match_logic::calculate_match_count(
-        tournament.participant_count,
+        active,
         tournament.matches_per_player,
         &tournament.randomness_seed,
     );
@@ -136,10 +205,71 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
     tournament.state = TournamentState::Running;
 
     msg!(
-        "Tournament {} started with {} participants, {} matches",
+        "Tournament {} reveal closed, {} active participants, {} matches",
         tournament.id,
-        tournament.participant_count,
+        active,
         tournament.matches_total
+    );
+
+    Ok(())
+}
+
+/// Forfeit an unrevealed entry after reveal deadline
+/// Called by operator for each unrevealed entry. Stake stays in pool.
+#[derive(Accounts)]
+pub struct ForfeitUnrevealed<'info> {
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        has_one = operator @ DilemmaError::Unauthorized
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        has_one = tournament,
+        close = operator,  // rent → operator
+    )]
+    pub entry: Account<'info, Entry>,
+
+    #[account(mut)]
+    pub tournament: Account<'info, Tournament>,
+
+    #[account(mut)]
+    pub operator: Signer<'info>,
+}
+
+pub fn forfeit_unrevealed(ctx: Context<ForfeitUnrevealed>) -> Result<()> {
+    let tournament = &mut ctx.accounts.tournament;
+    let entry = &ctx.accounts.entry;
+    let clock = Clock::get()?;
+
+    require!(
+        tournament.state == TournamentState::Reveal,
+        DilemmaError::InvalidState
+    );
+
+    require!(
+        clock.unix_timestamp > tournament.reveal_ends,
+        DilemmaError::RevealPeriodNotEnded
+    );
+
+    require!(!entry.revealed, DilemmaError::AlreadyRevealed);
+
+    // Mark player slot as forfeited
+    let idx = entry.index as usize;
+    tournament.strategies[idx] = u8::MAX;  // sentinel stays
+    tournament.players[idx] = Pubkey::default();
+
+    // Track forfeiture (stake stays in pool — benefits remaining players)
+    tournament.forfeits += 1;
+    tournament.entries_remaining -= 1;
+
+    msg!(
+        "Forfeited unrevealed entry {} (player {}) in tournament {}",
+        idx,
+        entry.player,
+        tournament.id,
     );
 
     Ok(())
@@ -176,6 +306,16 @@ pub fn run_matches<'info>(
         DilemmaError::InvalidState
     );
 
+    // Safety check: verify all active strategies are revealed (belt-and-suspenders)
+    for i in 0..tournament.players.len() {
+        if tournament.players[i] != Pubkey::default() {
+            require!(
+                tournament.strategies[i] != u8::MAX,
+                DilemmaError::UnrevealedStrategy
+            );
+        }
+    }
+
     // Process up to MATCHES_PER_TX matches
     let matches_to_run = MATCHES_PER_TX.min(tournament.matches_total - tournament.matches_completed);
     
@@ -193,9 +333,10 @@ pub fn run_matches<'info>(
     for batch_idx in 0..matches_to_run {
         let match_index = start_index + batch_idx;
         
-        // Get pairing for this match
+        // Get pairing for this match (use active count = participant_count - forfeits)
+        let active_count = tournament.participant_count - tournament.forfeits;
         let pairing = match_logic::get_pairing_for_match(
-            tournament.participant_count,
+            active_count,
             tournament.matches_per_player,
             &tournament.randomness_seed,
             match_index,
@@ -203,14 +344,14 @@ pub fn run_matches<'info>(
 
         let (idx_a, idx_b) = pairing;
 
-        // Skip if either player is refunded (default pubkey)
+        // Skip if either player is refunded/forfeited (default pubkey)
         let player_a = tournament.players.get(idx_a as usize)
             .ok_or(DilemmaError::InvalidMatch)?;
         let player_b = tournament.players.get(idx_b as usize)
             .ok_or(DilemmaError::InvalidMatch)?;
 
         if *player_a == Pubkey::default() || *player_b == Pubkey::default() {
-            // Skip this match (player refunded)
+            // Skip this match (player refunded/forfeited)
             tournament.matches_completed += 1;
             continue;
         }
@@ -314,7 +455,6 @@ fn deserialize_entry(data: &[u8]) -> Result<Entry> {
 }
 
 fn serialize_entry(entry: &Entry, data: &mut [u8]) -> Result<()> {
-    // try_serialize writes discriminator + borsh data, so write from offset 0
     let mut writer = &mut data[..];
     entry.try_serialize(&mut writer)
         .map_err(|_| DilemmaError::InvalidEntryAccount.into())
@@ -377,8 +517,11 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
         .collect();
     sorted_scores.sort_by(|a, b| b.cmp(a));
 
+    // Active participants = participant_count - forfeits
+    let active = tournament.participant_count - tournament.forfeits;
+
     // Calculate winner count (top 25%, minimum 1)
-    let target_winners = std::cmp::max(1, (tournament.participant_count + 3) / 4); // ceil(n/4)
+    let target_winners = std::cmp::max(1, (active + 3) / 4); // ceil(n/4)
     
     // Set min_winning_score (threshold to be a winner)
     tournament.min_winning_score = sorted_scores
@@ -431,6 +574,7 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.house_fee_bps = config.house_fee_bps;
     next_tournament.matches_per_player = config.matches_per_player;
     next_tournament.registration_duration = config.registration_duration;
+    next_tournament.reveal_duration = config.reveal_duration;  // NEW v1.7
     next_tournament.pool = 0;
     next_tournament.participant_count = 0;
     next_tournament.registration_ends = clock.unix_timestamp + config.registration_duration;
@@ -444,6 +588,9 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     next_tournament.payout_started_at = 0;
     next_tournament.entries_remaining = 0;
     next_tournament.round_tier = 0;
+    next_tournament.reveal_ends = 0;          // NEW v1.7
+    next_tournament.reveals_completed = 0;    // NEW v1.7
+    next_tournament.forfeits = 0;             // NEW v1.7
     next_tournament.players = Vec::new();
     next_tournament.scores = Vec::new();
     next_tournament.strategies = Vec::new();
@@ -519,8 +666,6 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     if !entry.paid_out && entry.score >= tournament.min_winning_score {
         let unclaimed_share = tournament.winner_pool / tournament.winner_count as u64;
 
-        // Cap transfer to keep tournament above rent-exempt minimum
-        // (remaining surplus will be swept by close_tournament)
         let rent = Rent::get()?;
         let min_balance = rent.minimum_balance(tournament.to_account_info().data_len());
         let max_transfer = tournament.to_account_info().lamports()
@@ -543,7 +688,6 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     // Decrement entries_remaining counter
     tournament.entries_remaining -= 1;
 
-    // Entry account rent goes to operator (via close = operator)
     msg!("Closed expired entry for player {}", entry.player);
 
     Ok(())

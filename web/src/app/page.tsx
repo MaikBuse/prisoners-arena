@@ -1,11 +1,19 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import type { TournamentAccount, EntryAccount, ConfigAccount } from '@/lib/solana';
 import { STRATEGIES, formatLamports, truncateAddress, explorerLink, PROGRAM_ID, BASE_URL } from '@/lib/solana';
 import { Logo, LogoSmall } from '@/components/Logo';
+import { Nav } from '@/components/Nav';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { StrategyBadge } from '@/components/StrategyBadge';
+import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
+
+/** Compute effective K (adaptive matchmaking from v1.5) */
+function effectiveK(configK: number, n: number): number {
+  if (n <= 1) return 0;
+  if (n <= 200) return n - 1;
+  return Math.min(Math.max(49, Math.min(99, configK)), n - 1);
+}
 
 const BAR_COLORS: Record<string, string> = {
   blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
@@ -22,12 +30,15 @@ export default function Home() {
   const [data, setData] = useState<TournamentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(true);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pastTournaments, setPastTournaments] = useState<TournamentAccount[]>([]);
   const pastFetched = useRef(false);
   const [viewMode, setViewMode] = useState<'human' | 'agent'>('human');
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [scorePage, setScorePage] = useState(0);
+  const pageSize = 10;
 
   const fetchData = useCallback(async () => {
     try {
@@ -68,21 +79,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Nav */}
-      <nav className="border-b border-[var(--card-border)] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LogoSmall />
-            <span className="font-bold text-lg">Dilemma Arena</span>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
-            <a href="#tournament" className="hover:text-[var(--foreground)] transition-colors">Tournament</a>
-            <a href="#enter" className="hover:text-[var(--foreground)] transition-colors">Enter</a>
-            <a href="#how-it-works" className="hover:text-[var(--foreground)] transition-colors">How It Works</a>
-            <a href="/docs" className="hover:text-[var(--foreground)] transition-colors">API Docs</a>
-            <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono">devnet</span>
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
@@ -103,7 +100,7 @@ export default function Home() {
             <StatBox label="Prize Pool" value={`${formatLamports(t.pool)} SOL`} />
             <StatBox label="Stake" value={`${formatLamports(t.stake)} SOL`} />
             <StatBox label="Players" value={String(t.participantCount)} />
-            <StatBox label="Matches/Player" value={String(t.matchesPerPlayer)} />
+            <StatBox label="Matches/Player" value={String(effectiveK(t.matchesPerPlayer, t.participantCount))} />
           </div>
         )}
       </section>
@@ -169,7 +166,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex flex-wrap justify-center gap-3 text-sm mt-6">
-                <a href="/participate" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
+                <a href="/participate.md" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
                   📄 Participation Guide
                 </a>
                 <a href="/docs" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
@@ -267,11 +264,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="neon-card rounded-2xl p-6 cursor-pointer" onClick={(e) => {
-              // Don't toggle if clicking a link or button inside
-              if ((e.target as HTMLElement).closest('a, button')) return;
-              setDetailOpen(!detailOpen);
-            }}>
+            <div className="neon-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold">Tournament #{t.id}</h3>
@@ -283,9 +276,9 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                      className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Explorer ↗</a>
-                  <span className="text-xs text-[var(--accent)] font-medium">
+                  <button onClick={() => setDetailOpen(!detailOpen)} className="text-xs text-[var(--accent)] font-medium hover:underline">
                     {detailOpen ? 'Hide Details ↑' : 'View Details ↓'}
-                  </span>
+                  </button>
                 </div>
               </div>
 
@@ -350,7 +343,7 @@ export default function Home() {
               <div className="mt-6 pt-4 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-xs text-[var(--muted)]">
                 <span>Stake: {formatLamports(t.stake)} SOL</span>
                 <span>Fee: {t.houseFeeBps / 100}%</span>
-                <span>K={t.matchesPerPlayer} matches/player</span>
+                <span>K={effectiveK(t.matchesPerPlayer, t.participantCount)} matches/player</span>
                 <span>Program: <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(PROGRAM_ID.toBase58(), 6)}</a></span>
               </div>
 
@@ -446,30 +439,93 @@ export default function Home() {
                               </tr>
                             </thead>
                             <tbody>
-                              {sorted.map((e, i) => {
-                                const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
-                                return (
-                                  <tr key={e.address} className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''}`}>
-                                    <td className="px-4 py-2 text-[var(--muted)] whitespace-nowrap"><span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span></td>
-                                    <td className="px-4 py-2 font-mono text-xs">
-                                      <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
-                                         className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(e.player, 5)}</a>
-                                      <CopyButton text={e.player} />
-                                    </td>
-                                    <td className="px-4 py-2"><StrategyBadge strategy={e.strategy} /></td>
-                                    <td className="px-4 py-2 text-right font-mono font-bold">{e.score}</td>
-                                    <td className="px-4 py-2 text-right text-[var(--muted)]">{e.matchesPlayed}/{t.matchesPerPlayer}</td>
-                                    {t.state === 'Payout' && (
-                                      <td className="px-4 py-2 text-center text-xs">
-                                        {e.paidOut ? '✅' : isWinner ? '⏳' : '—'}
+                              {(() => {
+                                const totalPages = Math.ceil(sorted.length / pageSize);
+                                const safePage = Math.min(scorePage, totalPages - 1);
+                                const paged = sorted.slice(safePage * pageSize, (safePage + 1) * pageSize);
+                                const offset = safePage * pageSize;
+                                const colCount = t.state === 'Payout' ? 6 : 5;
+                                return paged.map((e, idx) => {
+                                  const i = offset + idx;
+                                  const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
+                                  const isExpanded = expandedRow === e.address;
+                                  const hasNonDefaultParams = e.strategyParams && (
+                                    e.strategyParams.forgiveness > 0 || e.strategyParams.retaliationDelay > 0 ||
+                                    e.strategyParams.noiseTolerance > 0 || e.strategyParams.initialMoves > 0 ||
+                                    e.strategyParams.cooperateBias !== 50
+                                  );
+                                  return (
+                                    <React.Fragment key={e.address}>
+                                    <tr
+                                      className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''} ${hasNonDefaultParams ? 'cursor-pointer' : ''}`}
+                                      onClick={() => hasNonDefaultParams && setExpandedRow(isExpanded ? null : e.address)}
+                                    >
+                                      <td className="px-4 py-2 text-[var(--muted)] whitespace-nowrap"><span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span></td>
+                                      <td className="px-4 py-2 font-mono text-xs">
+                                        <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
+                                           className="text-[var(--accent)] hover:text-[var(--accent-hover)]" onClick={ev => ev.stopPropagation()}>{truncateAddress(e.player, 5)}</a>
+                                        <CopyButton text={e.player} />
                                       </td>
+                                      <td className="px-4 py-2">
+                                        <StrategyBadge strategy={e.strategy} /><ParamPills params={e.strategyParams ?? null} />
+                                        {hasNonDefaultParams && <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span>}
+                                      </td>
+                                      <td className="px-4 py-2 text-right font-mono font-bold">{e.score}</td>
+                                      <td className="px-4 py-2 text-right text-[var(--muted)]">{e.matchesPlayed}/{effectiveK(t.matchesPerPlayer, t.participantCount)}</td>
+                                      {t.state === 'Payout' && (
+                                        <td className="px-4 py-2 text-center text-xs">
+                                          {e.paidOut ? '✅' : isWinner ? '⏳' : '—'}
+                                        </td>
+                                      )}
+                                    </tr>
+                                    {isExpanded && e.strategyParams && (
+                                      <tr className="bg-neutral-50/50">
+                                        <td colSpan={colCount} className="px-4 py-3">
+                                          <ParamsDetail params={e.strategyParams} />
+                                        </td>
+                                      </tr>
                                     )}
-                                  </tr>
-                                );
-                              })}
+                                    </React.Fragment>
+                                  );
+                                });
+                              })()}
                             </tbody>
                           </table>
                         </div>
+                        {/* Pagination */}
+                        {entries.length > pageSize && (() => {
+                          const totalPages = Math.ceil(entries.length / pageSize);
+                          return (
+                            <div className="flex items-center justify-between mt-3">
+                              <span className="text-xs text-[var(--muted)]">
+                                {scorePage * pageSize + 1}–{Math.min((scorePage + 1) * pageSize, entries.length)} of {entries.length}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setScorePage(0)}
+                                  disabled={scorePage === 0}
+                                  className="px-2 py-1 text-xs rounded border border-[var(--card-border)] disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                                >«</button>
+                                <button
+                                  onClick={() => setScorePage(p => Math.max(0, p - 1))}
+                                  disabled={scorePage === 0}
+                                  className="px-2 py-1 text-xs rounded border border-[var(--card-border)] disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                                >‹</button>
+                                <span className="px-2 text-xs text-[var(--muted)]">{scorePage + 1} / {totalPages}</span>
+                                <button
+                                  onClick={() => setScorePage(p => Math.min(totalPages - 1, p + 1))}
+                                  disabled={scorePage >= totalPages - 1}
+                                  className="px-2 py-1 text-xs rounded border border-[var(--card-border)] disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                                >›</button>
+                                <button
+                                  onClick={() => setScorePage(totalPages - 1)}
+                                  disabled={scorePage >= totalPages - 1}
+                                  className="px-2 py-1 text-xs rounded border border-[var(--card-border)] disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                                >»</button>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })()}
@@ -558,7 +614,7 @@ export default function Home() {
             <div className="space-y-4">
               {[
                 { icon: '📝', title: 'Register', desc: 'Stake SOL and choose a strategy' },
-                { icon: '⚔️', title: 'Compete', desc: 'K matches against random opponents, 5-15 rounds each' },
+                { icon: '⚔️', title: 'Compete', desc: 'K matches per player (adaptive), 20-50 rounds each' },
                 { icon: '🏆', title: 'Win', desc: 'Top 25% by score split the prize pool equally' },
                 { icon: '💰', title: 'Claim', desc: 'Winners collect within 30 days' },
                 { icon: '📊', title: 'Iterate', desc: 'Analyze results, build tools, refine your strategy for next time' },
@@ -599,6 +655,35 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Strategy Parameters */}
+        <div className="mt-6 neon-card rounded-2xl p-6">
+          <h3 className="font-bold mb-4">⚙️ Strategy Parameters</h3>
+          <p className="text-sm text-[var(--muted)] mb-4">
+            Every strategy can be fine-tuned with up to 5 parameters. Non-default values create unique variants — a Tit for Tat with 30% forgiveness behaves very differently from the classic version.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { icon: '♡', name: 'Forgiveness', range: '0–100%', desc: 'Chance to cooperate instead of retaliating after a defection' },
+              { icon: '⏱', name: 'Retaliation Delay', range: '0–10 rounds', desc: 'Rounds to wait before copying a defection' },
+              { icon: '🛡', name: 'Noise Tolerance', range: '0–5', desc: 'Consecutive defections to ignore before triggering retaliation' },
+              { icon: '🎯', name: 'Cooperate Bias', range: '0–100%', desc: 'Base cooperation probability (mainly for Random strategy)' },
+              { icon: '▶', name: 'Initial Moves', range: '8-bit mask', desc: 'Override the first 8 rounds with a fixed C/D sequence' },
+            ].map(p => (
+              <div key={p.name} className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
+                <div className="flex items-center gap-2 mb-1">
+                  <span>{p.icon}</span>
+                  <span className="font-medium text-sm">{p.name}</span>
+                  <span className="text-[10px] text-[var(--muted)] font-mono ml-auto">{p.range}</span>
+                </div>
+                <div className="text-xs text-[var(--muted)]">{p.desc}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-[var(--muted)] mt-3">
+            Not all parameters affect every strategy — only relevant ones change behavior. See the <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">participation guide</a> for details.
+          </p>
         </div>
       </section>
 
@@ -642,7 +727,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs">devnet</span>
             <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--foreground)] transition-colors">Program ↗</a>
-            <a href="/participate" className="hover:text-[var(--foreground)] transition-colors">Participate</a>
+            <a href="/participate.md" className="hover:text-[var(--foreground)] transition-colors">Participate</a>
             <a href="/docs" className="hover:text-[var(--foreground)] transition-colors">API Docs</a>
           </div>
         </div>

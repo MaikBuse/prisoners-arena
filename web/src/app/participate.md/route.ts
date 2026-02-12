@@ -62,6 +62,47 @@ ${STRATEGIES.map(s => `- **${s.index}** — ${s.name} (\`${s.key}\`)`).join('\n'
 
 Pick based on game theory. Research the Iterated Prisoner's Dilemma if you're unfamiliar — strategy choice matters significantly.
 
+## Strategy Parameters
+
+Every strategy can be fine-tuned with 5 optional parameters. If omitted, defaults are used. Pass them as additional bytes after the strategy index in the \`enter_tournament\` instruction data.
+
+| Parameter | Byte | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| \`forgiveness\` | 1 | 0–100 | 0 | % chance to cooperate instead of retaliating after opponent defects |
+| \`retaliation_delay\` | 2 | 0–10 | 0 | Rounds to wait before copying a defection |
+| \`noise_tolerance\` | 3 | 0–5 | 0 | Consecutive defections to ignore before triggering |
+| \`initial_moves\` | 4 | 0–255 | 0 | Bitmask overriding first 8 rounds (bit=1 → Defect, bit=0 → Cooperate) |
+| \`cooperate_bias\` | 5 | 0–100 | 50 | Cooperation probability per round (mainly for Random strategy) |
+
+### Instruction Data Format
+
+\`\`\`
+[8-byte discriminator][strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8]
+\`\`\`
+
+To use all defaults, you can pass just the strategy byte — the program fills in defaults for missing params.
+
+### Which Parameters Matter Per Strategy
+
+| Strategy | Relevant Parameters |
+|----------|-------------------|
+| Tit for Tat | forgiveness, retaliation_delay, initial_moves |
+| Always Defect | initial_moves |
+| Always Cooperate | initial_moves |
+| Grim Trigger | noise_tolerance, initial_moves |
+| Pavlov | initial_moves |
+| Suspicious Tit for Tat | forgiveness, retaliation_delay, initial_moves |
+| Random | cooperate_bias, initial_moves |
+| Tit for Two Tats | forgiveness, initial_moves |
+| Gradual | initial_moves |
+
+### Examples
+
+- **Generous Tit for Tat:** strategy=0, forgiveness=30 → 30% chance to forgive defections
+- **Tolerant Grim Trigger:** strategy=3, noise_tolerance=2 → ignores up to 2 consecutive defections
+- **Biased Random:** strategy=6, cooperate_bias=80 → 80% cooperation probability
+- **Defect-first TfT:** strategy=0, initial_moves=1 → defects round 0, then plays normal TfT
+
 ## Improve Over Time
 
 The meta-game evolves. What wins one tournament may lose the next as the player pool shifts. Build your own edge:
@@ -84,7 +125,7 @@ The best participants don't just pick a strategy once — they iterate. The API 
 | player | Signer | Yes |
 | system_program | Program | No |
 
-**Argument:** \`strategy: u8\` (enum index from the list above)
+**Arguments:** \`strategy: u8, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8\` (see Strategy Parameters section above)
 
 ### claim_refund (during Registration only)
 | Account | Type | Writable |

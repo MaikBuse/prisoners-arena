@@ -1,4 +1,4 @@
-//! State deserialization — adapted from operator/src/state.rs
+//! State deserialization — adapted from operator/src/state.rs (v1.7)
 
 use anyhow::{bail, Result};
 use solana_client::rpc_client::RpcClient;
@@ -7,6 +7,7 @@ use solana_sdk::pubkey::Pubkey;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TournamentState {
     Registration,
+    Reveal,     // NEW v1.7
     Running,
     Payout,
 }
@@ -15,6 +16,7 @@ impl std::fmt::Display for TournamentState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Registration => write!(f, "Registration"),
+            Self::Reveal => write!(f, "Reveal"),
             Self::Running => write!(f, "Running"),
             Self::Payout => write!(f, "Payout"),
         }
@@ -42,6 +44,10 @@ pub struct Tournament {
     pub payout_started_at: i64,
     pub entries_remaining: u32,
     pub round_tier: u8,
+    pub reveal_ends: i64,           // NEW v1.7
+    pub reveal_duration: i64,       // NEW v1.7
+    pub reveals_completed: u32,     // NEW v1.7
+    pub forfeits: u32,              // NEW v1.7
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
@@ -61,6 +67,7 @@ pub struct Config {
     pub matches_per_player: u16,
     pub accumulated_fees: u64,
     pub current_tournament_id: u32,
+    pub reveal_duration: i64,       // NEW v1.7
     pub bump: u8,
 }
 
@@ -69,8 +76,10 @@ pub struct Entry {
     pub tournament: Pubkey,
     pub player: Pubkey,
     pub index: u32,
+    pub commitment: [u8; 32],      // NEW v1.7
     pub strategy: u8,
     pub strategy_params: [u8; 5],
+    pub revealed: bool,            // NEW v1.7
     pub score: u32,
     pub matches_played: u16,
     pub paid_out: bool,
@@ -80,9 +89,6 @@ pub struct Entry {
 
 impl Config {
     pub fn deserialize(data: &[u8]) -> Result<Self> {
-        if data.len() < 109 {
-            bail!("Config account data too short");
-        }
         let data = &data[8..];
         let mut o = 0;
         let admin = Pubkey::try_from(&data[o..o + 32])?; o += 32;
@@ -95,8 +101,9 @@ impl Config {
         let matches_per_player = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
         let accumulated_fees = u64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let current_tournament_id = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
+        let reveal_duration = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let bump = data[o];
-        Ok(Config { admin, operator, house_fee_bps, stake, min_participants, max_participants, registration_duration, matches_per_player, accumulated_fees, current_tournament_id, bump })
+        Ok(Config { admin, operator, house_fee_bps, stake, min_participants, max_participants, registration_duration, matches_per_player, accumulated_fees, current_tournament_id, reveal_duration, bump })
     }
 }
 
@@ -105,7 +112,13 @@ impl Tournament {
         let data = &data[8..];
         let mut o = 0;
         let id = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
-        let state = match data[o] { 0 => TournamentState::Registration, 1 => TournamentState::Running, 2 => TournamentState::Payout, s => bail!("Unknown state: {}", s) }; o += 1;
+        let state = match data[o] {
+            0 => TournamentState::Registration,
+            1 => TournamentState::Reveal,
+            2 => TournamentState::Running,
+            3 => TournamentState::Payout,
+            s => bail!("Unknown state: {}", s),
+        }; o += 1;
         let stake = u64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let house_fee_bps = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
         let matches_per_player = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
@@ -123,6 +136,12 @@ impl Tournament {
         let payout_started_at = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let entries_remaining = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let round_tier = data[o]; o += 1;
+        // NEW v1.7 fields
+        let reveal_ends = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
+        let reveal_duration = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
+        let reveals_completed = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
+        let forfeits = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
+        // Vecs
         let players_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
         let mut players = Vec::with_capacity(players_len);
         for _ in 0..players_len { players.push(Pubkey::try_from(&data[o..o + 32])?); o += 32; }
@@ -136,7 +155,7 @@ impl Tournament {
         let mut strategy_params = Vec::with_capacity(params_len);
         for _ in 0..params_len { let mut p = [0u8; 5]; p.copy_from_slice(&data[o..o + 5]); o += 5; strategy_params.push(p); }
         let bump = data[o];
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, players, scores, strategies, strategy_params, bump })
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, forfeits, players, scores, strategies, strategy_params, bump })
     }
 }
 
@@ -147,14 +166,18 @@ impl Entry {
         let tournament = Pubkey::try_from(&data[o..o + 32])?; o += 32;
         let player = Pubkey::try_from(&data[o..o + 32])?; o += 32;
         let index = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
+        // NEW v1.7: commitment
+        let mut commitment = [0u8; 32]; commitment.copy_from_slice(&data[o..o + 32]); o += 32;
         let strategy = data[o]; o += 1;
         let mut strategy_params = [0u8; 5]; strategy_params.copy_from_slice(&data[o..o + 5]); o += 5;
+        // NEW v1.7: revealed
+        let revealed = data[o] != 0; o += 1;
         let score = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let matches_played = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
         let paid_out = data[o] != 0; o += 1;
         let created_at = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let bump = data[o];
-        Ok(Entry { tournament, player, index, strategy, strategy_params, score, matches_played, paid_out, created_at, bump })
+        Ok(Entry { tournament, player, index, commitment, strategy, strategy_params, revealed, score, matches_played, paid_out, created_at, bump })
     }
 }
 

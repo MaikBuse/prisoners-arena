@@ -46,7 +46,7 @@ enum Commands {
         #[arg(long)]
         tournament: Option<u32>,
     },
-    /// Enter current tournament
+    /// Enter current tournament (submits commitment hash)
     Enter {
         #[arg(long, default_value = "admin")]
         wallet: String,
@@ -62,10 +62,23 @@ enum Commands {
         initial_moves: u8,
         #[arg(long, default_value = "50")]
         cooperate_bias: u8,
+        /// Hex-encoded 16-byte salt (random if omitted)
+        #[arg(long)]
+        salt: Option<String>,
         #[arg(long)]
         dry_run: bool,
     },
-    /// Claim refund for current tournament
+    /// Reveal strategy during Reveal phase
+    Reveal {
+        #[arg(long, default_value = "admin")]
+        wallet: String,
+        /// Hex-encoded 16-byte salt (loads from saved file if omitted)
+        #[arg(long)]
+        salt: Option<String>,
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Claim refund (during Registration or Reveal phase)
     Refund {
         #[arg(long, default_value = "admin")]
         wallet: String,
@@ -116,6 +129,8 @@ enum ConfigAction {
         #[arg(long)]
         operator: Option<String>,
         #[arg(long)]
+        reveal_duration: Option<i64>,
+        #[arg(long)]
         dry_run: bool,
     },
 }
@@ -131,19 +146,22 @@ fn main() -> Result<()> {
             ConfigAction::Update {
                 stake, min_participants, max_participants,
                 registration_duration, matches_per_player, house_fee_bps,
-                operator, dry_run,
+                operator, reveal_duration, dry_run,
             } => commands::admin::config_update(
                 &cfg, stake, min_participants, max_participants,
                 registration_duration, matches_per_player, house_fee_bps,
-                operator, dry_run,
+                operator, reveal_duration, dry_run,
             ),
         },
         Commands::WithdrawFees { dry_run } => commands::admin::withdraw_fees(&cfg, dry_run),
         Commands::Status => commands::info::status(&cfg),
         Commands::Tournament { id } => commands::info::tournament(&cfg, id),
         Commands::Entries { tournament } => commands::info::entries(&cfg, tournament),
-        Commands::Enter { wallet, strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, dry_run } => {
-            commands::player::enter(&cfg, &wallet, &strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, dry_run)
+        Commands::Enter { wallet, strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, salt, dry_run } => {
+            commands::player::enter(&cfg, &wallet, &strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, salt.as_deref(), dry_run)
+        }
+        Commands::Reveal { wallet, salt, dry_run } => {
+            commands::player::reveal(&cfg, &wallet, salt.as_deref(), dry_run)
         }
         Commands::Refund { wallet, dry_run } => commands::player::refund(&cfg, &wallet, dry_run),
         Commands::Claim { wallet, tournament, dry_run } => commands::player::claim(&cfg, &wallet, tournament, dry_run),

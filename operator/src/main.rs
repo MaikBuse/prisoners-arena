@@ -2,7 +2,10 @@
 //!
 //! Automated bot that runs tournament lifecycle:
 //! - Monitors registration deadline
-//! - Closes registration and starts matches
+//! - Closes registration → Reveal phase
+//! - Waits for reveal deadline
+//! - Forfeits unrevealed entries
+//! - Closes reveal → Running
 //! - Executes matches in batches
 //! - Finalizes tournament and starts next one
 //! - Cleans up expired entries after claim window
@@ -60,7 +63,6 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -74,7 +76,6 @@ async fn main() -> Result<()> {
     info!("RPC: {}", args.rpc_url);
     info!("Program: {}", args.program_id);
 
-    // Load keypair
     let keypair_path = shellexpand::tilde(&args.keypair.to_string_lossy()).to_string();
     let keypair = read_keypair_file(&keypair_path)
         .map_err(|e| anyhow::anyhow!("Failed to load keypair: {}", e))?;
@@ -85,10 +86,8 @@ async fn main() -> Result<()> {
         warn!("DRY RUN MODE - no transactions will be sent");
     }
 
-    // Create RPC client
     let client = RpcClient::new(args.rpc_url.clone());
 
-    // Check initial balance
     let balance = actions::check_balance(&client, &keypair.pubkey())?;
     info!("Operator balance: {} SOL", balance as f64 / LAMPORTS_PER_SOL as f64);
     
@@ -101,7 +100,6 @@ async fn main() -> Result<()> {
     }
 
     if args.manual {
-        // Manual mode: single cycle, then exit with appropriate code
         info!("Manual mode: running single cycle");
         match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
             Ok(action_taken) => {
@@ -135,7 +133,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Continuous loop mode
     let poll_interval = Duration::from_secs(args.poll_interval);
     
     loop {
@@ -146,7 +143,6 @@ async fn main() -> Result<()> {
                 if is_state_conflict(&err_str) {
                     warn!("State conflict (stale RPC data), retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    // Retry once immediately after wait
                     match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
                         Ok(_) => {}
                         Err(e2) => error!("Retry failed: {}", e2),
@@ -157,7 +153,6 @@ async fn main() -> Result<()> {
             }
         }
 
-        // Check balance periodically
         if let Ok(balance) = actions::check_balance(&client, &keypair.pubkey()) {
             if balance < MIN_BALANCE {
                 warn!(
@@ -171,7 +166,6 @@ async fn main() -> Result<()> {
     }
 }
 
-/// Check if an error is a state conflict (InvalidState = error 6000, or stale data)
 fn is_state_conflict(err: &str) -> bool {
     err.contains("0x1770") // 6000 in hex = InvalidState
         || err.contains("InvalidState")
@@ -185,10 +179,8 @@ async fn run_cycle(
     operator: &Keypair,
     dry_run: bool,
 ) -> Result<bool> {
-    // Fetch current state
     let config = state::fetch_config(client, program_id)?;
     
-    // Verify we're the operator
     if config.operator != operator.pubkey() {
         error!(
             "This wallet is not the operator! Expected: {}, Got: {}",
@@ -213,28 +205,56 @@ async fn run_cycle(
                 tournament.registration_ends.saturating_sub(now)
             );
             
-            // Check if deadline passed
             if now >= tournament.registration_ends {
                 if tournament.participant_count >= config.min_participants as u32 {
-                    info!("Registration deadline passed with {} participants, closing", tournament.participant_count);
+                    info!("Registration deadline passed with {} participants, closing → Reveal", tournament.participant_count);
                     if !dry_run {
                         actions::close_registration(client, program_id, &tournament, operator, &config)?;
                     }
                     return Ok(true);
                 } else {
-                    // Deadline passed but minimum not met - deadline will be extended by contract
                     info!(
                         "Deadline passed but only {} participants (need {}), extending deadline",
                         tournament.participant_count,
                         config.min_participants
                     );
                     if !dry_run {
-                        // Call close_registration anyway - contract will extend deadline
                         actions::close_registration(client, program_id, &tournament, operator, &config)?;
                     }
                     return Ok(true);
                 }
             }
+        }
+
+        TournamentState::Reveal => {
+            let active_count = tournament.participant_count - tournament.forfeits;
+            info!(
+                "Tournament #{} in Reveal | {}/{} revealed | deadline in {}s",
+                tournament.id,
+                tournament.reveals_completed,
+                active_count,
+                tournament.reveal_ends.saturating_sub(now)
+            );
+            
+            if now > tournament.reveal_ends {
+                // Reveal deadline passed — forfeit unrevealed entries, then close reveal
+                if tournament.reveals_completed < active_count {
+                    info!("Forfeiting unrevealed entries...");
+                    if !dry_run {
+                        let forfeited = actions::forfeit_all_unrevealed(client, program_id, &tournament, operator)?;
+                        info!("Forfeited {} entries", forfeited);
+                    }
+                    return Ok(true);
+                }
+                
+                // All forfeits processed — close reveal
+                info!("All forfeits processed, closing reveal → Running");
+                if !dry_run {
+                    actions::close_reveal(client, program_id, &tournament, operator, &config)?;
+                }
+                return Ok(true);
+            }
+            // Else: still waiting for reveal deadline, nothing to do
         }
 
         TournamentState::Running => {
@@ -273,7 +293,6 @@ async fn run_cycle(
             );
             
             if expired {
-                // Clean up expired entries
                 if !dry_run {
                     let closed = actions::close_expired_entries(client, program_id, &tournament, operator)?;
                     if closed > 0 {
@@ -281,22 +300,17 @@ async fn run_cycle(
                         return Ok(true);
                     }
                     
-                    // All entries closed — close the tournament account itself
                     match actions::close_tournament(client, program_id, &tournament, operator, &config) {
                         Ok(_) => {
                             info!("Tournament {} account closed, rent recovered", tournament.id);
                             return Ok(true);
                         }
                         Err(e) => {
-                            // May fail if entries still exist (closed by someone else this cycle)
                             warn!("Could not close tournament account: {}", e);
                         }
                     }
                 }
             }
-            
-            // Note: Winners claim their own payouts via claim_payout instruction
-            // Operator just monitors and cleans up after expiry
         }
     }
 

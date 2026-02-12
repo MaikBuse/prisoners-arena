@@ -24,56 +24,34 @@ const MATCHES_PER_TX: u32 = 5;
 /// Instruction discriminators (first 8 bytes of sha256("global:<instruction_name>"))
 mod discriminator {
     pub const CLOSE_REGISTRATION: [u8; 8] = [44, 118, 178, 58, 21, 125, 102, 138];
+    pub const CLOSE_REVEAL: [u8; 8] = [178, 16, 118, 36, 7, 42, 184, 51];
+    pub const FORFEIT_UNREVEALED: [u8; 8] = [106, 138, 130, 170, 105, 11, 59, 183];
     pub const RUN_MATCHES: [u8; 8] = [231, 195, 232, 182, 30, 237, 182, 246];
     pub const FINALIZE_TOURNAMENT: [u8; 8] = [205, 30, 149, 11, 108, 122, 120, 11];
     pub const CLOSE_EXPIRED_ENTRY: [u8; 8] = [241, 64, 198, 246, 182, 114, 87, 149];
     pub const CLOSE_TOURNAMENT: [u8; 8] = [14, 80, 54, 9, 221, 239, 201, 35];
 }
 
-/// Close registration and transition to Running state
+/// Close registration and transition to Reveal phase
 pub fn close_registration(
     client: &RpcClient,
     program_id: &Pubkey,
     tournament: &Tournament,
     operator: &Keypair,
-    config: &Config,
+    _config: &Config,
 ) -> Result<()> {
     info!("Closing registration for tournament {}", tournament.id);
     
     let (config_pda, _) = state::get_config_pda(program_id);
     let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
     
-    // Check if we need to refund the last player (odd count)
-    let need_refund = tournament.participant_count % 2 == 1 && tournament.participant_count >= config.min_participants as u32;
-    
-    let mut accounts = vec![
+    // v1.7: close_registration no longer needs slotHashes or refund accounts
+    let accounts = vec![
         AccountMeta::new(config_pda, false),
         AccountMeta::new(tournament_pda, false),
-        AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
+        AccountMeta::new_readonly(operator.pubkey(), true),
+        AccountMeta::new_readonly(system_program::id(), false),
     ];
-    
-    // Add refund accounts if needed
-    if need_refund {
-        // Find the last non-refunded player
-        let last_player = tournament.players.iter()
-            .rposition(|pk| *pk != Pubkey::default())
-            .map(|idx| tournament.players[idx]);
-            
-        if let Some(player) = last_player {
-            let (entry_pda, _) = state::get_entry_pda(program_id, &tournament_pda, &player);
-            accounts.push(AccountMeta::new(entry_pda, false)); // refund_entry
-            accounts.push(AccountMeta::new(player, false)); // refund_player
-        } else {
-            bail!("Need to refund but couldn't find last player");
-        }
-    } else {
-        // Pass program ID for optional None accounts (Anchor convention)
-        accounts.push(AccountMeta::new_readonly(*program_id, false)); // refund_entry = None
-        accounts.push(AccountMeta::new_readonly(*program_id, false)); // refund_player = None
-    }
-    
-    accounts.push(AccountMeta::new_readonly(operator.pubkey(), true)); // operator (signer)
-    accounts.push(AccountMeta::new_readonly(system_program::id(), false));
     
     let instruction = Instruction {
         program_id: *program_id,
@@ -82,7 +60,125 @@ pub fn close_registration(
     };
     
     send_transaction(client, &[instruction], operator)?;
-    info!("Registration closed for tournament {}", tournament.id);
+    info!("Registration closed for tournament {} → Reveal phase", tournament.id);
+    
+    Ok(())
+}
+
+/// Forfeit an unrevealed entry after reveal deadline
+pub fn forfeit_unrevealed(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    tournament: &Tournament,
+    entry_player: &Pubkey,
+    operator: &Keypair,
+) -> Result<()> {
+    let (config_pda, _) = state::get_config_pda(program_id);
+    let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
+    let (entry_pda, _) = state::get_entry_pda(program_id, &tournament_pda, entry_player);
+    
+    let accounts = vec![
+        AccountMeta::new_readonly(config_pda, false),
+        AccountMeta::new(entry_pda, false),
+        AccountMeta::new(tournament_pda, false),
+        AccountMeta::new(operator.pubkey(), true),
+    ];
+    
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: discriminator::FORFEIT_UNREVEALED.to_vec(),
+    };
+    
+    send_transaction(client, &[instruction], operator)?;
+    info!("Forfeited unrevealed entry for player {}", entry_player);
+    
+    Ok(())
+}
+
+/// Forfeit all unrevealed entries for a tournament
+pub fn forfeit_all_unrevealed(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    tournament: &Tournament,
+    operator: &Keypair,
+) -> Result<u32> {
+    let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
+    let mut forfeited = 0u32;
+    
+    for player in &tournament.players {
+        if *player == Pubkey::default() {
+            continue; // Already refunded/forfeited
+        }
+        
+        // Check if entry exists and is unrevealed
+        match state::fetch_entry(client, program_id, &tournament_pda, player) {
+            Ok(entry) => {
+                if !entry.revealed {
+                    match forfeit_unrevealed(client, program_id, tournament, player, operator) {
+                        Ok(_) => forfeited += 1,
+                        Err(e) => warn!("Failed to forfeit entry for {}: {}", player, e),
+                    }
+                }
+            }
+            Err(_) => continue, // Entry doesn't exist
+        }
+    }
+    
+    Ok(forfeited)
+}
+
+/// Close reveal phase and transition to Running
+pub fn close_reveal(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    tournament: &Tournament,
+    operator: &Keypair,
+    _config: &Config,
+) -> Result<()> {
+    info!("Closing reveal phase for tournament {}", tournament.id);
+    
+    let (config_pda, _) = state::get_config_pda(program_id);
+    let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
+    
+    // Check if we need to refund the last player (odd active count)
+    let active_count = tournament.participant_count - tournament.forfeits;
+    let need_refund = active_count % 2 == 1 && active_count > 0;
+    
+    let mut accounts = vec![
+        AccountMeta::new_readonly(config_pda, false),
+        AccountMeta::new(tournament_pda, false),
+        AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
+    ];
+    
+    if need_refund {
+        let last_player = tournament.players.iter()
+            .rposition(|pk| *pk != Pubkey::default())
+            .map(|idx| tournament.players[idx]);
+            
+        if let Some(player) = last_player {
+            let (entry_pda, _) = state::get_entry_pda(program_id, &tournament_pda, &player);
+            accounts.push(AccountMeta::new(entry_pda, false));
+            accounts.push(AccountMeta::new(player, false));
+        } else {
+            bail!("Need to refund but couldn't find last player");
+        }
+    } else {
+        accounts.push(AccountMeta::new_readonly(*program_id, false));
+        accounts.push(AccountMeta::new_readonly(*program_id, false));
+    }
+    
+    accounts.push(AccountMeta::new_readonly(operator.pubkey(), true));
+    accounts.push(AccountMeta::new_readonly(system_program::id(), false));
+    
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: discriminator::CLOSE_REVEAL.to_vec(),
+    };
+    
+    send_transaction(client, &[instruction], operator)?;
+    info!("Reveal closed for tournament {} → Running", tournament.id);
     
     Ok(())
 }
@@ -113,32 +209,31 @@ pub fn run_matches(
     let (config_pda, _) = state::get_config_pda(program_id);
     let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
     
-    // Collect entry accounts for this batch
     let mut entry_accounts: Vec<AccountMeta> = Vec::new();
     let mut seen_entries: std::collections::HashSet<Pubkey> = std::collections::HashSet::new();
+    
+    // Use active count for pairing (participant_count - forfeits)
+    let active_count = tournament.participant_count - tournament.forfeits;
     
     for batch_idx in 0..matches_to_run {
         let match_index = tournament.matches_completed + batch_idx;
         
         let pairing = match_logic::get_pairing_for_match(
-            tournament.participant_count,
+            active_count,
             tournament.matches_per_player,
             &tournament.randomness_seed,
             match_index,
         );
         
         if let Some((idx_a, idx_b)) = pairing {
-            // Get players from tournament
             let player_a = tournament.players.get(idx_a as usize);
             let player_b = tournament.players.get(idx_b as usize);
             
             if let (Some(pk_a), Some(pk_b)) = (player_a, player_b) {
-                // Skip if either player refunded
                 if *pk_a == Pubkey::default() || *pk_b == Pubkey::default() {
                     continue;
                 }
                 
-                // Add entry accounts (deduplicated)
                 let (entry_a, _) = state::get_entry_pda(program_id, &tournament_pda, pk_a);
                 let (entry_b, _) = state::get_entry_pda(program_id, &tournament_pda, pk_b);
                 
@@ -152,14 +247,11 @@ pub fn run_matches(
         }
     }
     
-    // Build accounts list
     let mut accounts = vec![
         AccountMeta::new_readonly(config_pda, false),
         AccountMeta::new(tournament_pda, false),
         AccountMeta::new_readonly(operator.pubkey(), true),
     ];
-    
-    // Add entry accounts as remaining_accounts
     accounts.extend(entry_accounts);
     
     let instruction = Instruction {
@@ -191,8 +283,8 @@ pub fn finalize_tournament(
     let accounts = vec![
         AccountMeta::new(config_pda, false),
         AccountMeta::new(tournament_pda, false),
-        AccountMeta::new(next_tournament_pda, false), // next_tournament (init)
-        AccountMeta::new(operator.pubkey(), true), // operator (signer, payer)
+        AccountMeta::new(next_tournament_pda, false),
+        AccountMeta::new(operator.pubkey(), true),
         AccountMeta::new_readonly(system_program::id(), false),
     ];
     
@@ -219,10 +311,10 @@ pub fn close_expired_entries(
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs() as i64;
     
-    const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000; // 30 days
+    const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
     
     if now < tournament.payout_started_at + CLAIM_EXPIRY_SECONDS {
-        return Ok(0); // Not expired yet
+        return Ok(0);
     }
     
     info!("Closing expired entries for tournament {}", tournament.id);
@@ -234,15 +326,13 @@ pub fn close_expired_entries(
     
     for player in &tournament.players {
         if *player == Pubkey::default() {
-            continue; // Skip refunded
+            continue;
         }
         
         let (entry_pda, _) = state::get_entry_pda(program_id, &tournament_pda, player);
         
-        // Check if entry still exists
         match client.get_account(&entry_pda) {
             Ok(_) => {
-                // Entry exists, close it
                 let accounts = vec![
                     AccountMeta::new(config_pda, false),
                     AccountMeta::new(tournament_pda, false),
@@ -261,14 +351,10 @@ pub fn close_expired_entries(
                         info!("Closed expired entry for {}", player);
                         closed += 1;
                     }
-                    Err(e) => {
-                        warn!("Failed to close entry for {}: {}", player, e);
-                    }
+                    Err(e) => warn!("Failed to close entry for {}: {}", player, e),
                 }
             }
-            Err(_) => {
-                // Entry already closed
-            }
+            Err(_) => {}
         }
     }
     
@@ -291,7 +377,7 @@ pub fn close_tournament(
     let accounts = vec![
         AccountMeta::new_readonly(config_pda, false),
         AccountMeta::new(tournament_pda, false),
-        AccountMeta::new(config.admin, false), // admin receives lamports
+        AccountMeta::new(config.admin, false),
         AccountMeta::new_readonly(operator.pubkey(), true),
     ];
     
@@ -322,7 +408,6 @@ fn send_transaction(
         recent_blockhash,
     );
     
-    // Send with confirmation
     let signature = client.send_and_confirm_transaction_with_spinner_and_commitment(
         &transaction,
         CommitmentConfig::confirmed(),

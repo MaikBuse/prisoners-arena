@@ -39,6 +39,7 @@ pub fn init(cfg: &ArenaConfig, dry_run: bool) -> Result<()> {
     data.extend_from_slice(&cfg.defaults.max_participants.to_le_bytes()); // max_participants: u16
     data.extend_from_slice(&cfg.defaults.registration_duration.to_le_bytes()); // registration_duration: i64
     data.extend_from_slice(&cfg.defaults.matches_per_player.to_le_bytes()); // matches_per_player: u16
+    data.extend_from_slice(&cfg.defaults.reveal_duration.to_le_bytes()); // reveal_duration: i64
 
     let accounts = vec![
         AccountMeta::new(config_pda, false),
@@ -69,6 +70,7 @@ pub fn config_show(cfg: &ArenaConfig) -> Result<()> {
     println!("  Max Participants:      {}", config.max_participants);
     println!("  Registration Duration: {}s", config.registration_duration);
     println!("  Matches Per Player:    {}", config.matches_per_player);
+    println!("  Reveal Duration:       {}s", config.reveal_duration);
     println!("  Accumulated Fees:      {} lamports ({:.4} SOL)", config.accumulated_fees, config.accumulated_fees as f64 / 1e9);
     println!("  Current Tournament ID: {}", config.current_tournament_id);
     Ok(())
@@ -83,6 +85,7 @@ pub fn config_update(
     matches_per_player: Option<u16>,
     house_fee_bps: Option<u16>,
     operator: Option<String>,
+    reveal_duration: Option<i64>,
     dry_run: bool,
 ) -> Result<()> {
     let client = RpcClient::new(&cfg.network.rpc_url);
@@ -121,13 +124,15 @@ pub fn config_update(
     }
 
     let operator_pk = operator.map(|s| Pubkey::from_str(&s)).transpose()?;
+    // Order must match contract: operator, house_fee_bps, stake, min_participants, max_participants, registration_duration, matches_per_player, reveal_duration
     push_option_pubkey(&mut data, &operator_pk);
+    push_option_u16(&mut data, &house_fee_bps);
     push_option_u64(&mut data, &stake);
     push_option_u16(&mut data, &min_participants);
     push_option_u16(&mut data, &max_participants);
     push_option_i64(&mut data, &registration_duration);
     push_option_u16(&mut data, &matches_per_player);
-    push_option_u16(&mut data, &house_fee_bps);
+    push_option_i64(&mut data, &reveal_duration);
 
     let accounts = vec![
         AccountMeta::new(config_pda, false),

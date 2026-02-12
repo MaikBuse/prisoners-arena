@@ -6,7 +6,13 @@ import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explo
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
-import { LogoSmall } from '@/components/Logo';
+import { Nav } from '@/components/Nav';
+
+function effectiveK(configK: number, n: number): number {
+  if (n <= 1) return 0;
+  if (n <= 200) return n - 1;
+  return Math.min(Math.max(49, Math.min(99, configK)), n - 1);
+}
 
 const BAR_COLORS: Record<string, string> = {
   blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
@@ -79,22 +85,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="min-h-screen">
       {/* Nav */}
-      <nav className="border-b border-[var(--card-border)] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <LogoSmall />
-              <span className="font-bold text-lg">Dilemma Arena</span>
-            </a>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
-            <a href="/" className="hover:text-[var(--foreground)] transition-colors">← Dashboard</a>
-            <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono">
-              {process.env.NEXT_PUBLIC_NETWORK || 'devnet'}
-            </span>
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         {loading ? (
@@ -175,7 +166,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     <div className="h-full bg-blue-500 rounded-full transition-all duration-1000"
                       style={{ width: `${t.matchesTotal > 0 ? (t.matchesCompleted / t.matchesTotal * 100) : 0}%` }} />
                   </div>
-                  <div className="text-xs text-[var(--muted)] mt-2">K={t.matchesPerPlayer} matches per player</div>
+                  <div className="text-xs text-[var(--muted)] mt-2">K={effectiveK(t.matchesPerPlayer, t.participantCount)} matches per player</div>
                 </div>
               )}
 
@@ -199,7 +190,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="mt-4 pt-4 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-xs text-[var(--muted)]">
                 <span>Program: <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(PROGRAM_ID.toBase58(), 6)}</a></span>
                 <span>Account: <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(t.address, 6)}</a></span>
-                <span>Matches/player: {t.matchesPerPlayer}</span>
+                <span>Matches/player: {effectiveK(t.matchesPerPlayer, t.participantCount)}</span>
               </div>
             </div>
 
@@ -289,11 +280,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                                 <span className="inline-flex items-center flex-wrap gap-y-1">
                                   {e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
                                   <ParamPills params={e.strategyParams} />
+                                  <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span>
                                 </span>
                               </td>
                               <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
                               <td className="px-5 py-3 text-right text-[var(--muted)]">
-                                {e.matchesPlayed > 0 ? `${e.matchesPlayed} / ${t.matchesPerPlayer}` : '—'}
+                                {`${e.matchesPlayed} / ${effectiveK(t.matchesPerPlayer, t.participantCount)}`}
                               </td>
                               {t.state === 'Payout' && (
                                 <td className="px-5 py-3 text-center text-sm">
@@ -323,7 +315,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="neon-card rounded-2xl p-8 text-center">
                 <div className="text-4xl mb-3">🎯</div>
                 <h3 className="font-bold text-lg mb-2">No participants yet</h3>
-                <p className="text-[var(--muted)] text-sm">Be the first to enter! Read the <a href="/participate" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">participation guide</a>.</p>
+                <p className="text-[var(--muted)] text-sm">Be the first to enter! Read the <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">participation guide</a>.</p>
               </div>
             )}
           </div>

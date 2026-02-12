@@ -49,6 +49,8 @@ pub struct Config {
     pub accumulated_fees: u64,
     /// Current tournament ID (increments each tournament)
     pub current_tournament_id: u32,
+    /// Reveal duration in seconds (e.g., 172800 = 48h)
+    pub reveal_duration: i64,
     /// PDA bump seed
     pub bump: u8,
 }
@@ -65,8 +67,9 @@ impl Config {
         2 +   // matches_per_player
         8 +   // accumulated_fees
         4 +   // current_tournament_id
+        8 +   // reveal_duration (NEW v1.7)
         1 +   // bump
-        32;   // padding for future fields
+        24;   // padding for future fields (was 32, used 8 for reveal_duration)
 }
 
 /// Tournament state machine
@@ -74,6 +77,7 @@ impl Config {
 pub enum TournamentState {
     #[default]
     Registration,
+    Reveal,    // NEW v1.7
     Running,
     Payout,
 }
@@ -125,6 +129,14 @@ pub struct Tournament {
     pub entries_remaining: u32,
     /// Round tier: 0 = standard (20-50 rounds), 1 = compressed (10-30 rounds)
     pub round_tier: u8,
+    /// Reveal phase deadline (Unix timestamp, set when registration closes)
+    pub reveal_ends: i64,             // NEW v1.7
+    /// Reveal duration in seconds (snapshotted from config)
+    pub reveal_duration: i64,         // NEW v1.7
+    /// Number of players who have revealed
+    pub reveals_completed: u32,       // NEW v1.7
+    /// Number of players who forfeited (didn't reveal in time)
+    pub forfeits: u32,                // NEW v1.7
     /// Ordered list of player pubkeys (index = entry order, default = refunded)
     pub players: Vec<Pubkey>,
     /// Scores indexed by entry.index (source of truth for finalization)
@@ -137,7 +149,7 @@ pub struct Tournament {
     pub bump: u8,
 }
 
-/// Bytes added per player (32-byte pubkey + 4-byte score + 1-byte strategy)
+/// Bytes added per player (32-byte pubkey + 4-byte score + 1-byte strategy + 5-byte params)
 pub const BYTES_PER_PLAYER: usize = 42;
 
 impl Tournament {
@@ -162,12 +174,16 @@ impl Tournament {
         8 +   // payout_started_at
         4 +   // entries_remaining
         1 +   // round_tier
+        8 +   // reveal_ends (NEW v1.7)
+        8 +   // reveal_duration (NEW v1.7)
+        4 +   // reveals_completed (NEW v1.7)
+        4 +   // forfeits (NEW v1.7)
         4 +   // players vec len (empty)
         4 +   // scores vec len (empty)
         4 +   // strategies vec len (empty)
         4 +   // strategy_params vec len (empty)
         1 +   // bump
-        32;   // padding
+        8;    // padding (was 32, used 24 for new fields)
 
     /// Calculate space needed for a tournament with given number of participants
     pub fn space(participant_count: u16) -> usize {
@@ -227,10 +243,14 @@ pub struct Entry {
     pub player: Pubkey,
     /// Anonymous index for matching (position in tournament.players[])
     pub index: u32,
-    /// Player's strategy
+    /// SHA256 commitment hash (NEW v1.7)
+    pub commitment: [u8; 32],
+    /// Player's strategy (zeroed until reveal)
     pub strategy: Strategy,
-    /// Strategy parameters
+    /// Strategy parameters (zeroed until reveal)
     pub strategy_params: StrategyParams,
+    /// Has player revealed? (NEW v1.7)
+    pub revealed: bool,
     /// Accumulated score (synced with tournament.scores[index] during run_matches)
     pub score: u32,
     /// Number of matches played
@@ -248,8 +268,10 @@ impl Entry {
         32 +  // tournament
         32 +  // player
         4 +   // index
+        32 +  // commitment (NEW v1.7)
         1 +   // strategy (enum)
         5 +   // strategy_params
+        1 +   // revealed (NEW v1.7)
         4 +   // score
         2 +   // matches_played
         1 +   // paid_out

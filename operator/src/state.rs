@@ -10,6 +10,7 @@ use solana_sdk::pubkey::Pubkey;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TournamentState {
     Registration,
+    Reveal,     // NEW v1.7
     Running,
     Payout,
 }
@@ -39,6 +40,10 @@ pub struct Tournament {
     pub payout_started_at: i64,
     pub entries_remaining: u32,
     pub round_tier: u8,
+    pub reveal_ends: i64,           // NEW v1.7
+    pub reveal_duration: i64,       // NEW v1.7
+    pub reveals_completed: u32,     // NEW v1.7
+    pub forfeits: u32,              // NEW v1.7
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
@@ -59,6 +64,7 @@ pub struct Config {
     pub matches_per_player: u16,
     pub accumulated_fees: u64,
     pub current_tournament_id: u32,
+    pub reveal_duration: i64,       // NEW v1.7
     pub bump: u8,
 }
 
@@ -68,8 +74,10 @@ pub struct Entry {
     pub tournament: Pubkey,
     pub player: Pubkey,
     pub index: u32,
-    pub strategy: u8, // Strategy enum as u8
+    pub commitment: [u8; 32],      // NEW v1.7
+    pub strategy: u8,
     pub strategy_params: [u8; 5],
+    pub revealed: bool,            // NEW v1.7
     pub score: u32,
     pub matches_played: u16,
     pub paid_out: bool,
@@ -78,23 +86,7 @@ pub struct Entry {
 }
 
 impl Config {
-    /// Config account layout (after 8-byte discriminator):
-    /// admin: Pubkey (32)
-    /// operator: Pubkey (32)
-    /// house_fee_bps: u16 (2)
-    /// stake: u64 (8)
-    /// min_participants: u16 (2)
-    /// max_participants: u16 (2)
-    /// registration_duration: i64 (8)
-    /// matches_per_player: u16 (2)
-    /// accumulated_fees: u64 (8)
-    /// current_tournament_id: u32 (4)
-    /// bump: u8 (1)
     pub fn deserialize(data: &[u8]) -> Result<Self> {
-        if data.len() < 8 + 32 + 32 + 2 + 8 + 2 + 2 + 8 + 2 + 8 + 4 + 1 {
-            bail!("Config account data too short");
-        }
-        
         let data = &data[8..]; // Skip discriminator
         let mut offset = 0;
         
@@ -128,6 +120,9 @@ impl Config {
         let current_tournament_id = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
         offset += 4;
         
+        let reveal_duration = i64::from_le_bytes(data[offset..offset + 8].try_into()?);
+        offset += 8;
+        
         let bump = data[offset];
         
         Ok(Config {
@@ -141,34 +136,13 @@ impl Config {
             matches_per_player,
             accumulated_fees,
             current_tournament_id,
+            reveal_duration,
             bump,
         })
     }
 }
 
 impl Tournament {
-    /// Tournament account layout (after 8-byte discriminator):
-    /// id: u32 (4)
-    /// state: TournamentState (1)
-    /// stake: u64 (8)
-    /// house_fee_bps: u16 (2)
-    /// matches_per_player: u16 (2)
-    /// registration_duration: i64 (8)
-    /// pool: u64 (8)
-    /// participant_count: u32 (4)
-    /// registration_ends: i64 (8)
-    /// matches_completed: u32 (4)
-    /// matches_total: u32 (4)
-    /// randomness_seed: [u8; 32] (32)
-    /// min_winning_score: u32 (4)
-    /// winner_count: u32 (4)
-    /// winner_pool: u64 (8)
-    /// claims_processed: u32 (4)
-    /// payout_started_at: i64 (8)
-    /// entries_remaining: u32 (4)
-    /// players: Vec<Pubkey> (4 + n*32)
-    /// scores: Vec<u32> (4 + n*4)
-    /// bump: u8 (1)
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         let data = &data[8..]; // Skip discriminator
         let mut offset = 0;
@@ -178,8 +152,9 @@ impl Tournament {
         
         let state = match data[offset] {
             0 => TournamentState::Registration,
-            1 => TournamentState::Running,
-            2 => TournamentState::Payout,
+            1 => TournamentState::Reveal,
+            2 => TournamentState::Running,
+            3 => TournamentState::Payout,
             s => bail!("Unknown tournament state: {}", s),
         };
         offset += 1;
@@ -236,10 +211,22 @@ impl Tournament {
         let round_tier = data[offset];
         offset += 1;
         
+        // NEW v1.7 fields
+        let reveal_ends = i64::from_le_bytes(data[offset..offset + 8].try_into()?);
+        offset += 8;
+        
+        let reveal_duration = i64::from_le_bytes(data[offset..offset + 8].try_into()?);
+        offset += 8;
+        
+        let reveals_completed = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
+        offset += 4;
+        
+        let forfeits = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
+        offset += 4;
+        
         // Vec<Pubkey> players
         let players_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
         offset += 4;
-        
         let mut players = Vec::with_capacity(players_len);
         for _ in 0..players_len {
             players.push(Pubkey::try_from(&data[offset..offset + 32])?);
@@ -249,7 +236,6 @@ impl Tournament {
         // Vec<u32> scores
         let scores_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
         offset += 4;
-        
         let mut scores = Vec::with_capacity(scores_len);
         for _ in 0..scores_len {
             scores.push(u32::from_le_bytes(data[offset..offset + 4].try_into()?));
@@ -259,7 +245,6 @@ impl Tournament {
         // Vec<u8> strategies
         let strategies_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
         offset += 4;
-        
         let mut strategies = Vec::with_capacity(strategies_len);
         for _ in 0..strategies_len {
             strategies.push(data[offset]);
@@ -299,6 +284,10 @@ impl Tournament {
             payout_started_at,
             entries_remaining,
             round_tier,
+            reveal_ends,
+            reveal_duration,
+            reveals_completed,
+            forfeits,
             players,
             scores,
             strategies,
@@ -309,16 +298,6 @@ impl Tournament {
 }
 
 impl Entry {
-    /// Entry account layout (after 8-byte discriminator):
-    /// tournament: Pubkey (32)
-    /// player: Pubkey (32)
-    /// index: u32 (4)
-    /// strategy: Strategy enum (1)
-    /// score: u32 (4)
-    /// matches_played: u16 (2)
-    /// paid_out: bool (1)
-    /// created_at: i64 (8)
-    /// bump: u8 (1)
     pub fn deserialize(data: &[u8]) -> Result<Self> {
         let data = &data[8..]; // Skip discriminator
         let mut offset = 0;
@@ -332,12 +311,21 @@ impl Entry {
         let index = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
         offset += 4;
         
+        // NEW v1.7: commitment
+        let mut commitment = [0u8; 32];
+        commitment.copy_from_slice(&data[offset..offset + 32]);
+        offset += 32;
+        
         let strategy = data[offset];
         offset += 1;
         
         let mut strategy_params = [0u8; 5];
         strategy_params.copy_from_slice(&data[offset..offset + 5]);
         offset += 5;
+        
+        // NEW v1.7: revealed
+        let revealed = data[offset] != 0;
+        offset += 1;
         
         let score = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
         offset += 4;
@@ -357,8 +345,10 @@ impl Entry {
             tournament,
             player,
             index,
+            commitment,
             strategy,
             strategy_params,
+            revealed,
             score,
             matches_played,
             paid_out,

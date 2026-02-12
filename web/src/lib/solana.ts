@@ -144,6 +144,7 @@ export interface ConfigAccount {
   matchesPerPlayer: number;
   accumulatedFees: string;
   currentTournamentId: number;
+  revealDuration: string;  // v1.7
   bump: number;
   address: string;
 }
@@ -160,11 +161,12 @@ export function deserializeConfig(data: Buffer, address: string): ConfigAccount 
   const matchesPerPlayer = readU16LE(data, offset); offset += 2;
   const accumulatedFees = readU64LE(data, offset).toString(); offset += 8;
   const currentTournamentId = readU32LE(data, offset); offset += 4;
+  const revealDuration = readI64LE(data, offset).toString(); offset += 8;  // v1.7
   const bump = readU8(data, offset);
-  return { admin, operator, houseFeeBps, stake, minParticipants, maxParticipants, registrationDuration, matchesPerPlayer, accumulatedFees, currentTournamentId, bump, address };
+  return { admin, operator, houseFeeBps, stake, minParticipants, maxParticipants, registrationDuration, matchesPerPlayer, accumulatedFees, currentTournamentId, revealDuration, bump, address };
 }
 
-export type TournamentState = 'Registration' | 'Running' | 'Payout';
+export type TournamentState = 'Registration' | 'Reveal' | 'Running' | 'Payout';
 
 export interface TournamentAccount {
   id: number;
@@ -186,6 +188,10 @@ export interface TournamentAccount {
   payoutStartedAt: string;
   entriesRemaining: number;
   roundTier: number;
+  revealEnds: string;           // v1.7
+  revealDuration: string;       // v1.7
+  revealsCompleted: number;     // v1.7
+  forfeits: number;             // v1.7
   players: string[];
   scores: number[];
   strategies: number[];
@@ -194,7 +200,7 @@ export interface TournamentAccount {
   address: string;
 }
 
-const STATE_MAP: TournamentState[] = ['Registration', 'Running', 'Payout'];
+const STATE_MAP: TournamentState[] = ['Registration', 'Reveal', 'Running', 'Payout'];
 
 export function deserializeTournament(data: Buffer, address: string): TournamentAccount {
   let offset = 8;
@@ -218,6 +224,11 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const payoutStartedAt = readI64LE(data, offset).toString(); offset += 8;
   const entriesRemaining = readU32LE(data, offset); offset += 4;
   const roundTier = readU8(data, offset); offset += 1;
+  // v1.7 fields
+  const revealEnds = readI64LE(data, offset).toString(); offset += 8;
+  const revealDuration = readI64LE(data, offset).toString(); offset += 8;
+  const revealsCompleted = readU32LE(data, offset); offset += 4;
+  const forfeits = readU32LE(data, offset); offset += 4;
 
   const playersLen = readU32LE(data, offset); offset += 4;
   const players: string[] = [];
@@ -252,13 +263,14 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
 
   const bump = readU8(data, offset);
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, players, scores, strategies, strategyParams, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, forfeits, players, scores, strategies, strategyParams, bump, address };
 }
 
 export interface EntryAccount {
   tournament: string;
   player: string;
   index: number;
+  commitment: string;    // v1.7 — hex-encoded SHA256
   strategy: number;
   strategyName: string;
   strategyParams: {
@@ -268,6 +280,7 @@ export interface EntryAccount {
     initialMoves: number;
     cooperateBias: number;
   };
+  revealed: boolean;     // v1.7
   score: number;
   matchesPlayed: number;
   paidOut: boolean;
@@ -281,6 +294,8 @@ export function deserializeEntry(data: Buffer, address: string): EntryAccount {
   const tournament = readPubkey(data, offset); offset += 32;
   const player = readPubkey(data, offset); offset += 32;
   const index = readU32LE(data, offset); offset += 4;
+  // v1.7: commitment hash
+  const commitment = Buffer.from(data.subarray(offset, offset + 32)).toString('hex'); offset += 32;
   const strategy = readU8(data, offset); offset += 1;
   const strategyName = STRATEGIES[strategy]?.name || 'Unknown';
   const forgiveness = readU8(data, offset); offset += 1;
@@ -289,12 +304,14 @@ export function deserializeEntry(data: Buffer, address: string): EntryAccount {
   const initialMoves = readU8(data, offset); offset += 1;
   const cooperateBias = readU8(data, offset); offset += 1;
   const strategyParams = { forgiveness, retaliationDelay, noiseTolerance, initialMoves, cooperateBias };
+  // v1.7: revealed flag
+  const revealed = readBool(data, offset); offset += 1;
   const score = readU32LE(data, offset); offset += 4;
   const matchesPlayed = readU16LE(data, offset); offset += 2;
   const paidOut = readBool(data, offset); offset += 1;
   const createdAt = readI64LE(data, offset).toString(); offset += 8;
   const bump = readU8(data, offset);
-  return { tournament, player, index, strategy, strategyName, strategyParams, score, matchesPlayed, paidOut, createdAt, bump, address };
+  return { tournament, player, index, commitment, strategy, strategyName, strategyParams, revealed, score, matchesPlayed, paidOut, createdAt, bump, address };
 }
 
 // Fetch functions

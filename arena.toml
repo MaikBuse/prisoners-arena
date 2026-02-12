@@ -13,3 +13,4 @@ max_participants = 100
 registration_duration = 300
 matches_per_player = 15
 house_fee_bps = 0
+reveal_duration = 172800

@@ -35,11 +35,12 @@ pub fn status(cfg: &ArenaConfig) -> Result<()> {
     println!("  Stake:        {} lamports ({:.4} SOL)", tournament.stake, tournament.stake as f64 / 1e9);
     println!("  Pool:         {} lamports ({:.4} SOL)", tournament.pool, tournament.pool as f64 / 1e9);
 
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs() as i64;
+
     match tournament.state {
         state::TournamentState::Registration => {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)?
-                .as_secs() as i64;
             let remaining = tournament.registration_ends - now;
             if remaining > 0 {
                 println!("  Time Left:    {}s", remaining);
@@ -47,6 +48,21 @@ pub fn status(cfg: &ArenaConfig) -> Result<()> {
                 println!("  Registration: EXPIRED (awaiting close)");
             }
             println!("  Min Players:  {}", config.min_participants);
+        }
+        state::TournamentState::Reveal => {
+            let remaining = tournament.reveal_ends - now;
+            let active = tournament.participant_count - tournament.forfeits;
+            println!("  Revealed:     {}/{}", tournament.reveals_completed, active);
+            if remaining > 0 {
+                let hours = remaining / 3600;
+                let mins = (remaining % 3600) / 60;
+                println!("  Time Left:    {}h {}m", hours, mins);
+            } else {
+                println!("  Reveal:       EXPIRED (awaiting close)");
+            }
+            if tournament.forfeits > 0 {
+                println!("  Forfeits:     {}", tournament.forfeits);
+            }
         }
         state::TournamentState::Running => {
             println!("  Matches:      {}/{}", tournament.matches_completed, tournament.matches_total);
@@ -74,6 +90,14 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
     println!("  Pool:               {} lamports", t.pool);
     println!("  Participants:       {}", t.participant_count);
     println!("  Registration Ends:  {}", t.registration_ends);
+    println!("  Reveal Duration:    {}s", t.reveal_duration);
+    if t.reveal_ends > 0 {
+        println!("  Reveal Ends:        {}", t.reveal_ends);
+        println!("  Reveals Completed:  {}", t.reveals_completed);
+    }
+    if t.forfeits > 0 {
+        println!("  Forfeits:           {}", t.forfeits);
+    }
     println!("  Matches:            {}/{}", t.matches_completed, t.matches_total);
     println!("  Winners:            {}", t.winner_count);
     println!("  Winner Pool:        {} lamports", t.winner_pool);
@@ -84,12 +108,16 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
         for (i, player) in t.players.iter().enumerate() {
             let score = t.scores.get(i).copied().unwrap_or(0);
             let strat = t.strategies.get(i).copied().unwrap_or(255);
-            let strat_str = if strat <= 8 { strategy_name(strat) } else { "N/A" };
-            let params = t.strategy_params.get(i).copied().unwrap_or([0; 5]);
-            let params_str = format_params(params);
             let default_pk = Pubkey::default();
-            let status = if *player == default_pk { " (refunded)" } else { "" };
-            println!("    [{}] {} — strategy: {}{}, score: {}{}", i, player, strat_str, params_str, score, status);
+            let status = if *player == default_pk {
+                " (refunded/forfeited)".to_string()
+            } else if strat == 255 {
+                " 🔒 Hidden".to_string()
+            } else {
+                let params = t.strategy_params.get(i).copied().unwrap_or([0; 5]);
+                format!(" — {}{}, score: {}", strategy_name(strat), format_params(params), score)
+            };
+            println!("    [{}] {}{}", i, player, status);
         }
     }
     Ok(())
@@ -117,7 +145,7 @@ pub fn entries(cfg: &ArenaConfig, tournament_id: Option<u32>) -> Result<()> {
     for (i, player) in t.players.iter().enumerate() {
         let default_pk = Pubkey::default();
         if *player == default_pk {
-            println!("  [{}] (refunded)", i);
+            println!("  [{}] (refunded/forfeited)", i);
             continue;
         }
 
@@ -126,17 +154,24 @@ pub fn entries(cfg: &ArenaConfig, tournament_id: Option<u32>) -> Result<()> {
             Ok(account) => {
                 let entry = state::Entry::deserialize(&account.data)?;
                 let score = t.scores.get(i).copied().unwrap_or(entry.score);
-                println!(
-                    "  [{}] {} — strategy: {}, score: {}, matches: {}, paid: {}",
-                    entry.index, player, strategy_name(entry.strategy), score,
-                    entry.matches_played, entry.paid_out
-                );
+                if entry.revealed {
+                    println!(
+                        "  [{}] {} — ✅ {}, score: {}, matches: {}, paid: {}",
+                        entry.index, player, strategy_name(entry.strategy), score,
+                        entry.matches_played, entry.paid_out
+                    );
+                } else {
+                    println!(
+                        "  [{}] {} — 🔒 committed (unrevealed)",
+                        entry.index, player
+                    );
+                }
             }
             Err(_) => {
                 let score = t.scores.get(i).copied().unwrap_or(0);
                 let strat = t.strategies.get(i).copied().unwrap_or(255);
                 let strat_str = if strat <= 8 { strategy_name(strat) } else { "Unknown" };
-                println!("  [{}] {} — strategy: {}, score: {} (entry closed)", i, player, strat_str, score);
+                println!("  [{}] {} — {}, score: {} (entry closed)", i, player, strat_str, score);
             }
         }
     }

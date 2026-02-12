@@ -33,6 +33,12 @@ pub struct DefaultsConfig {
     pub registration_duration: i64,
     pub matches_per_player: u16,
     pub house_fee_bps: u16,
+    #[serde(default = "default_reveal_duration")]
+    pub reveal_duration: i64,
+}
+
+fn default_reveal_duration() -> i64 {
+    172800 // 48 hours
 }
 
 impl ArenaConfig {
