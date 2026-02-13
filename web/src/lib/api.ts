@@ -78,6 +78,7 @@ export interface ScoreboardEntry {
   strategyParams: StrategyParams | null;
   matchesPlayed: number;
   paidOut: boolean;
+  revealed: boolean;
   /** true if the entry account still exists on-chain */
   entryExists: boolean;
 }
@@ -125,6 +126,7 @@ export function buildScoreboard(tournament: TournamentAccount, entries: EntryAcc
       strategyParams,
       matchesPlayed: entry?.matchesPlayed ?? inferredMatchesPlayed,
       paidOut: entry?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore),
+      revealed: entry?.revealed ?? true,
       entryExists: !!entry,
     });
   }

@@ -172,9 +172,6 @@ export default function Home() {
                 <a href="/docs" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
                   📚 API Docs
                 </a>
-                <a href="/participate.md" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
-                  📝 Markdown
-                </a>
                 <a href="/api/idl" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
                   🏗️ IDL
                 </a>
@@ -367,7 +364,7 @@ export default function Home() {
                   {/* Strategy Distribution with avg scores */}
                   {entries.length > 0 && (() => {
                     const dist = new Map<number, { count: number; totalScore: number }>();
-                    entries.forEach(e => {
+                    entries.filter(e => e.revealed !== false).forEach(e => {
                       const d = dist.get(e.strategy) || { count: 0, totalScore: 0 };
                       d.count++;
                       d.totalScore += e.score;
@@ -467,8 +464,12 @@ export default function Home() {
                                         <CopyButton text={e.player} />
                                       </td>
                                       <td className="px-4 py-2">
-                                        <StrategyBadge strategy={e.strategy} /><ParamPills params={e.strategyParams ?? null} />
-                                        {hasNonDefaultParams && <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span>}
+                                        {e.revealed === false ? (
+                                          <span className="text-[var(--muted)]">🔒 Hidden</span>
+                                        ) : (
+                                          <><StrategyBadge strategy={e.strategy} /><ParamPills params={e.strategyParams ?? null} />
+                                          {hasNonDefaultParams && <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span>}</>
+                                        )}
                                       </td>
                                       <td className="px-4 py-2 text-right font-mono font-bold">{e.score}</td>
                                       <td className="px-4 py-2 text-right text-[var(--muted)]">{e.matchesPlayed}/{effectiveK(t.matchesPerPlayer, t.participantCount)}</td>
@@ -478,7 +479,7 @@ export default function Home() {
                                         </td>
                                       )}
                                     </tr>
-                                    {isExpanded && e.strategyParams && (
+                                    {isExpanded && e.revealed !== false && e.strategyParams && (
                                       <tr className="bg-neutral-50/50">
                                         <td colSpan={colCount} className="px-4 py-3">
                                           <ParamsDetail params={e.strategyParams} />
@@ -613,11 +614,12 @@ export default function Home() {
             <h3 className="font-bold mb-4">Tournament Flow</h3>
             <div className="space-y-4">
               {[
-                { icon: '📝', title: 'Register', desc: 'Stake SOL and choose a strategy' },
-                { icon: '⚔️', title: 'Compete', desc: 'K matches per player (adaptive), 20-50 rounds each' },
+                { icon: '📝', title: 'Register', desc: 'Stake SOL and commit to a secret strategy' },
+                { icon: '🔓', title: 'Reveal', desc: 'Once registration closes, reveal your strategy to prove your commitment' },
+                { icon: '⚔️', title: 'Compete', desc: 'Players are matched up for iterated rounds of the Prisoner\'s Dilemma' },
                 { icon: '🏆', title: 'Win', desc: 'Top 25% by score split the prize pool equally' },
-                { icon: '💰', title: 'Claim', desc: 'Winners collect within 30 days' },
-                { icon: '📊', title: 'Iterate', desc: 'Analyze results, build tools, refine your strategy for next time' },
+                { icon: '💰', title: 'Claim', desc: 'Winners collect their prize' },
+                { icon: '📊', title: 'Iterate', desc: 'Analyze results, refine your strategy for next time' },
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <span className="text-xl">{step.icon}</span>

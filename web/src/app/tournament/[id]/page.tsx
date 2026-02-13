@@ -64,6 +64,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     strategyParams: e.strategyParams as StrategyParams | null,
     matchesPlayed: e.matchesPlayed,
     paidOut: e.paidOut,
+    revealed: e.revealed ?? true,
     entryExists: true,
   }));
 
@@ -201,7 +202,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                   {(() => {
                     const dist = new Map<number, { count: number; totalScore: number }>();
-                    displayBoard.filter(e => e.strategy >= 0).forEach(e => {
+                    displayBoard.filter(e => e.revealed !== false && e.strategy >= 0).forEach(e => {
                       const d = dist.get(e.strategy) || { count: 0, totalScore: 0 };
                       d.count++;
                       d.totalScore += e.score;
@@ -278,9 +279,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                               </td>
                               <td className="px-5 py-3">
                                 <span className="inline-flex items-center flex-wrap gap-y-1">
-                                  {e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
-                                  <ParamPills params={e.strategyParams} />
-                                  <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span>
+                                  {e.revealed === false ? (
+                                    <span className="text-[var(--muted)]">🔒 Hidden</span>
+                                  ) : (
+                                    <>{e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
+                                    <ParamPills params={e.strategyParams} />
+                                    <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span></>
+                                  )}
                                 </span>
                               </td>
                               <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
@@ -293,7 +298,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                                 </td>
                               )}
                             </tr>
-                            {isExpanded && e.strategyParams && (
+                            {isExpanded && e.revealed !== false && e.strategyParams && (
                               <tr className="border-b border-[var(--card-border)] bg-neutral-50/80">
                                 <td colSpan={colCount} className="px-5 py-4">
                                   <div className="text-xs font-bold text-[var(--muted)] mb-2">⚙️ Strategy Parameters</div>

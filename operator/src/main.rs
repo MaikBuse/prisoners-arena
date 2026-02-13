@@ -10,13 +10,15 @@
 //! - Finalizes tournament and starts next one
 //! - Cleans up expired entries after claim window
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
+use serde::Deserialize;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, Keypair, Signer};
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::Duration;
 use tracing::{info, warn, error};
 
@@ -31,21 +33,54 @@ const MIN_BALANCE: u64 = LAMPORTS_PER_SOL / 10;
 /// 30 days in seconds
 const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
 
+// --- Config file structs (mirrors cli/src/config.rs, operator only needs network + wallets) ---
+
+#[derive(Debug, Deserialize)]
+struct ArenaConfig {
+    network: NetworkConfig,
+    wallets: WalletConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct NetworkConfig {
+    rpc_url: String,
+    program_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct WalletConfig {
+    operator: String,
+}
+
+impl ArenaConfig {
+    fn load(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read config from {}", path.display()))?;
+        toml::from_str(&content).with_context(|| format!("Failed to parse {}", path.display()))
+    }
+}
+
+// --- CLI args (all optional when arena.toml provides defaults) ---
+
 #[derive(Parser, Debug)]
 #[command(name = "operator")]
 #[command(about = "Dilemma Arena Tournament Operator")]
 struct Args {
-    /// Solana RPC endpoint
-    #[arg(short, long, default_value = "http://localhost:8899")]
-    rpc_url: String,
+    /// Path to config file
+    #[arg(short, long, default_value = "arena.toml")]
+    config: PathBuf,
 
-    /// Path to operator keypair
-    #[arg(short, long, default_value = "~/.config/solana/id.json")]
-    keypair: PathBuf,
-
-    /// Program ID
+    /// Solana RPC endpoint (overrides config file)
     #[arg(short, long)]
-    program_id: Pubkey,
+    rpc_url: Option<String>,
+
+    /// Path to operator keypair (overrides config file)
+    #[arg(short, long)]
+    keypair: Option<PathBuf>,
+
+    /// Program ID (overrides config file)
+    #[arg(short, long)]
+    program_id: Option<Pubkey>,
 
     /// Poll interval in seconds
     #[arg(long, default_value = "5")]
@@ -72,13 +107,52 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    info!("Starting Dilemma Arena Operator");
-    info!("RPC: {}", args.rpc_url);
-    info!("Program: {}", args.program_id);
+    // Load config file (non-fatal if missing, fatal only if no CLI overrides)
+    let file_config = match ArenaConfig::load(&args.config) {
+        Ok(cfg) => {
+            info!("Loaded config from {}", args.config.display());
+            Some(cfg)
+        }
+        Err(e) => {
+            if args.config.as_os_str() != "arena.toml" {
+                // Explicitly specified config file must exist
+                return Err(e);
+            }
+            warn!("No arena.toml found, using CLI args only");
+            None
+        }
+    };
 
-    let keypair_path = shellexpand::tilde(&args.keypair.to_string_lossy()).to_string();
+    // Resolve values: CLI args override config file
+    let rpc_url = args.rpc_url
+        .or_else(|| file_config.as_ref().map(|c| c.network.rpc_url.clone()))
+        .unwrap_or_else(|| "http://localhost:8899".to_string());
+
+    let program_id = match args.program_id {
+        Some(id) => id,
+        None => {
+            let id_str = file_config.as_ref()
+                .map(|c| c.network.program_id.as_str())
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No program_id provided. Pass --program-id or set it in arena.toml"
+                ))?;
+            Pubkey::from_str(id_str)
+                .map_err(|e| anyhow::anyhow!("Invalid program_id in config: {}", e))?
+        }
+    };
+
+    let keypair_path_raw = args.keypair
+        .map(|p| p.to_string_lossy().to_string())
+        .or_else(|| file_config.as_ref().map(|c| c.wallets.operator.clone()))
+        .unwrap_or_else(|| "~/.config/solana/id.json".to_string());
+
+    info!("Starting Dilemma Arena Operator");
+    info!("RPC: {}", rpc_url);
+    info!("Program: {}", program_id);
+
+    let keypair_path = shellexpand::tilde(&keypair_path_raw).to_string();
     let keypair = read_keypair_file(&keypair_path)
-        .map_err(|e| anyhow::anyhow!("Failed to load keypair: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to load keypair from {}: {}", keypair_path, e))?;
 
     info!("Operator wallet: {}", keypair.pubkey());
 
@@ -86,7 +160,7 @@ async fn main() -> Result<()> {
         warn!("DRY RUN MODE - no transactions will be sent");
     }
 
-    let client = RpcClient::new(args.rpc_url.clone());
+    let client = RpcClient::new(rpc_url);
 
     let balance = actions::check_balance(&client, &keypair.pubkey())?;
     info!("Operator balance: {} SOL", balance as f64 / LAMPORTS_PER_SOL as f64);
@@ -101,7 +175,7 @@ async fn main() -> Result<()> {
 
     if args.manual {
         info!("Manual mode: running single cycle");
-        match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+        match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
             Ok(action_taken) => {
                 if action_taken {
                     info!("Action taken, exiting");
@@ -116,7 +190,7 @@ async fn main() -> Result<()> {
                 if is_state_conflict(&err_str) {
                     warn!("State conflict, retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+                    match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
                         Ok(action_taken) => {
                             std::process::exit(if action_taken { 0 } else { 1 });
                         }
@@ -136,14 +210,14 @@ async fn main() -> Result<()> {
     let poll_interval = Duration::from_secs(args.poll_interval);
     
     loop {
-        match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+        match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
             Ok(_) => {}
             Err(e) => {
                 let err_str = format!("{}", e);
                 if is_state_conflict(&err_str) {
                     warn!("State conflict (stale RPC data), retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    match run_cycle(&client, &args.program_id, &keypair, args.dry_run).await {
+                    match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
                         Ok(_) => {}
                         Err(e2) => error!("Retry failed: {}", e2),
                     }

@@ -129,7 +129,7 @@ pub fn entries(cfg: &ArenaConfig, tournament_id: Option<u32>) -> Result<()> {
 
     let tid = match tournament_id {
         Some(id) => id,
-        None => state::fetch_config(&client, &program_id)?.current_tournament_id,
+        None => state::resolve_latest_tournament_id(&client, &program_id)?,
     };
 
     let t = state::fetch_tournament(&client, &program_id, tid)?;

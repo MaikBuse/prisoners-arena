@@ -25,6 +25,7 @@ pub struct WalletConfig {
     pub operator: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct DefaultsConfig {
     pub stake: u64,

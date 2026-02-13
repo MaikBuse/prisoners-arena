@@ -3,8 +3,9 @@ use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     signer::Signer,
-    system_program,
 };
+#[allow(deprecated)]
+use solana_sdk::system_program;
 use sha2::{Sha256, Digest};
 
 use crate::config::ArenaConfig;
@@ -242,7 +243,7 @@ pub fn claim(cfg: &ArenaConfig, wallet: &str, tournament_id: Option<u32>, dry_ru
 
     let tid = match tournament_id {
         Some(id) => id,
-        None => state::fetch_config(&client, &program_id)?.current_tournament_id,
+        None => state::resolve_latest_tournament_id(&client, &program_id)?,
     };
 
     let (tournament_pda, _) = state::get_tournament_pda(&program_id, tid);

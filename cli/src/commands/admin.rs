@@ -3,10 +3,10 @@ use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signature::Keypair,
     signer::Signer,
-    system_program,
 };
+#[allow(deprecated)]
+use solana_sdk::system_program;
 use std::str::FromStr;
 
 use crate::config::ArenaConfig;

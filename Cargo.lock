@@ -1268,6 +1268,7 @@ dependencies = [
  "solana-client",
  "solana-sdk",
  "tokio",
+ "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
 ]

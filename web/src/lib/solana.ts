@@ -373,7 +373,8 @@ export async function fetchEntryByPlayer(playerPubkey: string): Promise<EntryAcc
   const config = await fetchConfig();
   if (!config) return null;
 
-  const [tournamentPda] = deriveTournamentPDA(config.currentTournamentId);
+  const activeId = config.currentTournamentId;
+  const [tournamentPda] = deriveTournamentPDA(activeId);
   const playerPk = new PublicKey(playerPubkey);
   const [entryPda] = deriveEntryPDA(tournamentPda, playerPk);
   const info = await connection.getAccountInfo(entryPda);

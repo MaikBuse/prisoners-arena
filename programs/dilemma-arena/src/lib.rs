@@ -13,7 +13,7 @@ use instructions::*;
 pub use state::Strategy;
 pub use state::StrategyParams;
 
-declare_id!("DY8hD39MiiA14E8vSrrEtYCtm6chPQF6PkUrFuLVW8b2");
+declare_id!("32SU6RjkMa6F3tYrkWdU6jmBrG3a6UDCT6DZVAKNjbji");
 
 #[program]
 pub mod dilemma_arena {

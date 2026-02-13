@@ -23,6 +23,7 @@ impl std::fmt::Display for TournamentState {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Tournament {
     pub id: u32,
@@ -55,6 +56,7 @@ pub struct Tournament {
     pub bump: u8,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Config {
     pub admin: Pubkey,
@@ -71,6 +73,7 @@ pub struct Config {
     pub bump: u8,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Entry {
     pub tournament: Pubkey,
@@ -205,8 +208,29 @@ pub fn fetch_tournament(client: &RpcClient, program_id: &Pubkey, id: u32) -> Res
     Tournament::deserialize(&account.data)
 }
 
+/// Returns the ID of the most relevant tournament:
+/// - If current_tournament_id points to a Registration-phase tournament
+///   (created automatically after finalization), returns id - 1.
+/// - Otherwise returns current_tournament_id (the active tournament).
+pub fn resolve_latest_tournament_id(client: &RpcClient, program_id: &Pubkey) -> Result<u32> {
+    let config = fetch_config(client, program_id)?;
+    let tid = config.current_tournament_id;
+    let tournament = fetch_tournament(client, program_id, tid)?;
+    if tournament.state == TournamentState::Registration && tid > 1 {
+        Ok(tid - 1)
+    } else {
+        Ok(tid)
+    }
+}
+
 pub fn fetch_current_tournament(client: &RpcClient, program_id: &Pubkey) -> Result<(Config, Tournament)> {
     let config = fetch_config(client, program_id)?;
-    let tournament = fetch_tournament(client, program_id, config.current_tournament_id)?;
-    Ok((config, tournament))
+    let tid = config.current_tournament_id;
+    let tournament = fetch_tournament(client, program_id, tid)?;
+    if tournament.state == TournamentState::Registration && tid > 1 {
+        let prev = fetch_tournament(client, program_id, tid - 1)?;
+        Ok((config, prev))
+    } else {
+        Ok((config, tournament))
+    }
 }

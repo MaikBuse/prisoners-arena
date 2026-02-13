@@ -69,9 +69,17 @@ build-web:
 start-web:
     cd web && npm start
 
+# Run CLI (pass args after --)
+cli *ARGS:
+    cargo run -p dilemma-cli -- {{ARGS}}
+
 # Run operator
 dev-operator:
-    cd operator && cargo run
+    cargo run -p dilemma-operator
+
+# Run operator in manual mode (single cycle then exit)
+operator-manual:
+    cargo run -p dilemma-operator -- --manual
 
 # Deploy to devnet
 deploy-devnet:
