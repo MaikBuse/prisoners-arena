@@ -17,8 +17,9 @@ jobs:
             docker push m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64
 
   deploy:
-    docker:
-      - image: cimg/base:current
+    machine:
+      image: ubuntu-2404:current
+    resource_class: medium
     steps:
       - run:
           name: Update Helm values and push
