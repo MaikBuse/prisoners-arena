@@ -9,7 +9,7 @@ name = "operator"
 path = "src/main.rs"
 
 [dependencies]
-match-logic = { path = "../crates/match-logic" }
+match-logic = { path = "../contract/crates/match-logic" }
 solana-sdk = "2.0"
 solana-client = "2.0"
 tokio = { version = "1.0", features = ["full"] }

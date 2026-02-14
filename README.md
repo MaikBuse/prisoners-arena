@@ -41,12 +41,17 @@ Nine base strategies available — see `requirements/match-logic.md` for the ful
 
 ```
 prisoners-arena/
-├── crates/match-logic/     # Shared game logic (Rust)
-├── programs/prisoners-arena/ # Solana smart contract (Anchor)
-├── operator/               # Tournament automation (Rust)
-├── docs/                   # Technical specification
-└── requirements/           # Acceptance criteria
+├── contract/                  # Git submodule (public repo)
+│   ├── crates/match-logic/    # Shared game logic (Rust)
+│   └── programs/prisoners-arena/ # Solana smart contract (Anchor)
+├── operator/                  # Tournament automation (Rust)
+├── cli/                       # Admin CLI tool (Rust)
+├── web/                       # Next.js frontend
+├── docs/                      # Technical specification
+└── requirements/              # Acceptance criteria
 ```
+
+> Clone with submodules: `git clone --recurse-submodules <repo-url>`
 
 ## Documentation
 

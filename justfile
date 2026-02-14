@@ -25,26 +25,26 @@ test: test-match-logic test-contract
 
 # Test match-logic crate
 test-match-logic:
-    cd crates/match-logic && cargo test
+    cd contract/crates/match-logic && cargo test
 
 # Test contract
 test-contract:
-    cd programs/prisoners-arena && anchor test --provider.cluster localnet -- --features testing
+    anchor test --provider.cluster localnet -- --features testing
 
 # Build everything
 build: build-match-logic build-wasm build-contract build-operator
 
 # Build match-logic native
 build-match-logic:
-    cd crates/match-logic && cargo build --release
+    cd contract/crates/match-logic && cargo build --release
 
 # Build WASM for frontend
 build-wasm:
-    cd crates/match-logic && wasm-pack build --target web --features wasm --out-dir ../../web/src/wasm
+    cd contract/crates/match-logic && wasm-pack build --target web --features wasm --out-dir ../../../web/src/wasm
 
 # Build contract
 build-contract:
-    cd programs/prisoners-arena && anchor build
+    anchor build
 
 # Build operator
 build-operator:
@@ -52,9 +52,8 @@ build-operator:
 
 # Clean all builds
 clean:
-    cd crates/match-logic && cargo clean
-    cd programs/prisoners-arena && anchor clean || true
-    cd operator && cargo clean || true
+    cargo clean
+    anchor clean || true
     rm -rf web/src/wasm
 
 # Run frontend dev server
@@ -83,20 +82,20 @@ operator-manual:
 
 # Deploy to devnet
 deploy-devnet:
-    cd programs/prisoners-arena && anchor deploy --provider.cluster devnet
+    anchor deploy --provider.cluster devnet
 
 # Deploy to mainnet (careful!)
 deploy-mainnet:
-    cd programs/prisoners-arena && anchor deploy --provider.cluster mainnet
+    anchor deploy --provider.cluster mainnet
 
 # Format all code
 fmt:
-    cd crates/match-logic && cargo fmt
-    cd programs/prisoners-arena && cargo fmt
+    cd contract/crates/match-logic && cargo fmt
+    cd contract/programs/prisoners-arena && cargo fmt
     cd operator && cargo fmt
 
 # Lint all code
 lint:
-    cd crates/match-logic && cargo clippy
-    cd programs/prisoners-arena && cargo clippy
+    cd contract/crates/match-logic && cargo clippy
+    cd contract/programs/prisoners-arena && cargo clippy
     cd operator && cargo clippy

@@ -8,12 +8,19 @@ Prisoner's Arena is a competitive AI tournament platform on Solana implementing 
 
 ## Monorepo Structure
 
-- `crates/match-logic/` — Core game logic (Rust, compiles to native + WASM)
-- `programs/prisoners-arena/` — Solana smart contract (Anchor 0.32)
+- `contract/` — **Git submodule** ([makoto-kusanagi/prisoners-arena-program](https://github.com/makoto-kusanagi/prisoners-arena-program)) — publicly verifiable
+  - `contract/crates/match-logic/` — Core game logic (Rust, compiles to native + WASM)
+  - `contract/programs/prisoners-arena/` — Solana smart contract (Anchor 0.32)
 - `operator/` — Tournament automation bot (Rust)
 - `cli/` — Admin CLI tool (Rust, binary name: `arena`)
 - `web/` — Next.js 16 frontend (React 19, TypeScript, Tailwind CSS 4)
 - `tests/` — Anchor integration tests (TypeScript/Mocha)
+
+**Submodule workflow:**
+```bash
+git clone --recurse-submodules <repo-url>   # or: git submodule update --init
+```
+Changes to contract/match-logic: commit inside `contract/`, push, then `git add contract` in monorepo root.
 
 ## Build & Test Commands
 
@@ -55,7 +62,7 @@ Players enter during Registration with a commitment hash. During Reveal, they di
 ### Commit-Reveal Flow
 Players submit `SHA256(strategy_u8 || params_5_bytes || salt_16_bytes)` at entry. Strategies hidden until Reveal phase closes.
 
-### Match Logic Crate (`crates/match-logic/`)
+### Match Logic Crate (`contract/crates/match-logic/`)
 Shared game engine used by the contract, operator, and optionally frontend (via WASM). Contains strategy implementations, match execution, pairing generation, and seeded RNG. The `wasm` feature enables browser compilation.
 
 9 strategies: TitForTat, AlwaysDefect, AlwaysCooperate, GrimTrigger, Pavlov, SuspiciousTitForTat, Random, TitForTwoTats, Gradual. Each has 5 configurable params: forgiveness, retaliation_delay, noise_tolerance, initial_moves (8-bit mask), cooperate_bias.
