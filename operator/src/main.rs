@@ -1,4 +1,4 @@
-//! Dilemma Arena Tournament Operator
+//! Prisoner's Arena Tournament Operator
 //!
 //! Automated bot that runs tournament lifecycle:
 //! - Monitors registration deadline
@@ -24,6 +24,7 @@ use tracing::{info, warn, error};
 
 mod state;
 mod actions;
+mod db;
 
 use state::TournamentState;
 
@@ -64,7 +65,7 @@ impl ArenaConfig {
 
 #[derive(Parser, Debug)]
 #[command(name = "operator")]
-#[command(about = "Dilemma Arena Tournament Operator")]
+#[command(about = "Prisoner's Arena Tournament Operator")]
 struct Args {
     /// Path to config file
     #[arg(short, long, default_value = "arena.toml")]
@@ -146,7 +147,7 @@ async fn main() -> Result<()> {
         .or_else(|| file_config.as_ref().map(|c| c.wallets.operator.clone()))
         .unwrap_or_else(|| "~/.config/solana/id.json".to_string());
 
-    info!("Starting Dilemma Arena Operator");
+    info!("Starting Prisoner's Arena Operator");
     info!("RPC: {}", rpc_url);
     info!("Program: {}", program_id);
 
@@ -162,6 +163,10 @@ async fn main() -> Result<()> {
 
     let client = RpcClient::new(rpc_url);
 
+    let db_path = args.config.parent().unwrap_or(Path::new(".")).join("operator.db");
+    let db = db::open(&db_path)?;
+    info!("Operator DB: {}", db_path.display());
+
     let balance = actions::check_balance(&client, &keypair.pubkey())?;
     info!("Operator balance: {} SOL", balance as f64 / LAMPORTS_PER_SOL as f64);
     
@@ -175,7 +180,7 @@ async fn main() -> Result<()> {
 
     if args.manual {
         info!("Manual mode: running single cycle");
-        match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
+        match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
             Ok(action_taken) => {
                 if action_taken {
                     info!("Action taken, exiting");
@@ -190,7 +195,7 @@ async fn main() -> Result<()> {
                 if is_state_conflict(&err_str) {
                     warn!("State conflict, retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
+                    match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
                         Ok(action_taken) => {
                             std::process::exit(if action_taken { 0 } else { 1 });
                         }
@@ -210,14 +215,14 @@ async fn main() -> Result<()> {
     let poll_interval = Duration::from_secs(args.poll_interval);
     
     loop {
-        match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
+        match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
             Ok(_) => {}
             Err(e) => {
                 let err_str = format!("{}", e);
                 if is_state_conflict(&err_str) {
                     warn!("State conflict (stale RPC data), retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    match run_cycle(&client, &program_id, &keypair, args.dry_run).await {
+                    match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
                         Ok(_) => {}
                         Err(e2) => error!("Retry failed: {}", e2),
                     }
@@ -252,6 +257,7 @@ async fn run_cycle(
     program_id: &Pubkey,
     operator: &Keypair,
     dry_run: bool,
+    db: &rusqlite::Connection,
 ) -> Result<bool> {
     let config = state::fetch_config(client, program_id)?;
     
@@ -287,15 +293,13 @@ async fn run_cycle(
                     }
                     return Ok(true);
                 } else {
+                    let needed = config.min_participants as u32 - tournament.participant_count;
                     info!(
-                        "Deadline passed but only {} participants (need {}), extending deadline",
+                        "Deadline passed but only {} participants (need {}), waiting for {} more",
                         tournament.participant_count,
-                        config.min_participants
+                        config.min_participants,
+                        needed
                     );
-                    if !dry_run {
-                        actions::close_registration(client, program_id, &tournament, operator, &config)?;
-                    }
-                    return Ok(true);
                 }
             }
         }
@@ -356,24 +360,26 @@ async fn run_cycle(
         TournamentState::Payout => {
             let time_since_payout = now - tournament.payout_started_at;
             let expired = time_since_payout >= CLAIM_EXPIRY_SECONDS;
-            
+            let all_winners_claimed = tournament.claims_processed >= tournament.winner_count;
+
             info!(
-                "Tournament #{} in Payout | {}/{} claims | {} days since start{}",
+                "Tournament #{} in Payout | {}/{} claims | {} days since start{}{}",
                 tournament.id,
                 tournament.claims_processed,
                 tournament.winner_count,
                 time_since_payout / 86400,
-                if expired { " [EXPIRED]" } else { "" }
+                if expired { " [EXPIRED]" } else { "" },
+                if all_winners_claimed { " [ALL CLAIMED]" } else { "" }
             );
-            
-            if expired {
+
+            if expired || all_winners_claimed {
                 if !dry_run {
                     let closed = actions::close_expired_entries(client, program_id, &tournament, operator)?;
                     if closed > 0 {
                         info!("Closed {} expired entries", closed);
                         return Ok(true);
                     }
-                    
+
                     match actions::close_tournament(client, program_id, &tournament, operator, &config) {
                         Ok(_) => {
                             info!("Tournament {} account closed, rent recovered", tournament.id);
@@ -385,6 +391,54 @@ async fn run_cycle(
                     }
                 }
             }
+        }
+    }
+
+    // Check all past tournaments for Payout cleanup
+    let program_id_str = program_id.to_string();
+    for prev_id in (0..config.current_tournament_id).rev() {
+        if db::is_closed(db, &program_id_str, prev_id) {
+            continue;
+        }
+
+        match state::fetch_tournament(client, program_id, prev_id) {
+            Ok(prev) if prev.state == TournamentState::Payout => {
+                let time_since_payout = now - prev.payout_started_at;
+                let expired = time_since_payout >= CLAIM_EXPIRY_SECONDS;
+                let all_winners_claimed = prev.claims_processed >= prev.winner_count;
+
+                info!(
+                    "Past Tournament #{} in Payout | {}/{} claims | {} entries remaining | {} days{}{}",
+                    prev.id, prev.claims_processed, prev.winner_count,
+                    prev.entries_remaining, time_since_payout / 86400,
+                    if expired { " [EXPIRED]" } else { "" },
+                    if all_winners_claimed { " [ALL CLAIMED]" } else { "" }
+                );
+
+                if (expired || all_winners_claimed) && !dry_run {
+                    let closed = actions::close_expired_entries(client, program_id, &prev, operator)?;
+                    if closed > 0 {
+                        info!("Closed {} expired entries from tournament #{}", closed, prev.id);
+                        return Ok(true);
+                    }
+
+                    if prev.entries_remaining == 0 {
+                        match actions::close_tournament(client, program_id, &prev, operator, &config) {
+                            Ok(_) => {
+                                info!("Tournament #{} account closed, rent recovered", prev.id);
+                                db::mark_closed(db, &program_id_str, prev.id)?;
+                                return Ok(true);
+                            }
+                            Err(e) => warn!("Could not close tournament #{}: {}", prev.id, e),
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                // Account doesn't exist — already closed on-chain, record it
+                db::mark_closed(db, &program_id_str, prev_id)?;
+            }
+            _ => {} // Not in Payout (shouldn't happen for past tournaments)
         }
     }
 

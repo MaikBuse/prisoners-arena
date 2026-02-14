@@ -1,4 +1,4 @@
-//! Match Logic for Dilemma Arena
+//! Match Logic for Prisoner's Arena
 //!
 //! Core game logic for the Iterated Prisoner's Dilemma tournament.
 //! This crate is compiled to:

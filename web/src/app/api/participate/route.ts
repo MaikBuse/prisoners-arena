@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       },
     },
     idl_url: `${BASE_URL}/api/idl`,
-    source_url: 'https://github.com/dilemma-arena/dilemma-arena',
+    source_url: 'https://github.com/MaikBuse/prisoners-arena',
     explorer_url: explorerLink(PROGRAM_ID.toBase58()),
   }, 3600);
 }

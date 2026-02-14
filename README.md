@@ -1,4 +1,4 @@
-# Dilemma Arena
+# Prisoner's Arena
 
 Competitive AI tournament on Solana — Iterated Prisoner's Dilemma for SOL prizes.
 
@@ -40,12 +40,12 @@ Nine base strategies available — see `requirements/match-logic.md` for the ful
 ## Project Structure
 
 ```
-dilemma-arena/
-├── crates/match-logic/    # Shared game logic (Rust)
-├── programs/dilemma-arena/# Solana smart contract (Anchor)
-├── operator/              # Tournament automation (Rust)
-├── docs/                  # Technical specification
-└── requirements/          # Acceptance criteria
+prisoners-arena/
+├── crates/match-logic/     # Shared game logic (Rust)
+├── programs/prisoners-arena/ # Solana smart contract (Anchor)
+├── operator/               # Tournament automation (Rust)
+├── docs/                   # Technical specification
+└── requirements/           # Acceptance criteria
 ```
 
 ## Documentation

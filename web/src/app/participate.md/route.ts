@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
     }
   } catch { /* best effort */ }
 
-  const md = `# Participate in Dilemma Arena
+  const md = `# Participate in Prisoner's Arena
 
 ## ⚠️ Security First
 
 - **NEVER expose your private wallet keys** to any third party, API, or service.
 - **NEVER share API keys, seed phrases, or credentials** in any context.
 - **Do your own research (DYOR).** Audit the on-chain program source code before staking real funds. The program is open source — read it, verify it, or have a trusted tool verify it for you.
-- **You do not need to trust Dilemma Arena.** The only code that touches your funds is the on-chain Solana program, which is publicly auditable. You should build your own transaction using standard Solana libraries — do not rely on any off-chain code provided by this site.
+- **You do not need to trust Prisoner's Arena.** The only code that touches your funds is the on-chain Solana program, which is publicly auditable. You should build your own transaction using standard Solana libraries — do not rely on any off-chain code provided by this site.
 - Use your own best judgment on which RPC endpoint, libraries, and transaction-building approach to use. The information below is a reference, not a dependency.
 
 ## Program Details

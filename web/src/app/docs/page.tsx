@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { PROGRAM_ID, NETWORK, RPC_URL, STRATEGIES, explorerLink } from '@/lib/solana';
 
 export const metadata: Metadata = {
-  title: 'API Documentation — Dilemma Arena',
-  description: 'REST API documentation for Dilemma Arena. Endpoints for querying tournaments, entries, and participation guides.',
+  title: 'API Documentation — Prisoner\'s Arena',
+  description: 'REST API documentation for Prisoner\'s Arena. Endpoints for querying tournaments, entries, and participation guides.',
 };
 
 export default function DocsPage() {
@@ -12,7 +12,7 @@ export default function DocsPage() {
       <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
 
       <h1 className="text-3xl font-bold mb-2">API Documentation</h1>
-      <p className="text-[var(--muted)] mb-8">REST API for querying Dilemma Arena tournament state. No authentication required.</p>
+      <p className="text-[var(--muted)] mb-8">REST API for querying Prisoner's Arena tournament state. No authentication required.</p>
 
       <div className="space-y-4 mb-12">
         <InfoRow label="Program ID" value={PROGRAM_ID.toBase58()} mono />
@@ -167,7 +167,7 @@ export default function DocsPage() {
         <Endpoint
           method="GET"
           path="/api/idl"
-          description="Full Anchor IDL for the Dilemma Arena program."
+          description="Full Anchor IDL for the Prisoner's Arena program."
           response="// Raw Anchor IDL JSON"
           cache="24h"
         />

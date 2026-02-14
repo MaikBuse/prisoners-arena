@@ -1,8 +1,8 @@
 [package]
-name = "dilemma-operator"
+name = "prisoners-operator"
 version = "0.1.0"
 edition = "2021"
-description = "Tournament automation bot for Dilemma Arena"
+description = "Tournament automation bot for Prisoner's Arena"
 
 [[bin]]
 name = "operator"
@@ -21,3 +21,4 @@ anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
 shellexpand = "3.1"
 toml = "0.8"
+rusqlite = { version = "0.34", features = ["bundled"] }

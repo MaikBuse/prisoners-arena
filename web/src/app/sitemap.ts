@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://dilemma-arena.dev';
+  const base = 'https://prisoners-arena.com';
   return [
     { url: base, lastModified: new Date(), changeFrequency: 'always', priority: 1 },
     { url: `${base}/participate`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },

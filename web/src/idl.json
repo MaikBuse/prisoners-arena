@@ -1,7 +1,7 @@
 {
-  "address": "5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW",
+  "address": "32SU6RjkMa6F3tYrkWdU6jmBrG3a6UDCT6DZVAKNjbji",
   "metadata": {
-    "name": "dilemma_arena",
+    "name": "prisoners_arena",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Iterated Prisoner's Dilemma tournament on Solana"

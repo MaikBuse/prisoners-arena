@@ -1,8 +1,8 @@
 [package]
-name = "dilemma-cli"
+name = "prisoners-cli"
 version = "0.1.0"
 edition = "2021"
-description = "Admin CLI for Dilemma Arena"
+description = "Admin CLI for Prisoner's Arena"
 
 [[bin]]
 name = "arena"

@@ -54,7 +54,7 @@ fn compute_commitment(strategy_id: u8, forgiveness: u8, retaliation_delay: u8, n
 fn save_reveal_data(tournament_id: u32, player: &str, strategy_id: u8, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8, salt: &[u8; 16]) -> Result<()> {
     let dir = dirs::home_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
-        .join(".dilemma-arena")
+        .join(".prisoners-arena")
         .join("reveals");
     std::fs::create_dir_all(&dir)?;
     
@@ -79,7 +79,7 @@ fn save_reveal_data(tournament_id: u32, player: &str, strategy_id: u8, forgivene
 fn load_reveal_data(tournament_id: u32, player: &str) -> Result<(u8, u8, u8, u8, u8, u8, [u8; 16])> {
     let path = dirs::home_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
-        .join(".dilemma-arena")
+        .join(".prisoners-arena")
         .join("reveals")
         .join(format!("{}_{}.json", tournament_id, player));
     
@@ -158,7 +158,7 @@ pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, forgiveness: u8, r
         
         println!("Commitment submitted for tournament #{}", config.current_tournament_id);
         println!("Salt: {}", hex::encode(&salt));
-        println!("Reveal data saved to ~/.dilemma-arena/reveals/");
+        println!("Reveal data saved to ~/.prisoners-arena/reveals/");
         println!("⚠️  Save your salt! You'll need it to reveal your strategy.");
     }
     Ok(())

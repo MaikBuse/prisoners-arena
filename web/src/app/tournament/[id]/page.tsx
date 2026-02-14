@@ -19,6 +19,13 @@ const BAR_COLORS: Record<string, string> = {
   amber: 'bar-amber', orange: 'bar-orange', gray: 'bar-gray', cyan: 'bar-cyan', pink: 'bar-pink',
 };
 
+function displayState(t: TournamentAccount): string {
+  if (t.state === 'Payout' && t.winnerCount > 0 && t.claimsProcessed >= t.winnerCount) {
+    return 'Completed';
+  }
+  return t.state;
+}
+
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [tournament, setTournament] = useState<TournamentAccount | null>(null);
@@ -29,10 +36,14 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
+  const [minParticipants, setMinParticipants] = useState<number>(2);
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/tournament/${id}`);
+      const [res, cfgRes] = await Promise.all([
+        fetch(`/api/tournament/${id}`),
+        fetch('/api/config'),
+      ]);
       const json = await res.json();
       if (json.ok) {
         setTournament(json.data.tournament);
@@ -41,6 +52,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         setError(null);
       } else {
         setError(json.error || 'Failed to fetch tournament');
+      }
+      const cfgJson = await cfgRes.json();
+      if (cfgJson.ok) {
+        setMinParticipants(cfgJson.data.minParticipants);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Network error — API unreachable');
@@ -120,10 +135,16 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold">Tournament #{t.id}</h1>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    t.state === 'Registration' ? 'badge-registration' :
-                    t.state === 'Running' ? 'badge-running' : 'badge-payout'
-                  }`}>{t.state}</span>
+                  {(() => {
+                    const dState = displayState(t);
+                    return (
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                        dState === 'Registration' ? 'badge-registration' :
+                        dState === 'Running' ? 'badge-running' :
+                        dState === 'Completed' ? 'badge-completed' : 'badge-payout'
+                      }`}>{dState}</span>
+                    );
+                  })()}
                 </div>
                 <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                    className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
@@ -140,22 +161,36 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               </div>
 
               {/* State-specific widget */}
-              {t.state === 'Registration' && (
-                <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <CountdownTimer
-                      targetTimestamp={Number(t.registrationEnds)}
-                      label="Registration Ends"
-                      expiredText={t.participantCount < 2 ? 'Waiting for players' : 'Starting soon'}
-                      expiredClassName={t.participantCount < 2 ? 'text-amber-500' : 'text-emerald-500'}
-                    />
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="text-4xl font-bold">{t.participantCount}</div>
-                      <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>
+              {t.state === 'Registration' && (() => {
+                const nowSec = Math.floor(Date.now() / 1000);
+                const deadlinePassed = nowSec >= Number(t.registrationEnds);
+                const needed = Math.max(0, minParticipants - t.participantCount);
+                return (
+                  <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {deadlinePassed && needed > 0 ? (
+                        <div className="text-center">
+                          <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">Registration Open</div>
+                          <div className="text-2xl font-bold font-mono text-amber-500">
+                            Waiting for {needed} more player{needed !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      ) : (
+                        <CountdownTimer
+                          targetTimestamp={Number(t.registrationEnds)}
+                          label="Registration Ends"
+                          expiredText="Starting soon"
+                          expiredClassName="text-emerald-500"
+                        />
+                      )}
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="text-4xl font-bold">{t.participantCount}</div>
+                        <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {t.state === 'Running' && (
                 <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
@@ -179,7 +214,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     <StatCard label="Min Score" value={String(t.minWinningScore)} />
                     <StatCard label="Claimed" value={`${t.claimsProcessed} / ${t.winnerCount}`} />
                   </div>
-                  {t.payoutStartedAt !== '0' && (
+                  {displayState(t) === 'Completed' ? (
+                    <div className="text-xs text-[var(--muted)] mt-3">
+                      Tournament completed. All prizes distributed.
+                    </div>
+                  ) : t.payoutStartedAt !== '0' && (
                     <div className="text-xs text-[var(--muted)] mt-3">
                       Claim deadline: {new Date((Number(t.payoutStartedAt) + 30 * 86400) * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </div>

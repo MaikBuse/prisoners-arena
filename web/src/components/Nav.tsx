@@ -13,7 +13,7 @@ export function Nav() {
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <LogoSmall />
-          <span className="font-bold text-lg">Dilemma Arena</span>
+          <span className="font-bold text-lg">Prisoner's Arena</span>
         </a>
         <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
           {LINKS.map(l => (

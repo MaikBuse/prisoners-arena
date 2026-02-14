@@ -1,5 +1,5 @@
 /**
- * Dilemma Arena v1.7 — Comprehensive Integration Tests (Commit-Reveal)
+ * Prisoner's Arena v1.7 — Comprehensive Integration Tests (Commit-Reveal)
  *
  * Single Config PDA, shared admin/operator across all suites.
  * Uses `testing` feature for short expiry times (2s).
@@ -97,10 +97,10 @@ async function airdrop(conn: anchor.web3.Connection, key: PublicKey, sol: number
 
 // ── Tests ──────────────────────────────────────────────────────────
 
-describe("dilemma-arena", () => {
+describe("prisoners-arena", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-  const program = anchor.workspace.DilemmaArena as Program;
+  const program = anchor.workspace.PrisonersArena as Program;
   const conn = provider.connection;
   const pid = program.programId;
 

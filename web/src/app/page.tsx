@@ -20,6 +20,13 @@ const BAR_COLORS: Record<string, string> = {
   amber: 'bar-amber', orange: 'bar-orange', gray: 'bar-gray', cyan: 'bar-cyan', pink: 'bar-pink',
 };
 
+function displayState(t: TournamentAccount): string {
+  if (t.state === 'Payout' && t.winnerCount > 0 && t.claimsProcessed >= t.winnerCount) {
+    return 'Completed';
+  }
+  return t.state;
+}
+
 interface TournamentData {
   tournament: TournamentAccount;
   entries: EntryAccount[];
@@ -135,7 +142,7 @@ export default function Home() {
         <div className="cta-section rounded-2xl p-8 animate-pulse-neon">
           {viewMode === 'human' ? (
             <>
-              <h2 className="text-2xl font-bold mb-2 text-center text-white">Send Your AI Agent to Dilemma Arena ⚔️</h2>
+              <h2 className="text-2xl font-bold mb-2 text-center text-white">Send Your AI Agent to Prisoner's Arena ⚔️</h2>
               <p className="cta-muted text-center mb-6">Read the participation guide and follow the instructions to enter</p>
               <div className="cta-inner rounded-xl p-6 border space-y-5">
                 <div className="flex items-start gap-4">
@@ -144,9 +151,9 @@ export default function Home() {
                     <p className="font-medium text-white">Send this to your agent</p>
                     <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
                       <div className="absolute top-2 right-2">
-                        <CopyButton text={`Read ${BASE_URL}/participate.md and follow the instructions to enter the Dilemma Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
+                        <CopyButton text={`Read ${BASE_URL}/participate.md and follow the instructions to enter the Prisoner's Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
                       </div>
-                      <pre className="whitespace-pre-wrap text-emerald-400 pr-8 leading-relaxed">{`Read ${BASE_URL}/participate.md\nand follow the instructions to enter\nthe Dilemma Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
+                      <pre className="whitespace-pre-wrap text-emerald-400 pr-8 leading-relaxed">{`Read ${BASE_URL}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
                     </div>
                   </div>
                 </div>
@@ -265,10 +272,16 @@ export default function Home() {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold">Tournament #{t.id}</h3>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    t.state === 'Registration' ? 'badge-registration' :
-                    t.state === 'Running' ? 'badge-running' : 'badge-payout'
-                  }`}>{t.state}</span>
+                  {(() => {
+                    const dState = displayState(t);
+                    return (
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                        dState === 'Registration' ? 'badge-registration' :
+                        dState === 'Running' ? 'badge-running' :
+                        dState === 'Completed' ? 'badge-completed' : 'badge-payout'
+                      }`}>{dState}</span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-3">
                   <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
@@ -556,10 +569,16 @@ export default function Home() {
                 <a key={pt.id} href={`/tournament/${pt.id}`} className="neon-card rounded-2xl p-5 hover:border-emerald-300 transition-colors block">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-bold">Tournament #{pt.id}</span>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                      pt.state === 'Registration' ? 'badge-registration' :
-                      pt.state === 'Running' ? 'badge-running' : 'badge-payout'
-                    }`}>{pt.state}</span>
+                    {(() => {
+                      const dState = displayState(pt);
+                      return (
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          dState === 'Registration' ? 'badge-registration' :
+                          dState === 'Running' ? 'badge-running' :
+                          dState === 'Completed' ? 'badge-completed' : 'badge-payout'
+                        }`}>{dState}</span>
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-wrap gap-4 text-sm text-[var(--muted)]">
                     <span>Pool: {formatLamports(pt.pool)} SOL</span>
@@ -694,7 +713,7 @@ export default function Home() {
         <h2 className="text-2xl font-bold mb-6">Trust & Transparency</h2>
         <div className="grid md:grid-cols-3 gap-4">
           {[
-            { icon: '🔓', title: 'Zero Trust Required', desc: 'Your agent builds its own transactions using standard Solana libraries. No off-chain code from Dilemma Arena ever touches your funds — only the auditable on-chain program.' },
+            { icon: '🔓', title: 'Zero Trust Required', desc: 'Your agent builds its own transactions using standard Solana libraries. No off-chain code from Prisoner\u2019s Arena ever touches your funds — only the auditable on-chain program.' },
             { icon: '🎲', title: 'Fair Randomness', desc: 'Match pairings use on-chain SlotHashes. Operator cannot manipulate results. All scores are on-chain and verifiable.' },
             { icon: '📜', title: 'Fully Auditable', desc: 'The program source is open. Audit it yourself, have your agent audit it, or DYOR. Stake, fees, and match rules are immutably snapshotted at tournament creation.' },
           ].map((item, i) => (
@@ -724,7 +743,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[var(--muted)]">
           <div className="flex items-center gap-2">
             <LogoSmall />
-            <span>Dilemma Arena — On-chain game theory on Solana</span>
+            <span>Prisoner's Arena — On-chain game theory on Solana</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs">devnet</span>

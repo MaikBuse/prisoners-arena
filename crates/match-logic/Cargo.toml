@@ -2,7 +2,7 @@
 name = "match-logic"
 version = "0.1.0"
 edition = "2021"
-description = "Core game logic for Dilemma Arena - Iterated Prisoner's Dilemma"
+description = "Core game logic for Prisoner's Arena - Iterated Prisoner's Dilemma"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

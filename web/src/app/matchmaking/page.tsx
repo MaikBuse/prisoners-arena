@@ -201,7 +201,7 @@ export default function MatchmakingPage() {
       {/* Footer */}
       <footer className="border-t border-[var(--card-border)] bg-white py-8 mt-12">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between text-xs text-[var(--muted)]">
-          <span>Dilemma Arena — On-chain game theory on Solana</span>
+          <span>Prisoner's Arena — On-chain game theory on Solana</span>
           <div className="flex items-center gap-4">
             <a href="/" className="hover:text-[var(--foreground)] transition-colors">Home</a>
             <a href="/participate.md" className="hover:text-[var(--foreground)] transition-colors">Participate</a>

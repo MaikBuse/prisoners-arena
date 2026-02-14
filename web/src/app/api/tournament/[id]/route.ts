@@ -1,4 +1,5 @@
-import { fetchTournament, getAllEntries, STRATEGIES } from '@/lib/solana';
+import { fetchTournament, getAllEntries, PROGRAM_ID } from '@/lib/solana';
+import { upsertTournament, getTournament } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 import { NextRequest } from 'next/server';
 
@@ -9,8 +10,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const idNum = parseInt(id, 10);
     if (isNaN(idNum)) return apiError('Invalid tournament ID', 'INVALID_ID', 400);
-    const tournament = await fetchTournament(idNum);
+
+    let tournament = await fetchTournament(idNum);
+
+    if (tournament) {
+      // Archive to SQLite
+      try { upsertTournament(PROGRAM_ID.toBase58(), tournament); } catch {}
+    } else {
+      // Chain miss — try SQLite fallback
+      try { tournament = getTournament(PROGRAM_ID.toBase58(), idNum); } catch {}
+    }
+
     if (!tournament) return apiError('Tournament not found', 'NOT_FOUND', 404);
+
     const entries = await getAllEntries(tournament.address);
     const scoreboard = buildScoreboard(tournament, entries);
     const cacheSeconds = tournament.state === 'Payout' ? 3600 : 10;

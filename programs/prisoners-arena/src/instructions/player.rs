@@ -3,7 +3,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::state::{Config, Tournament, Entry, Strategy, StrategyParams, TournamentState, CLAIM_EXPIRY_SECONDS, BYTES_PER_PLAYER};
-use crate::error::DilemmaError;
+use crate::error::ArenaError;
 
 /// Enter the current tournament with a commitment hash
 #[derive(Accounts)]
@@ -48,22 +48,18 @@ pub fn enter_tournament(
     let entry = &mut ctx.accounts.entry;
     let player = &ctx.accounts.player;
 
-    // Validate state
+    // Validate state — players can join anytime while in Registration
     require!(
         tournament.state == TournamentState::Registration,
-        DilemmaError::RegistrationClosed
+        ArenaError::RegistrationClosed
     );
 
     let clock = Clock::get()?;
-    require!(
-        clock.unix_timestamp < tournament.registration_ends,
-        DilemmaError::RegistrationClosed
-    );
 
     // Check max participants
     require!(
         tournament.players.len() < config.max_participants as usize,
-        DilemmaError::TournamentFull
+        ArenaError::TournamentFull
     );
 
     // Use snapshotted stake from tournament
@@ -145,23 +141,23 @@ pub fn reveal_strategy(
     // State check
     require!(
         tournament.state == TournamentState::Reveal,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     // Deadline check
     require!(
         clock.unix_timestamp <= tournament.reveal_ends,
-        DilemmaError::RevealPeriodEnded
+        ArenaError::RevealPeriodEnded
     );
 
     // Not already revealed
-    require!(!entry.revealed, DilemmaError::AlreadyRevealed);
+    require!(!entry.revealed, ArenaError::AlreadyRevealed);
 
     // Validate params (same as v1.4 validation)
-    require!(params.forgiveness <= 100, DilemmaError::InvalidParams);
-    require!(params.retaliation_delay <= 10, DilemmaError::InvalidParams);
-    require!(params.noise_tolerance <= 5, DilemmaError::InvalidParams);
-    require!(params.cooperate_bias <= 100, DilemmaError::InvalidParams);
+    require!(params.forgiveness <= 100, ArenaError::InvalidParams);
+    require!(params.retaliation_delay <= 10, ArenaError::InvalidParams);
+    require!(params.noise_tolerance <= 5, ArenaError::InvalidParams);
+    require!(params.cooperate_bias <= 100, ArenaError::InvalidParams);
 
     // Verify commitment: SHA256(strategy_byte || param_bytes[5] || salt[16])
     let mut preimage = Vec::with_capacity(22);
@@ -176,7 +172,7 @@ pub fn reveal_strategy(
     let hash = solana_sha256_hasher::hash(&preimage);
     require!(
         hash.to_bytes() == entry.commitment,
-        DilemmaError::CommitmentMismatch
+        ArenaError::CommitmentMismatch
     );
 
     // Store revealed strategy
@@ -237,7 +233,7 @@ pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
     require!(
         tournament.state == TournamentState::Registration
             || tournament.state == TournamentState::Reveal,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     // Use snapshotted stake from tournament
@@ -305,28 +301,28 @@ pub fn claim_payout(ctx: Context<ClaimPayout>) -> Result<()> {
     // Must be in Payout state
     require!(
         tournament.state == TournamentState::Payout,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     // Must not have already claimed
-    require!(!entry.paid_out, DilemmaError::AlreadyPaid);
+    require!(!entry.paid_out, ArenaError::AlreadyPaid);
 
     // Check 30-day claim expiry
     require!(
         clock.unix_timestamp < tournament.payout_started_at + CLAIM_EXPIRY_SECONDS,
-        DilemmaError::ClaimExpired
+        ArenaError::ClaimExpired
     );
 
     // Must be a winner (score >= min_winning_score)
     require!(
         entry.score >= tournament.min_winning_score,
-        DilemmaError::NotWinner
+        ArenaError::NotWinner
     );
 
     // Calculate equal share (all winners split equally)
     let payout = tournament.winner_pool
         .checked_div(tournament.winner_count as u64)
-        .ok_or(DilemmaError::Overflow)?;
+        .ok_or(ArenaError::Overflow)?;
 
     // Transfer payout to player
     **tournament.to_account_info().try_borrow_mut_lamports()? -= payout;

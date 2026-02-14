@@ -1,5 +1,5 @@
 {
-  "name": "dilemma-arena",
+  "name": "prisoners-arena",
   "version": "0.1.0",
   "description": "Iterated Prisoner's Dilemma tournament on Solana",
   "scripts": {

@@ -2,16 +2,16 @@
 
 use anchor_lang::prelude::*;
 use crate::state::{Config, Tournament, Entry, TournamentState, CLAIM_EXPIRY_SECONDS, TOURNAMENT_CLOSURE_SECONDS, MATCHES_PER_TX};
-use crate::error::DilemmaError;
+use crate::error::ArenaError;
 
-/// Close registration and transition to Reveal phase (or extend deadline)
+/// Close registration and transition to Reveal phase
 #[derive(Accounts)]
 pub struct CloseRegistration<'info> {
     #[account(
         mut,
         seeds = [b"config"],
         bump = config.bump,
-        has_one = operator @ DilemmaError::Unauthorized
+        has_one = operator @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -33,27 +33,19 @@ pub fn close_registration(ctx: Context<CloseRegistration>) -> Result<()> {
 
     require!(
         tournament.state == TournamentState::Registration,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     require!(
         clock.unix_timestamp >= tournament.registration_ends,
-        DilemmaError::RegistrationOpen
+        ArenaError::RegistrationOpen
     );
 
     // Check if minimum participants reached
-    if tournament.participant_count < config.min_participants as u32 {
-        // Extend registration deadline using snapshotted duration (never cancel)
-        tournament.registration_ends = clock.unix_timestamp + tournament.registration_duration;
-        msg!(
-            "Tournament {} extended: only {} participants, need {}. New deadline: {}",
-            tournament.id,
-            tournament.participant_count,
-            config.min_participants,
-            tournament.registration_ends
-        );
-        return Ok(());
-    }
+    require!(
+        tournament.participant_count >= config.min_participants as u32,
+        ArenaError::MinParticipantsNotReached
+    );
 
     // Transition to Reveal phase (NOT Running — that happens after close_reveal)
     tournament.state = TournamentState::Reveal;
@@ -76,7 +68,7 @@ pub struct CloseReveal<'info> {
     #[account(
         seeds = [b"config"],
         bump = config.bump,
-        has_one = operator @ DilemmaError::Unauthorized
+        has_one = operator @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -109,19 +101,19 @@ pub fn close_reveal(ctx: Context<CloseReveal>) -> Result<()> {
 
     require!(
         tournament.state == TournamentState::Reveal,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     require!(
         clock.unix_timestamp > tournament.reveal_ends,
-        DilemmaError::RevealPeriodNotEnded
+        ArenaError::RevealPeriodNotEnded
     );
 
     // Verify all non-forfeited players have revealed
     let active_count = tournament.participant_count - tournament.forfeits;
     require!(
         tournament.reveals_completed == active_count,
-        DilemmaError::UnprocessedForfeits
+        ArenaError::UnprocessedForfeits
     );
 
     // Handle zero active players (all forfeited/refunded)
@@ -142,23 +134,23 @@ pub fn close_reveal(ctx: Context<CloseReveal>) -> Result<()> {
         // Find the last valid (non-refunded/non-forfeited) player
         let last_index = tournament.players.iter()
             .rposition(|pk| *pk != Pubkey::default())
-            .ok_or(DilemmaError::InvalidState)?;
+            .ok_or(ArenaError::InvalidState)?;
         
         let last_player = tournament.players[last_index];
         
         // Verify refund_entry and refund_player are provided and match
         let refund_entry = ctx.accounts.refund_entry.as_ref()
-            .ok_or(DilemmaError::InvalidEntryAccount)?;
+            .ok_or(ArenaError::InvalidEntryAccount)?;
         let refund_player = ctx.accounts.refund_player.as_ref()
-            .ok_or(DilemmaError::InvalidEntryAccount)?;
+            .ok_or(ArenaError::InvalidEntryAccount)?;
         
         require!(
             refund_entry.player == last_player && refund_player.key() == last_player,
-            DilemmaError::InvalidEntryAccount
+            ArenaError::InvalidEntryAccount
         );
         require!(
             refund_entry.index == last_index as u32,
-            DilemmaError::InvalidEntryAccount
+            ArenaError::InvalidEntryAccount
         );
 
         // Process refund
@@ -179,7 +171,7 @@ pub fn close_reveal(ctx: Context<CloseReveal>) -> Result<()> {
     // Generate randomness seed from slot hash (moved from close_registration)
     let slot_hashes_data = ctx.accounts.slot_hashes.try_borrow_data()?;
     let mut seed = [0u8; 32];
-    require!(slot_hashes_data.len() >= 48, DilemmaError::SlotHashUnavailable);
+    require!(slot_hashes_data.len() >= 48, ArenaError::SlotHashUnavailable);
     seed.copy_from_slice(&slot_hashes_data[16..48]);
     
     // Mix in tournament-specific data
@@ -221,7 +213,7 @@ pub struct ForfeitUnrevealed<'info> {
     #[account(
         seeds = [b"config"],
         bump = config.bump,
-        has_one = operator @ DilemmaError::Unauthorized
+        has_one = operator @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -246,15 +238,15 @@ pub fn forfeit_unrevealed(ctx: Context<ForfeitUnrevealed>) -> Result<()> {
 
     require!(
         tournament.state == TournamentState::Reveal,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     require!(
         clock.unix_timestamp > tournament.reveal_ends,
-        DilemmaError::RevealPeriodNotEnded
+        ArenaError::RevealPeriodNotEnded
     );
 
-    require!(!entry.revealed, DilemmaError::AlreadyRevealed);
+    require!(!entry.revealed, ArenaError::AlreadyRevealed);
 
     // Mark player slot as forfeited
     let idx = entry.index as usize;
@@ -281,7 +273,7 @@ pub struct RunMatches<'info> {
     #[account(
         seeds = [b"config"],
         bump = config.bump,
-        has_one = operator @ DilemmaError::Unauthorized
+        has_one = operator @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -303,7 +295,7 @@ pub fn run_matches<'info>(
 
     require!(
         tournament.state == TournamentState::Running,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     // Safety check: verify all active strategies are revealed (belt-and-suspenders)
@@ -311,7 +303,7 @@ pub fn run_matches<'info>(
         if tournament.players[i] != Pubkey::default() {
             require!(
                 tournament.strategies[i] != u8::MAX,
-                DilemmaError::UnrevealedStrategy
+                ArenaError::UnrevealedStrategy
             );
         }
     }
@@ -340,15 +332,15 @@ pub fn run_matches<'info>(
             tournament.matches_per_player,
             &tournament.randomness_seed,
             match_index,
-        ).ok_or(DilemmaError::InvalidMatch)?;
+        ).ok_or(ArenaError::InvalidMatch)?;
 
         let (idx_a, idx_b) = pairing;
 
         // Skip if either player is refunded/forfeited (default pubkey)
         let player_a = tournament.players.get(idx_a as usize)
-            .ok_or(DilemmaError::InvalidMatch)?;
+            .ok_or(ArenaError::InvalidMatch)?;
         let player_b = tournament.players.get(idx_b as usize)
-            .ok_or(DilemmaError::InvalidMatch)?;
+            .ok_or(ArenaError::InvalidMatch)?;
 
         if *player_a == Pubkey::default() || *player_b == Pubkey::default() {
             // Skip this match (player refunded/forfeited)
@@ -370,8 +362,8 @@ pub fn run_matches<'info>(
         drop(entry_b_data);
 
         // Verify indices match
-        require!(entry_a_account.index == idx_a, DilemmaError::InvalidEntryAccount);
-        require!(entry_b_account.index == idx_b, DilemmaError::InvalidEntryAccount);
+        require!(entry_a_account.index == idx_a, ArenaError::InvalidEntryAccount);
+        require!(entry_b_account.index == idx_b, ArenaError::InvalidEntryAccount);
 
         // Run the match using match-logic crate
         let strategy_a = crate::state::to_match_strategy(entry_a_account.strategy, &entry_a_account.strategy_params);
@@ -442,22 +434,22 @@ fn find_entry_account<'info>(
         }
     }
 
-    Err(DilemmaError::InvalidEntryAccount.into())
+    Err(ArenaError::InvalidEntryAccount.into())
 }
 
 /// Workaround for deserializing Entry from account data
 fn deserialize_entry(data: &[u8]) -> Result<Entry> {
     if data.len() < 8 {
-        return Err(DilemmaError::InvalidEntryAccount.into());
+        return Err(ArenaError::InvalidEntryAccount.into());
     }
     Entry::try_deserialize(&mut &data[..])
-        .map_err(|_| DilemmaError::InvalidEntryAccount.into())
+        .map_err(|_| ArenaError::InvalidEntryAccount.into())
 }
 
 fn serialize_entry(entry: &Entry, data: &mut [u8]) -> Result<()> {
     let mut writer = &mut data[..];
     entry.try_serialize(&mut writer)
-        .map_err(|_| DilemmaError::InvalidEntryAccount.into())
+        .map_err(|_| ArenaError::InvalidEntryAccount.into())
 }
 
 /// Finalize tournament and determine winners, create next tournament
@@ -467,7 +459,7 @@ pub struct FinalizeTournament<'info> {
         mut,
         seeds = [b"config"],
         bump = config.bump,
-        has_one = operator @ DilemmaError::Unauthorized
+        has_one = operator @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -501,12 +493,12 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
 
     require!(
         tournament.state == TournamentState::Running,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
     require!(
         tournament.matches_completed >= tournament.matches_total,
-        DilemmaError::MatchesIncomplete
+        ArenaError::MatchesIncomplete
     );
 
     // Sort scores descending to find threshold
@@ -538,9 +530,9 @@ pub fn finalize_tournament(ctx: Context<FinalizeTournament>) -> Result<()> {
     // Calculate house fee
     let house_fee = tournament.pool
         .checked_mul(tournament.house_fee_bps as u64)
-        .ok_or(DilemmaError::Overflow)?
+        .ok_or(ArenaError::Overflow)?
         .checked_div(10000)
-        .ok_or(DilemmaError::Overflow)?;
+        .ok_or(ArenaError::Overflow)?;
 
     // Determine max distributable lamports (total - rent-exempt minimum)
     let rent = Rent::get()?;
@@ -620,7 +612,7 @@ pub struct CloseExpiredEntry<'info> {
         mut,
         seeds = [b"config"],
         bump = config.bump,
-        has_one = operator @ DilemmaError::Unauthorized
+        has_one = operator @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -653,13 +645,15 @@ pub fn close_expired_entry(ctx: Context<CloseExpiredEntry>) -> Result<()> {
     // Must be in Payout state
     require!(
         tournament.state == TournamentState::Payout,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
-    // Must be past 30-day expiry
+    // Allow early closure when all winners have claimed, or after 30-day expiry
+    let time_expired = clock.unix_timestamp >= tournament.payout_started_at + CLAIM_EXPIRY_SECONDS;
+    let all_winners_claimed = tournament.claims_processed >= tournament.winner_count;
     require!(
-        clock.unix_timestamp >= tournament.payout_started_at + CLAIM_EXPIRY_SECONDS,
-        DilemmaError::NotExpired
+        time_expired || all_winners_claimed,
+        ArenaError::NotExpired
     );
 
     // If this was an unclaimed winner, add their share to accumulated fees
@@ -711,7 +705,7 @@ pub struct CloseTournament<'info> {
     pub tournament: Account<'info, Tournament>,
 
     #[account(
-        constraint = operator.key() == config.operator || operator.key() == config.admin @ DilemmaError::Unauthorized
+        constraint = operator.key() == config.operator || operator.key() == config.admin @ ArenaError::Unauthorized
     )]
     pub operator: Signer<'info>,
 }
@@ -724,19 +718,21 @@ pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
     // Must be in Payout state
     require!(
         tournament.state == TournamentState::Payout,
-        DilemmaError::InvalidState
+        ArenaError::InvalidState
     );
 
-    // Must be past 30 days since payout started
+    // Allow early closure when all winners have claimed, or after 30 days
+    let time_expired = clock.unix_timestamp >= tournament.payout_started_at + TOURNAMENT_CLOSURE_SECONDS;
+    let all_winners_claimed = tournament.claims_processed >= tournament.winner_count;
     require!(
-        clock.unix_timestamp >= tournament.payout_started_at + TOURNAMENT_CLOSURE_SECONDS,
-        DilemmaError::TournamentNotCloseable
+        time_expired || all_winners_claimed,
+        ArenaError::TournamentNotCloseable
     );
 
     // All entries must be closed (claimed, refunded, or expired)
     require!(
         tournament.entries_remaining == 0,
-        DilemmaError::EntriesRemaining
+        ArenaError::EntriesRemaining
     );
 
     // Transfer ALL lamports (rent + any surplus) to config PDA → accumulated_fees
@@ -747,7 +743,7 @@ pub fn close_tournament(ctx: Context<CloseTournament>) -> Result<()> {
         **config.to_account_info().try_borrow_mut_lamports()? += total_lamports;
         config.accumulated_fees = config.accumulated_fees
             .checked_add(total_lamports)
-            .ok_or(DilemmaError::Overflow)?;
+            .ok_or(ArenaError::Overflow)?;
     }
 
     // Zero out account data to mark as closed (Solana GCs 0-lamport accounts)

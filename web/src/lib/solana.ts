@@ -6,7 +6,7 @@ export const PROGRAM_ID = new PublicKey(
 );
 export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.devnet.solana.com';
 export const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'devnet';
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://dilemma-arena.com';
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://prisoners-arena.com';
 export const EXPLORER_BASE = 'https://explorer.solana.com';
 
 const connection = new Connection(RPC_URL, 'confirmed');

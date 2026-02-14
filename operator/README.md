@@ -1,6 +1,6 @@
-# Dilemma Arena Operator
+# Prisoner's Arena Operator
 
-Automated tournament lifecycle manager for Dilemma Arena.
+Automated tournament lifecycle manager for Prisoner's Arena.
 
 ## Build Requirements
 
@@ -13,7 +13,7 @@ Automated tournament lifecycle manager for Dilemma Arena.
 ## Build
 
 ```bash
-cargo build -p dilemma-operator --release
+cargo build -p prisoners-operator --release
 ```
 
 ## Usage
@@ -31,7 +31,7 @@ cargo build -p dilemma-operator --release
 |------|---------|-------------|
 | `-r, --rpc-url` | `http://localhost:8899` | Solana RPC endpoint |
 | `-k, --keypair` | `~/.config/solana/id.json` | Operator keypair path |
-| `-p, --program-id` | (required) | Dilemma Arena program ID |
+| `-p, --program-id` | (required) | Prisoner's Arena program ID |
 | `--poll-interval` | `5` | Seconds between state checks |
 | `--dry-run` | `false` | Log actions without sending transactions |
 

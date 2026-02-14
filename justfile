@@ -1,4 +1,4 @@
-# Dilemma Arena - Development Commands
+# Prisoner's Arena - Development Commands
 
 # Default: show available recipes
 default:
@@ -29,7 +29,7 @@ test-match-logic:
 
 # Test contract
 test-contract:
-    cd programs/dilemma-arena && anchor test --provider.cluster localnet -- --features testing
+    cd programs/prisoners-arena && anchor test --provider.cluster localnet -- --features testing
 
 # Build everything
 build: build-match-logic build-wasm build-contract build-operator
@@ -44,7 +44,7 @@ build-wasm:
 
 # Build contract
 build-contract:
-    cd programs/dilemma-arena && anchor build
+    cd programs/prisoners-arena && anchor build
 
 # Build operator
 build-operator:
@@ -53,7 +53,7 @@ build-operator:
 # Clean all builds
 clean:
     cd crates/match-logic && cargo clean
-    cd programs/dilemma-arena && anchor clean || true
+    cd programs/prisoners-arena && anchor clean || true
     cd operator && cargo clean || true
     rm -rf web/src/wasm
 
@@ -71,32 +71,32 @@ start-web:
 
 # Run CLI (pass args after --)
 cli *ARGS:
-    cargo run -p dilemma-cli -- {{ARGS}}
+    cargo run -p prisoners-cli -- {{ARGS}}
 
 # Run operator
 dev-operator:
-    cargo run -p dilemma-operator
+    cargo run -p prisoners-operator
 
 # Run operator in manual mode (single cycle then exit)
 operator-manual:
-    cargo run -p dilemma-operator -- --manual
+    cargo run -p prisoners-operator -- --manual
 
 # Deploy to devnet
 deploy-devnet:
-    cd programs/dilemma-arena && anchor deploy --provider.cluster devnet
+    cd programs/prisoners-arena && anchor deploy --provider.cluster devnet
 
 # Deploy to mainnet (careful!)
 deploy-mainnet:
-    cd programs/dilemma-arena && anchor deploy --provider.cluster mainnet
+    cd programs/prisoners-arena && anchor deploy --provider.cluster mainnet
 
 # Format all code
 fmt:
     cd crates/match-logic && cargo fmt
-    cd programs/dilemma-arena && cargo fmt
+    cd programs/prisoners-arena && cargo fmt
     cd operator && cargo fmt
 
 # Lint all code
 lint:
     cd crates/match-logic && cargo clippy
-    cd programs/dilemma-arena && cargo clippy
+    cd programs/prisoners-arena && cargo clippy
     cd operator && cargo clippy

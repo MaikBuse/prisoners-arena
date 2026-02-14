@@ -1,16 +1,16 @@
 [features]
 seeds = false
 skip-lint = false
-testing = ["dilemma_arena/testing"]
+testing = ["prisoners_arena/testing"]
 
 [programs.localnet]
-dilemma_arena = "5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW"
+prisoners_arena = "32SU6RjkMa6F3tYrkWdU6jmBrG3a6UDCT6DZVAKNjbji"
 
 [programs.devnet]
-dilemma_arena = "5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW"
+prisoners_arena = "32SU6RjkMa6F3tYrkWdU6jmBrG3a6UDCT6DZVAKNjbji"
 
 [programs.mainnet]
-dilemma_arena = "5aUBgqYz8B3B7mogMqK4yk5n2gU2QNyTWiP8AB5iTtFW"
+prisoners_arena = "32SU6RjkMa6F3tYrkWdU6jmBrG3a6UDCT6DZVAKNjbji"
 
 [registry]
 url = "https://api.apr.dev"
@@ -23,4 +23,4 @@ wallet = "~/.config/solana/id.json"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [workspace]
-members = ["programs/dilemma-arena"]
+members = ["programs/prisoners-arena"]

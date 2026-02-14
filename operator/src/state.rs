@@ -1,6 +1,6 @@
 //! State fetching and deserialization
 //!
-//! Matches the on-chain account structures from the Dilemma Arena contract.
+//! Matches the on-chain account structures from the Prisoner's Arena contract.
 
 use anyhow::{bail, Result};
 use solana_client::rpc_client::RpcClient;
@@ -391,6 +391,13 @@ pub fn fetch_current_tournament(client: &RpcClient, program_id: &Pubkey) -> Resu
     let config = fetch_config(client, program_id)?;
     let (tournament_pda, _) = get_tournament_pda(program_id, config.current_tournament_id);
     let account = client.get_account(&tournament_pda)?;
+    Tournament::deserialize(&account.data)
+}
+
+/// Fetch a tournament by ID
+pub fn fetch_tournament(client: &RpcClient, program_id: &Pubkey, id: u32) -> Result<Tournament> {
+    let (pda, _) = get_tournament_pda(program_id, id);
+    let account = client.get_account(&pda)?;
     Tournament::deserialize(&account.data)
 }
 

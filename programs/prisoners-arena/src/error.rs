@@ -3,7 +3,7 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum DilemmaError {
+pub enum ArenaError {
     #[msg("Invalid tournament state for this action")]
     InvalidState = 6000,
 
@@ -88,4 +88,7 @@ pub enum DilemmaError {
 
     #[msg("Unrevealed strategy in active player slot")]
     UnrevealedStrategy = 6027,
+
+    #[msg("Minimum participants not reached")]
+    MinParticipantsNotReached = 6028,
 }

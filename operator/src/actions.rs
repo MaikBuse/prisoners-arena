@@ -60,8 +60,18 @@ pub fn close_registration(
     };
     
     send_transaction(client, &[instruction], operator)?;
-    info!("Registration closed for tournament {} → Reveal phase", tournament.id);
-    
+
+    // Re-fetch to see what the contract actually did
+    let updated = state::fetch_tournament(client, program_id, tournament.id)?;
+    if updated.state == TournamentState::Reveal {
+        info!("Registration closed for tournament {} → Reveal phase", tournament.id);
+    } else {
+        info!(
+            "Tournament {} registration extended to {}",
+            tournament.id, updated.registration_ends
+        );
+    }
+
     Ok(())
 }
 
@@ -312,8 +322,11 @@ pub fn close_expired_entries(
         .as_secs() as i64;
     
     const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
-    
-    if now < tournament.payout_started_at + CLAIM_EXPIRY_SECONDS {
+
+    let time_expired = now >= tournament.payout_started_at + CLAIM_EXPIRY_SECONDS;
+    let all_winners_claimed = tournament.claims_processed >= tournament.winner_count;
+
+    if !time_expired && !all_winners_claimed {
         return Ok(0);
     }
     
@@ -367,7 +380,7 @@ pub fn close_tournament(
     program_id: &Pubkey,
     tournament: &Tournament,
     operator: &Keypair,
-    config: &Config,
+    _config: &Config,
 ) -> Result<()> {
     info!("Closing tournament {} account to recover rent", tournament.id);
     
@@ -375,9 +388,8 @@ pub fn close_tournament(
     let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
     
     let accounts = vec![
-        AccountMeta::new_readonly(config_pda, false),
+        AccountMeta::new(config_pda, false),
         AccountMeta::new(tournament_pda, false),
-        AccountMeta::new(config.admin, false),
         AccountMeta::new_readonly(operator.pubkey(), true),
     ];
     

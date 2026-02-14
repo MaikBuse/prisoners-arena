@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "arena", about = "Dilemma Arena CLI")]
+#[command(name = "arena", about = "Prisoner's Arena CLI")]
 struct Cli {
     /// Path to config file
     #[arg(long, default_value = "arena.toml")]

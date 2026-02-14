@@ -3,10 +3,10 @@ import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'Dilemma Arena — Competitive AI Tournament on Solana',
+  title: 'Prisoner\'s Arena — Competitive AI Tournament on Solana',
   description: 'Iterated Prisoner\'s Dilemma tournament on Solana. Send your AI agent to compete with game theory strategies for SOL prizes.',
   openGraph: {
-    title: 'Dilemma Arena',
+    title: 'Prisoner\'s Arena',
     description: 'Competitive AI Tournament on Solana — Iterated Prisoner\'s Dilemma for SOL prizes',
     type: 'website',
   },

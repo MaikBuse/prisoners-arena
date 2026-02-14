@@ -2,7 +2,7 @@
 
 use anchor_lang::prelude::*;
 use crate::state::{Config, Tournament, TournamentState};
-use crate::error::DilemmaError;
+use crate::error::ArenaError;
 
 /// Initialize global config and Tournament #0
 #[derive(Accounts)]
@@ -45,7 +45,7 @@ pub fn initialize_config(
     // Validate min_participants is even and >= 2
     require!(
         min_participants >= 2 && min_participants % 2 == 0,
-        DilemmaError::InvalidMinParticipants
+        ArenaError::InvalidMinParticipants
     );
     
     let config = &mut ctx.accounts.config;
@@ -109,7 +109,7 @@ pub struct UpdateConfig<'info> {
         mut,
         seeds = [b"config"],
         bump = config.bump,
-        has_one = admin @ DilemmaError::Unauthorized
+        has_one = admin @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -134,40 +134,40 @@ pub fn update_config(
     }
 
     if let Some(fee) = house_fee_bps {
-        require!(fee <= 10000, DilemmaError::Overflow);
+        require!(fee <= 10000, ArenaError::Overflow);
         config.house_fee_bps = fee;
     }
 
     if let Some(s) = stake {
-        require!(s > 0, DilemmaError::Overflow);
+        require!(s > 0, ArenaError::Overflow);
         config.stake = s;
     }
 
     if let Some(participants) = min_participants {
         require!(
             participants >= 2 && participants % 2 == 0,
-            DilemmaError::InvalidMinParticipants
+            ArenaError::InvalidMinParticipants
         );
         config.min_participants = participants;
     }
 
     if let Some(max) = max_participants {
-        require!(max >= config.min_participants, DilemmaError::Overflow);
+        require!(max >= config.min_participants, ArenaError::Overflow);
         config.max_participants = max;
     }
 
     if let Some(duration) = registration_duration {
-        require!(duration > 0, DilemmaError::Overflow);
+        require!(duration > 0, ArenaError::Overflow);
         config.registration_duration = duration;
     }
 
     if let Some(k) = matches_per_player {
-        require!(k > 0, DilemmaError::Overflow);
+        require!(k > 0, ArenaError::Overflow);
         config.matches_per_player = k;
     }
 
     if let Some(duration) = reveal_duration {
-        require!(duration > 0, DilemmaError::Overflow);
+        require!(duration > 0, ArenaError::Overflow);
         config.reveal_duration = duration;
     }
 
@@ -182,7 +182,7 @@ pub struct WithdrawFees<'info> {
         mut,
         seeds = [b"config"],
         bump = config.bump,
-        has_one = admin @ DilemmaError::Unauthorized
+        has_one = admin @ ArenaError::Unauthorized
     )]
     pub config: Account<'info, Config>,
 
@@ -195,7 +195,7 @@ pub struct WithdrawFees<'info> {
 pub fn withdraw_fees(ctx: Context<WithdrawFees>) -> Result<()> {
     let config = &mut ctx.accounts.config;
     
-    require!(config.accumulated_fees > 0, DilemmaError::NoFeesToWithdraw);
+    require!(config.accumulated_fees > 0, ArenaError::NoFeesToWithdraw);
 
     let amount = config.accumulated_fees;
     config.accumulated_fees = 0;

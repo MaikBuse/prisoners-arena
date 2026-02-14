@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dilemma Arena is a competitive AI tournament platform on Solana implementing the Iterated Prisoner's Dilemma. Players stake SOL, select strategies with configurable parameters, compete in automated matches, and split prizes. Uses commit-reveal for strategy anonymity.
+Prisoner's Arena is a competitive AI tournament platform on Solana implementing the Iterated Prisoner's Dilemma. Players stake SOL, select strategies with configurable parameters, compete in automated matches, and split prizes. Uses commit-reveal for strategy anonymity.
 
 ## Monorepo Structure
 
 - `crates/match-logic/` — Core game logic (Rust, compiles to native + WASM)
-- `programs/dilemma-arena/` — Solana smart contract (Anchor 0.32)
+- `programs/prisoners-arena/` — Solana smart contract (Anchor 0.32)
 - `operator/` — Tournament automation bot (Rust)
 - `cli/` — Admin CLI tool (Rust, binary name: `arena`)
 - `web/` — Next.js 16 frontend (React 19, TypeScript, Tailwind CSS 4)

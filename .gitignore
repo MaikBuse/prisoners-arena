@@ -26,3 +26,4 @@ logs/
 wallets/
 test-ledger/
 arena-local.toml
+operator.db

@@ -1,4 +1,4 @@
-//! Dilemma Arena - Iterated Prisoner's Dilemma Tournament
+//! Prisoner's Arena - Iterated Prisoner's Dilemma Tournament
 //!
 //! A Solana smart contract for running competitive tournaments
 //! based on the classic Prisoner's Dilemma game theory scenario.
@@ -16,7 +16,7 @@ pub use state::StrategyParams;
 declare_id!("32SU6RjkMa6F3tYrkWdU6jmBrG3a6UDCT6DZVAKNjbji");
 
 #[program]
-pub mod dilemma_arena {
+pub mod prisoners_arena {
     use super::*;
 
     /// Initialize the global config and Tournament #0 (one-time setup)
