@@ -26,11 +26,18 @@ jobs:
           command: |
             git clone git@github.com:MaikBuse/pub-talos-cluster.git
             cd pub-talos-cluster
-            sed -i "s|tag:.*|tag: ${CIRCLE_SHA1}-amd64|" helm/prisoners-arena/web/Values.yaml
+
             git config user.email "ci@circleci.com"
             git config user.name "CircleCI"
+
+            IMAGE_TAG=${CIRCLE_SHA1}-amd64
+            rm -f helm/prisoners-arena/web/Values.yaml
+            echo 'web:' > helm/prisoners-arena/web/Values.yaml
+            echo '  container:' >> helm/prisoners-arena/web/Values.yaml
+            echo "    image: \"m9kusanagi/prisoners-arena-web:$IMAGE_TAG\"" >> helm/prisoners-arena/web/Values.yaml
+
             git add helm/prisoners-arena/web/Values.yaml
-            git commit -m "chore: update prisoners-arena-web image to ${CIRCLE_SHA1}-amd64"
+            git commit -m "chore: update prisoners-arena-web image to $IMAGE_TAG"
             git push origin main
 
 workflows:
