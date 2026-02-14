@@ -1,0 +1,47 @@
+version: 2.1
+
+jobs:
+  build_amd64:
+    machine:
+      image: ubuntu-2404:current
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Docker login
+          command: echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Build and push Docker image
+          command: |
+            docker build -t m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64 web/
+            docker push m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64
+
+  deploy:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - run:
+          name: Update Helm values and push
+          command: |
+            git clone https://${GITHUB_TOKEN}@github.com/makoto-kusanagi/pub-talos-cluster.git
+            cd pub-talos-cluster
+            sed -i "s|tag:.*|tag: ${CIRCLE_SHA1}-amd64|" helm/prisoners-arena/web/Values.yaml
+            git config user.email "ci@circleci.com"
+            git config user.name "CircleCI"
+            git add helm/prisoners-arena/web/Values.yaml
+            git commit -m "chore: update prisoners-arena-web image to ${CIRCLE_SHA1}-amd64"
+            git push
+
+workflows:
+  build_and_deploy:
+    jobs:
+      - build_amd64:
+          filters:
+            branches:
+              only: main
+      - deploy:
+          requires:
+            - build_amd64
+          filters:
+            branches:
+              only: main
