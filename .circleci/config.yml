@@ -23,7 +23,7 @@ jobs:
       - run:
           name: Update Helm values and push
           command: |
-            git clone https://${GITHUB_TOKEN}@github.com/makoto-kusanagi/pub-talos-cluster.git
+            git clone git@github.com:makoto-kusanagi/pub-talos-cluster.git
             cd pub-talos-cluster
             sed -i "s|tag:.*|tag: ${CIRCLE_SHA1}-amd64|" helm/prisoners-arena/web/Values.yaml
             git config user.email "ci@circleci.com"
