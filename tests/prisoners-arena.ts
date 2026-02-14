@@ -1563,26 +1563,38 @@ describe("prisoners-arena", () => {
       expect(t.forfeits).to.be.greaterThan(0);
     });
 
-    it("close_reveal fails with < 2 active players (refunds last player)", async () => {
-      // After forfeit, only 1 revealed player remains. close_reveal should
-      // handle this case (refund the last player or error).
-      // With only 1 active player, close_reveal needs refund accounts
+    it("close_reveal with 1 active player refunds odd player and transitions to Running with 0 matches", async () => {
+      // After forfeit, only 1 revealed player remains (odd count).
+      // close_reveal refunds the last active player, leaving 0 active,
+      // then transitions to Running with 0 matches for finalization.
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
-      try {
-        await program.methods
-          .closeReveal()
-          .accounts({
-            config: configKey, tournament: crTournamentKey,
-            slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
-            refundEntry: eKey, refundPlayer: crPlayers[0].publicKey,
-            operator: operator.publicKey, systemProgram: SystemProgram.programId,
-          })
-          .signers([operator])
-          .rpc();
-        // If it succeeds, the tournament should handle the odd player refund
-      } catch {
-        // Also acceptable — might not have enough players
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          await program.methods
+            .closeReveal()
+            .accounts({
+              config: configKey, tournament: crTournamentKey,
+              slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
+              refundEntry: eKey, refundPlayer: crPlayers[0].publicKey,
+              operator: operator.publicKey, systemProgram: SystemProgram.programId,
+            })
+            .signers([operator])
+            .rpc();
+          break;
+        } catch (err: any) {
+          if (err?.error?.errorCode?.code === "RevealPeriodNotEnded") {
+            await sleep(2000);
+            continue;
+          }
+          throw err;
+        }
       }
+
+      const t = await program.account.tournament.fetch(crTournamentKey);
+      expect(t.state).to.deep.equal({ running: {} });
+      expect(t.matchesTotal).to.equal(0);
+      expect(t.matchesCompleted).to.equal(0);
     });
   });
 
@@ -1792,6 +1804,94 @@ describe("prisoners-arena", () => {
       const info = await conn.getAccountInfo(t0Key);
       expect(info).to.not.be.null;
       expect(info!.data.length).to.be.greaterThan(100);
+    });
+  });
+
+  // ================================================================
+  // 16. Zero Active Players — Full Finalization
+  // ================================================================
+  describe("Zero Active Players — Full Finalization", () => {
+    // T2 should be in Running state with 0 matches after the commit-reveal
+    // tests (close_reveal refunded the last odd player → 0 active → Running).
+    let t2Key: PublicKey;
+
+    before(async () => {
+      [t2Key] = deriveT(pid, 2);
+    });
+
+    it("T2 is in Running state with 0 matches after all players forfeited/refunded", async () => {
+      const t2 = await program.account.tournament.fetch(t2Key);
+      expect(t2.state).to.deep.equal({ running: {} });
+      expect(t2.matchesTotal).to.equal(0);
+      expect(t2.matchesCompleted).to.equal(0);
+    });
+
+    it("finalize_tournament with 0 active players sweeps pool to fees and creates T3", async () => {
+      const [t3Key] = deriveT(pid, 3);
+      const cfgBefore = await program.account.config.fetch(configKey);
+      const feesBefore = cfgBefore.accumulatedFees.toNumber();
+
+      await program.methods
+        .finalizeTournament()
+        .accounts({
+          config: configKey, tournament: t2Key, nextTournament: t3Key,
+          operator: operator.publicKey, systemProgram: SystemProgram.programId,
+        })
+        .signers([operator])
+        .rpc();
+
+      const t2 = await program.account.tournament.fetch(t2Key);
+      expect(t2.state).to.deep.equal({ payout: {} });
+      expect(t2.winnerCount).to.equal(0);
+      expect(t2.winnerPool.toNumber()).to.equal(0);
+      expect(t2.minWinningScore).to.equal(0);
+
+      // Forfeited stakes swept to accumulated fees
+      const cfgAfter = await program.account.config.fetch(configKey);
+      expect(cfgAfter.accumulatedFees.toNumber()).to.be.greaterThanOrEqual(feesBefore);
+      expect(cfgAfter.currentTournamentId).to.equal(3);
+
+      // T3 created in Registration state
+      const t3 = await program.account.tournament.fetch(t3Key);
+      expect(t3.id).to.equal(3);
+      expect(t3.state).to.deep.equal({ registration: {} });
+    });
+
+    it("close_tournament succeeds on zero-winner tournament after expiry", async () => {
+      // Wait for claim/closure expiry (2 seconds with testing feature)
+      await sleep(3000);
+
+      // Player 6's entry still exists (close_reveal refund doesn't close it)
+      const refundedPlayer = players[6];
+      const [eKey] = deriveE(pid, t2Key, refundedPlayer.publicKey);
+      try {
+        await program.methods
+          .closeExpiredEntry()
+          .accounts({
+            config: configKey, tournament: t2Key, entry: eKey,
+            operator: operator.publicKey,
+          })
+          .signers([operator])
+          .rpc();
+      } catch {
+        // Entry might already be closed
+      }
+
+      const t2 = await program.account.tournament.fetch(t2Key);
+      expect(t2.entriesRemaining).to.equal(0);
+
+      await program.methods
+        .closeTournament()
+        .accounts({
+          config: configKey, tournament: t2Key,
+          operator: operator.publicKey,
+        })
+        .signers([operator])
+        .rpc();
+
+      // Tournament account should be zeroed/closed
+      const info = await conn.getAccountInfo(t2Key);
+      expect(info).to.be.null;
     });
   });
 });

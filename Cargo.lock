@@ -2781,6 +2781,7 @@ dependencies = [
  "shellexpand",
  "solana-client",
  "solana-sdk",
+ "solana-system-interface",
  "tokio",
  "toml 0.8.23",
  "tracing",

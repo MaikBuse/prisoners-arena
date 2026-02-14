@@ -16,6 +16,7 @@ pub enum TournamentState {
 }
 
 /// Tournament account data (mirrors on-chain structure)
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Tournament {
     pub id: u32,
@@ -52,6 +53,7 @@ pub struct Tournament {
 }
 
 /// Global config account data
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Config {
     pub admin: Pubkey,
@@ -69,6 +71,7 @@ pub struct Config {
 }
 
 /// Entry account data
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Entry {
     pub tournament: Pubkey,

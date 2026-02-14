@@ -10,10 +10,10 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
-    system_program,
     sysvar,
     transaction::Transaction,
 };
+use solana_system_interface::program as system_program;
 use tracing::{info, warn};
 
 use crate::state::{self, Config, Tournament, TournamentState};
