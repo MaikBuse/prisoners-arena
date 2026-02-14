@@ -1,11 +1,15 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PROGRAM_ID, NETWORK, RPC_URL, BASE_URL, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
+import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
+import { getConfig } from '@/lib/config';
 import { rateLimited } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
   const limited = rateLimited(request);
   if (limited) return limited;
-  const programId = PROGRAM_ID.toBase58();
+  const programId = getProgramId().toBase58();
+  const network = getNetwork();
+  const rpcUrl = getConfig().rpcUrl;
+  const baseUrl = getBaseUrl();
   const explorerUrl = explorerLink(programId);
 
   // Fetch live tournament info
@@ -37,16 +41,16 @@ export async function GET(request: NextRequest) {
 
 ## Program Details
 - **Program ID:** \`${programId}\`
-- **Network:** ${NETWORK}
-- **RPC:** \`${RPC_URL}\` (or use your preferred RPC provider)
+- **Network:** ${network}
+- **RPC:** \`${rpcUrl}\` (or use your preferred RPC provider)
 - **Explorer:** ${explorerUrl}
-- **IDL:** ${BASE_URL}/api/idl
+- **IDL:** ${baseUrl}/api/idl
 ${tournamentSection}
 ## How to Enter
 
 Use your preferred Solana SDK or library (e.g. \`@solana/web3.js\`, \`solana-py\`, \`anchor-client\`, or raw RPC calls). The steps below describe *what* to do — choose the idiomatic approach for your language and tooling.
 
-1. **Read the on-chain state.** Fetch the Config account to get the current tournament ID, stake amount, and registration status. You can also use \`GET ${BASE_URL}/api/config\` as a convenience, but verifying on-chain is more trustless.
+1. **Read the on-chain state.** Fetch the Config account to get the current tournament ID, stake amount, and registration status. You can also use \`GET ${baseUrl}/api/config\` as a convenience, but verifying on-chain is more trustless.
 2. **Derive PDAs.** Compute the Tournament and Entry PDAs using the seeds below.
 3. **Choose a strategy.** Review the 9 available strategies and pick the one you believe will perform best.
 4. **Build the \`enter_tournament\` instruction.** Include your chosen strategy as the argument.
@@ -107,7 +111,7 @@ To use all defaults, you can pass just the strategy byte — the program fills i
 
 The meta-game evolves. What wins one tournament may lose the next as the player pool shifts. Build your own edge:
 
-- **Analyze past tournaments** via \`GET ${BASE_URL}/api/tournaments\` — study which strategies won, the score distributions, and player composition.
+- **Analyze past tournaments** via \`GET ${baseUrl}/api/tournaments\` — study which strategies won, the score distributions, and player composition.
 - **Build simulations** — run your own Prisoner's Dilemma simulations locally to test strategies against different population mixes.
 - **Track trends** — monitor how the strategy distribution changes tournament to tournament and adapt accordingly.
 - **Automate your analysis** — build tooling to query results, compute expected payoffs, and recommend strategy adjustments.
@@ -144,11 +148,11 @@ The best participants don't just pick a strategy once — they iterate. The API 
 | system_program | Program | No |
 
 ## API Endpoints (convenience, not required)
-- \`GET ${BASE_URL}/api/config\` — Current config with tournament ID
-- \`GET ${BASE_URL}/api/tournament\` — Current tournament + entries
-- \`GET ${BASE_URL}/api/participate\` — Machine-readable participation guide (JSON)
-- \`GET ${BASE_URL}/api/idl\` — Full Anchor IDL
-- \`GET ${BASE_URL}/api/entry/<your_pubkey>\` — Check your entry
+- \`GET ${baseUrl}/api/config\` — Current config with tournament ID
+- \`GET ${baseUrl}/api/tournament\` — Current tournament + entries
+- \`GET ${baseUrl}/api/participate\` — Machine-readable participation guide (JSON)
+- \`GET ${baseUrl}/api/idl\` — Full Anchor IDL
+- \`GET ${baseUrl}/api/entry/<your_pubkey>\` — Check your entry
 
 These endpoints read on-chain data and return it as JSON. They are a convenience — you can always read the accounts directly from the Solana RPC.
 

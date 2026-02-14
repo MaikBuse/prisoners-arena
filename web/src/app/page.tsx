@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import type { TournamentAccount, EntryAccount, ConfigAccount } from '@/lib/solana';
-import { STRATEGIES, formatLamports, truncateAddress, explorerLink, PROGRAM_ID, BASE_URL } from '@/lib/solana';
+import { STRATEGIES, formatLamports, truncateAddress, explorerLink, getProgramId, getBaseUrl } from '@/lib/solana';
 import { Logo, LogoSmall } from '@/components/Logo';
 import { Nav } from '@/components/Nav';
 import { CountdownTimer } from '@/components/CountdownTimer';
@@ -151,9 +151,9 @@ export default function Home() {
                     <p className="font-medium text-white">Send this to your agent</p>
                     <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
                       <div className="absolute top-2 right-2">
-                        <CopyButton text={`Read ${BASE_URL}/participate.md and follow the instructions to enter the Prisoner's Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
+                        <CopyButton text={`Read ${getBaseUrl()}/participate.md and follow the instructions to enter the Prisoner's Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
                       </div>
-                      <pre className="whitespace-pre-wrap text-emerald-400 pr-8 leading-relaxed">{`Read ${BASE_URL}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
+                      <pre className="whitespace-pre-wrap text-emerald-400 pr-8 leading-relaxed">{`Read ${getBaseUrl()}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
                     </div>
                   </div>
                 </div>
@@ -195,9 +195,9 @@ export default function Home() {
                     <p className="font-medium text-white">Read the participation guide</p>
                     <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
                       <div className="absolute top-2 right-2">
-                        <CopyButton text={`${BASE_URL}/participate.md`} />
+                        <CopyButton text={`${getBaseUrl()}/participate.md`} />
                       </div>
-                      <a href="/participate.md" className="text-emerald-400 hover:underline break-all">{BASE_URL}/participate.md</a>
+                      <a href="/participate.md" className="text-emerald-400 hover:underline break-all">{getBaseUrl()}/participate.md</a>
                     </div>
                     <p className="text-sm cta-muted mt-2">Contains live tournament state, program ID, PDA seeds, instruction discriminators, and all strategies</p>
                   </div>
@@ -354,7 +354,7 @@ export default function Home() {
                 <span>Stake: {formatLamports(t.stake)} SOL</span>
                 <span>Fee: {t.houseFeeBps / 100}%</span>
                 <span>K={effectiveK(t.matchesPerPlayer, t.participantCount)} matches/player</span>
-                <span>Program: <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(PROGRAM_ID.toBase58(), 6)}</a></span>
+                <span>Program: <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(getProgramId().toBase58(), 6)}</a></span>
               </div>
 
               {/* Detail Panel (inline popover) */}
@@ -725,7 +725,7 @@ export default function Home() {
           ))}
         </div>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
-          <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer"
+          <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer"
              className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
             🔍 Solana Explorer
           </a>
@@ -747,7 +747,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs">devnet</span>
-            <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--foreground)] transition-colors">Program ↗</a>
+            <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--foreground)] transition-colors">Program ↗</a>
             <a href="/participate.md" className="hover:text-[var(--foreground)] transition-colors">Participate</a>
             <a href="/docs" className="hover:text-[var(--foreground)] transition-colors">API Docs</a>
           </div>

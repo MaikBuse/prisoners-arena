@@ -1,4 +1,4 @@
-import { fetchConfig, fetchTournament, PROGRAM_ID } from '@/lib/solana';
+import { fetchConfig, fetchTournament, getProgramId } from '@/lib/solana';
 import { upsertTournament, getTournament } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 import { NextRequest } from 'next/server';
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const config = await fetchConfig();
     if (!config) return apiSuccess({ tournaments: [], limit, offset });
 
-    const programId = PROGRAM_ID.toBase58();
+    const programId = getProgramId().toBase58();
     const start = Math.max(0, config.currentTournamentId - offset);
     const end = Math.max(0, start - limit);
 

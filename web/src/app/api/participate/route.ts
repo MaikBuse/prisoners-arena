@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { PROGRAM_ID, NETWORK, RPC_URL, BASE_URL, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
+import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
+import { getConfig } from '@/lib/config';
 import { apiSuccess, rateLimited } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
@@ -17,10 +18,11 @@ export async function GET(request: NextRequest) {
     }
   } catch { /* best effort */ }
 
+  const programId = getProgramId().toBase58();
   return apiSuccess({
-    program_id: PROGRAM_ID.toBase58(),
-    network: NETWORK,
-    rpc_url: RPC_URL,
+    program_id: programId,
+    network: getNetwork(),
+    rpc_url: getConfig().rpcUrl,
     current_tournament: currentTournament,
     pda_seeds: {
       config: ['config'],
@@ -68,8 +70,8 @@ export async function GET(request: NextRequest) {
         notes: 'Only during Payout state, within 30-day claim window. Score must be >= min_winning_score.',
       },
     },
-    idl_url: `${BASE_URL}/api/idl`,
+    idl_url: `${getBaseUrl()}/api/idl`,
     source_url: 'https://github.com/MaikBuse/prisoners-arena',
-    explorer_url: explorerLink(PROGRAM_ID.toBase58()),
+    explorer_url: explorerLink(programId),
   }, 3600);
 }

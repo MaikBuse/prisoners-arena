@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { NETWORK, STRATEGIES } from './solana';
+import { getNetwork, STRATEGIES } from './solana';
 import type { TournamentAccount, EntryAccount } from './solana';
 import { checkRateLimit } from './rate-limit';
 
@@ -18,7 +18,7 @@ export function rateLimited(request: NextRequest): NextResponse | null {
       ok: false,
       error: 'Rate limit exceeded',
       code: 'RATE_LIMITED',
-      network: NETWORK,
+      network: getNetwork(),
       timestamp: new Date().toISOString(),
     }, { status: 429 });
     res.headers.set('Retry-After', String(Math.ceil(retryAfterMs / 1000)));
@@ -37,7 +37,7 @@ export function apiSuccess(data: unknown, cacheSeconds = 10) {
   const res = NextResponse.json({
     ok: true,
     data,
-    network: NETWORK,
+    network: getNetwork(),
     timestamp: new Date().toISOString(),
   });
   res.headers.set('Access-Control-Allow-Origin', '*');
@@ -52,7 +52,7 @@ export function apiError(error: string, code: string, status = 400) {
     ok: false,
     error,
     code,
-    network: NETWORK,
+    network: getNetwork(),
     timestamp: new Date().toISOString(),
   }, { status });
   res.headers.set('Access-Control-Allow-Origin', '*');

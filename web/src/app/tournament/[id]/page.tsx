@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, use, Fragment } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
 import type { ScoreboardEntry, StrategyParams } from '@/lib/api';
-import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, PROGRAM_ID } from '@/lib/solana';
+import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, getProgramId } from '@/lib/solana';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
@@ -228,7 +228,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
               {/* Meta */}
               <div className="mt-4 pt-4 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-xs text-[var(--muted)]">
-                <span>Program: <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(PROGRAM_ID.toBase58(), 6)}</a></span>
+                <span>Program: <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(getProgramId().toBase58(), 6)}</a></span>
                 <span>Account: <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(t.address, 6)}</a></span>
                 <span>Matches/player: {effectiveK(t.matchesPerPlayer, t.participantCount)}</span>
               </div>

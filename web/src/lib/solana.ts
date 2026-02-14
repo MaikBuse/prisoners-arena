@@ -1,15 +1,33 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { getConfig } from './config';
 
-// Environment-driven configuration
-export const PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_PROGRAM_ID || 'Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7'
-);
-export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.devnet.solana.com';
-export const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'devnet';
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://prisoners-arena.com';
+// Lazy-initialized singletons
+let _programId: PublicKey | null = null;
+let _connection: Connection | null = null;
+
+export function getProgramId(): PublicKey {
+  if (!_programId) {
+    _programId = new PublicKey(getConfig().programId);
+  }
+  return _programId;
+}
+
+export function getConnection(): Connection {
+  if (!_connection) {
+    _connection = new Connection(getConfig().rpcUrl, 'confirmed');
+  }
+  return _connection;
+}
+
+export function getNetwork(): string {
+  return getConfig().network;
+}
+
+export function getBaseUrl(): string {
+  return getConfig().baseUrl;
+}
+
 export const EXPLORER_BASE = 'https://explorer.solana.com';
-
-const connection = new Connection(RPC_URL, 'confirmed');
 
 // Discriminators
 const DISCRIMINATORS = {
@@ -60,14 +78,14 @@ export const STRATEGY_BAR_COLORS: Record<string, string> = {
 // Explorer link — omit cluster param for mainnet-beta
 export function explorerLink(address: string, type: 'address' | 'tx' = 'address'): string {
   const base = `${EXPLORER_BASE}/${type}/${address}`;
-  if (NETWORK === 'mainnet-beta') return base;
-  return `${base}?cluster=${NETWORK}`;
+  const network = getNetwork();
+  if (network === 'mainnet-beta') return base;
+  return `${base}?cluster=${network}`;
 }
 
 // Cache
 const cache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL_CURRENT = 10_000;
-const CACHE_TTL_HISTORICAL = 3_600_000;
 
 function getCached<T>(key: string, ttl: number): T | null {
   const entry = cache.get(key);
@@ -112,7 +130,7 @@ function readBool(buf: Buffer, offset: number): boolean {
 export function deriveConfigPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('config')],
-    PROGRAM_ID
+    getProgramId()
   );
 }
 
@@ -121,14 +139,14 @@ export function deriveTournamentPDA(id: number): [PublicKey, number] {
   idBuf.writeUInt32LE(id);
   return PublicKey.findProgramAddressSync(
     [Buffer.from('tournament'), idBuf],
-    PROGRAM_ID
+    getProgramId()
   );
 }
 
 export function deriveEntryPDA(tournamentPubkey: PublicKey, playerPubkey: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('entry'), tournamentPubkey.toBuffer(), playerPubkey.toBuffer()],
-    PROGRAM_ID
+    getProgramId()
   );
 }
 
@@ -320,7 +338,7 @@ export async function fetchConfig(): Promise<ConfigAccount | null> {
   if (cached) return cached;
 
   const [pda] = deriveConfigPDA();
-  const info = await connection.getAccountInfo(pda);
+  const info = await getConnection().getAccountInfo(pda);
   if (!info) return null;
 
   const config = deserializeConfig(Buffer.from(info.data), pda.toBase58());
@@ -334,7 +352,7 @@ export async function fetchTournament(id: number): Promise<TournamentAccount | n
   if (cached) return cached;
 
   const [pda] = deriveTournamentPDA(id);
-  const info = await connection.getAccountInfo(pda);
+  const info = await getConnection().getAccountInfo(pda);
   if (!info) return null;
 
   const tournament = deserializeTournament(Buffer.from(info.data), pda.toBase58());
@@ -354,7 +372,7 @@ export async function getAllEntries(tournamentPubkey: string): Promise<EntryAcco
   if (cached) return cached;
 
   const tournamentPk = new PublicKey(tournamentPubkey);
-  const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+  const accounts = await getConnection().getProgramAccounts(getProgramId(), {
     filters: [
       { memcmp: { offset: 0, bytes: Buffer.from(DISCRIMINATORS.Entry).toString('base64'), encoding: 'base64' } },
       { memcmp: { offset: 8, bytes: tournamentPk.toBase58() } },
@@ -377,7 +395,7 @@ export async function fetchEntryByPlayer(playerPubkey: string): Promise<EntryAcc
   const [tournamentPda] = deriveTournamentPDA(activeId);
   const playerPk = new PublicKey(playerPubkey);
   const [entryPda] = deriveEntryPDA(tournamentPda, playerPk);
-  const info = await connection.getAccountInfo(entryPda);
+  const info = await getConnection().getAccountInfo(entryPda);
   if (!info) return null;
 
   return deserializeEntry(Buffer.from(info.data), entryPda.toBase58());

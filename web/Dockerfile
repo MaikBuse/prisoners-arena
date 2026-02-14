@@ -22,14 +22,6 @@ RUN apk add --no-cache python3 make g++
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time placeholders — replaced at runtime by entrypoint.sh
-# Must be valid base58 — PublicKey() is called at build time
-ENV NEXT_PUBLIC_PROGRAM_ID=8kiAR1C8vaGF9Xny1YX3HC7mh4knZoh2EjArk2vQKQxo
-# Must be valid URLs / values — Connection() and other code runs at build time
-ENV NEXT_PUBLIC_RPC_URL=https://placeholder-rpc.prisoners-arena.com
-ENV NEXT_PUBLIC_NETWORK=devnet
-ENV NEXT_PUBLIC_BASE_URL=https://placeholder.prisoners-arena.com
-
 RUN npm run build
 
 # --- runner ---
@@ -53,9 +45,6 @@ COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-t
 COPY --from=builder /app/node_modules/prebuild-install ./node_modules/prebuild-install
 COPY --from=builder /app/node_modules/node-gyp-build ./node_modules/node-gyp-build
 
-# Entrypoint for runtime env var replacement
-COPY entrypoint.sh ./entrypoint.sh
-
 # SQLite data directory (mount as volume in K8s)
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
 
@@ -65,4 +54,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["node", "server.js"]

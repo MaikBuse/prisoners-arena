@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
-import { PROGRAM_ID, NETWORK, RPC_URL, STRATEGIES, explorerLink } from '@/lib/solana';
+import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
+import { getConfig } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'API Documentation — Prisoner\'s Arena',
@@ -7,6 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function DocsPage() {
+  const programId = getProgramId().toBase58();
+  const network = getNetwork();
+  const rpcUrl = getConfig().rpcUrl;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
@@ -15,9 +20,9 @@ export default function DocsPage() {
       <p className="text-[var(--muted)] mb-8">REST API for querying Prisoner's Arena tournament state. No authentication required.</p>
 
       <div className="space-y-4 mb-12">
-        <InfoRow label="Program ID" value={PROGRAM_ID.toBase58()} mono />
-        <InfoRow label="Network" value={NETWORK} />
-        <InfoRow label="RPC" value={RPC_URL} mono />
+        <InfoRow label="Program ID" value={programId} mono />
+        <InfoRow label="Network" value={network} />
+        <InfoRow label="RPC" value={rpcUrl} mono />
         <InfoRow label="Rate Limit" value="60 requests/minute per IP" />
         <InfoRow label="Format" value="JSON — all responses include ok, data, network, timestamp" />
       </div>
@@ -139,9 +144,9 @@ export default function DocsPage() {
           response={`{
   "ok": true,
   "data": {
-    "program_id": "${PROGRAM_ID.toBase58()}",
-    "network": "${NETWORK}",
-    "rpc_url": "${RPC_URL}",
+    "program_id": "${programId}",
+    "network": "${network}",
+    "rpc_url": "${rpcUrl}",
     "current_tournament": { "id": 0, "state": "Registration", "stake_lamports": "100000000" },
     "pda_seeds": {
       "config": ["config"],
@@ -229,7 +234,7 @@ export default function DocsPage() {
 
       {/* Links */}
       <div className="mt-12 pt-8 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-sm">
-        <a href={explorerLink(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer"
+        <a href={explorerLink(programId)} target="_blank" rel="noopener noreferrer"
            className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Solana Explorer ↗</a>
         <a href="/api/idl" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Download IDL</a>
         <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Participation Guide</a>
