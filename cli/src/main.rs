@@ -106,6 +106,18 @@ enum Commands {
         #[arg(long, default_value = "1.0")]
         amount: f64,
     },
+    /// Transfer SOL between wallets
+    Transfer {
+        /// Source wallet (admin, operator, or keypair path)
+        #[arg(long, default_value = "admin")]
+        from: String,
+        /// Destination pubkey or wallet name (admin, operator, or keypair path)
+        #[arg(long)]
+        to: String,
+        /// Amount in SOL
+        #[arg(long)]
+        amount: f64,
+    },
 }
 
 #[derive(Subcommand)]
@@ -167,5 +179,6 @@ fn main() -> Result<()> {
         Commands::Claim { wallet, tournament, dry_run } => commands::player::claim(&cfg, &wallet, tournament, dry_run),
         Commands::Balance { wallet } => commands::util::balance(&cfg, &wallet),
         Commands::Airdrop { wallet, amount } => commands::util::airdrop(&cfg, &wallet, amount),
+        Commands::Transfer { from, to, amount } => commands::util::transfer(&cfg, &from, &to, amount),
     }
 }
