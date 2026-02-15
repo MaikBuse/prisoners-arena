@@ -42,9 +42,13 @@ build-match-logic:
 build-wasm:
     cd contract/crates/match-logic && wasm-pack build --target web --features wasm --out-dir ../../../web/src/wasm
 
-# Build contract
+# Build contract (fast, for local dev)
 build-contract:
     anchor build
+
+# Build contract (deterministic, for deploy/verification)
+build-contract-verifiable:
+    solana-verify build --library-name prisoners_arena
 
 # Build operator
 build-operator:
@@ -80,13 +84,20 @@ dev-operator:
 operator-manual:
     cargo run -p prisoners-operator -- --manual
 
-# Deploy to devnet
-deploy-devnet:
+# Deploy to devnet (verifiable build)
+deploy-devnet: build-contract-verifiable
     anchor deploy --provider.cluster devnet
 
-# Deploy to mainnet (careful!)
-deploy-mainnet:
+# Deploy to mainnet (verifiable build, careful!)
+deploy-mainnet: build-contract-verifiable
     anchor deploy --provider.cluster mainnet
+
+# Verify deployed program matches source repo
+verify-contract:
+    solana-verify verify-from-repo \
+        --program-id 89Pm5Qy61r1K8dLY1Z1fsJLu3PBN5tTLfZFoEAhejDYa \
+        --remote https://github.com/makoto-kusanagi/prisoners-arena-program \
+        --library-name prisoners_arena
 
 # Format all code
 fmt:

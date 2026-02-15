@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
+import { Footer } from '@/components/Footer';
 import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
 import { STRATEGY_CONFIGS, PARAM_META } from '@/lib/strategyConfig';
 
@@ -448,19 +449,11 @@ export default function HowItWorksPage() {
             </DetailBlock>
           </Section>
 
-          {/* Footer Links */}
-          <div className="pt-8 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-sm">
-            <a href={explorerLink(programId)} target="_blank" rel="noopener noreferrer"
-               className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Solana Explorer ↗</a>
-            <a href="/api/idl" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Download IDL</a>
-            <a href="/docs" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">API Docs</a>
-            <a href="/configure" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Strategy Lab</a>
-            <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Participation Guide</a>
-          </div>
 
         </div>
       </div>
     </div>
+    <Footer />
     </>
   );
 }

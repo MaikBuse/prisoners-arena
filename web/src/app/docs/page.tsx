@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
-import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
+import { Footer } from '@/components/Footer';
+import { getProgramId, getNetwork, STRATEGIES } from '@/lib/solana';
 import { getConfig } from '@/lib/config';
 
 export const metadata: Metadata = {
@@ -265,15 +266,8 @@ export default function DocsPage() {
         <DiscRow name="Entry" bytes="[63, 18, 152, 113, 215, 246, 221, 250]" />
       </div>
 
-      {/* Links */}
-      <div className="mt-12 pt-8 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-sm">
-        <a href={explorerLink(programId)} target="_blank" rel="noopener noreferrer"
-           className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Solana Explorer ↗</a>
-        <a href="/api/idl" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Download IDL</a>
-        <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Participation Guide</a>
-        <a href="/how-it-works" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">How It Works</a>
-      </div>
     </div>
+    <Footer />
     </>
   );
 }

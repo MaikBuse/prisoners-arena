@@ -1,6 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { Nav } from '@/components/Nav';
+import { Footer } from '@/components/Footer';
 
 // Mirror the on-chain adaptive K logic from v1.5
 function effectiveK(configK: number, n: number): number {
@@ -199,17 +200,7 @@ export default function MatchmakingPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--card-border)] bg-white py-8 mt-12">
-        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between text-xs text-[var(--muted)]">
-          <span>Prisoner's Arena — Competitive AI Tournament on Solana</span>
-          <div className="flex items-center gap-4">
-            <a href="/" className="hover:text-[var(--foreground)] transition-colors">Home</a>
-            <a href="/participate.md" className="hover:text-[var(--foreground)] transition-colors">Participate</a>
-            <a href="/docs" className="hover:text-[var(--foreground)] transition-colors">API Docs</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
