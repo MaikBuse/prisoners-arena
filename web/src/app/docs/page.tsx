@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Nav } from '@/components/Nav';
 import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
 import { getConfig } from '@/lib/config';
 
@@ -13,6 +14,8 @@ export default function DocsPage() {
   const rpcUrl = getConfig().rpcUrl;
 
   return (
+    <>
+    <Nav />
     <div className="max-w-4xl mx-auto px-4 py-12">
       <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
 
@@ -45,7 +48,9 @@ export default function DocsPage() {
     "minParticipants": 2,
     "maxParticipants": 100,
     "registrationDuration": "300",
+    "revealDuration": "172800",
     "matchesPerPlayer": 15,
+    "operatorTxFee": "0",
     "accumulatedFees": "0",
     "currentTournamentId": 0,
     "address": "A19Z...bJug"
@@ -72,8 +77,14 @@ export default function DocsPage() {
       "pool": "0",
       "participantCount": 0,
       "registrationEnds": "1770541358",
+      "revealEnds": "0",
+      "revealDuration": "172800",
+      "revealsCompleted": 0,
+      "forfeits": 0,
       "matchesCompleted": 0,
       "matchesTotal": 0,
+      "operatorCosts": "0",
+      "roundTier": 0,
       "winnerCount": 0,
       "winnerPool": "0",
       "players": [],
@@ -154,15 +165,37 @@ export default function DocsPage() {
       "entry": ["entry", "<tournament_pubkey>", "<player_pubkey>"]
     },
     "strategies": [
-      { "value": 0, "name": "TitForTat", "description": "Tit for Tat" },
+      {
+        "value": 0, "name": "TitForTat", "description": "Tit for Tat",
+        "short_description": "Copies opponent's last move. Starts by cooperating.",
+        "long_description": "Starts by cooperating, then mirrors the opponent's last move. The classic reciprocal strategy.",
+        "relevantParams": ["forgiveness", "retaliation_delay", "initial_moves"]
+      },
       ...
     ],
-    "instructions": {
-      "enter_tournament": { "discriminator": [...], "accounts": [...], "data": {...} },
-      "claim_refund": { ... },
-      "claim_payout": { ... }
+    "parameter_definitions": [
+      { "name": "forgiveness", "type": "u8", "min": 0, "max": 100, "default": 0, "description": "..." },
+      ...
+    ],
+    "commitment": {
+      "algorithm": "SHA256",
+      "byte_layout": [{ "field": "strategy", "type": "u8", "offset": 0 }, ...],
+      "total_bytes": 22
     },
+    "payoff_matrix": {
+      "cooperate_cooperate": [3, 3],
+      "cooperate_defect": [0, 5],
+      "defect_cooperate": [5, 0],
+      "defect_defect": [1, 1]
+    },
+    "game_rules": {
+      "round_config": { "standard": { "min_rounds": 20, "max_rounds": 50, ... }, ... },
+      "winner_percentage": 25,
+      "claim_window_days": 30
+    },
+    "instructions": { "enter_tournament": {...}, "reveal_strategy": {...}, ... },
     "idl_url": "/api/idl",
+    "source_url": "https://github.com/MaikBuse/prisoners-arena",
     "explorer_url": "..."
   }
 }`}
@@ -238,9 +271,10 @@ export default function DocsPage() {
            className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Solana Explorer ↗</a>
         <a href="/api/idl" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Download IDL</a>
         <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Participation Guide</a>
-        <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Markdown Guide</a>
+        <a href="/how-it-works" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">How It Works</a>
       </div>
     </div>
+    </>
   );
 }
 

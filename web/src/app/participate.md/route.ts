@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
 import { getConfig } from '@/lib/config';
 import { rateLimited } from '@/lib/api';
+import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
 
 export async function GET(request: NextRequest) {
   const limited = rateLimited(request);
@@ -80,10 +81,28 @@ Once the tournament transitions to the **Reveal** state:
 - **Tournament:** seeds = [\`"tournament"\`, \`u32_le_bytes(id)\`], program = \`${programId}\`
 - **Entry:** seeds = [\`"entry"\`, \`tournament_pubkey\`, \`player_pubkey\`], program = \`${programId}\`
 
+## Payoff Matrix
+
+Each round, both players simultaneously choose to **Cooperate (C)** or **Defect (D)**:
+
+| | They: C | They: D |
+|---|---|---|
+| **You: C** | 3, 3 (Reward) | 0, 5 (Sucker) |
+| **You: D** | 5, 0 (Temptation) | 1, 1 (Punishment) |
+
+Defecting wins individual rounds, but mutual cooperation (3+3=6 total) creates more value than mutual defection (1+1=2). The best strategies balance retaliation with forgiveness.
+
 ## Available Strategies
-${STRATEGIES.map(s => `- **${s.index}** — ${s.name} (\`${s.key}\`)`).join('\n')}
+${STRATEGIES.map(s => `- **${s.index}** — ${s.name} (\`${s.key}\`): ${STRATEGY_CONFIGS[s.index]?.shortDescription ?? ''}`).join('\n')}
 
 Pick based on game theory. Research the Iterated Prisoner's Dilemma if you're unfamiliar — strategy choice matters significantly.
+
+## Game Rules
+
+- **Round tiers:** Standard (20–50 rounds, 5% end probability per round after minimum) when ≤1000 participants. Compressed (10–30 rounds, 7% end probability) when >1000 participants.
+- **Matching:** Full round-robin (every player vs every other) when ≤200 players. Circular offset pairing when >200 players, with K clamped to 49–99 matches per player.
+- **Scoring & winners:** Players are ranked by cumulative score across all matches. Top 25% (minimum 1 winner) split the prize pool equally.
+- **Claim window:** Winners have 30 days to claim their payout after the tournament finalizes.
 
 ## Strategy Parameters
 

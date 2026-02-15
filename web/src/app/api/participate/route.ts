@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
 import { getConfig } from '@/lib/config';
 import { apiSuccess, rateLimited } from '@/lib/api';
+import { PARAM_META, STRATEGY_CONFIGS } from '@/lib/strategyConfig';
 
 export async function GET(request: NextRequest) {
   const limited = rateLimited(request);
@@ -33,7 +34,48 @@ export async function GET(request: NextRequest) {
       value: s.index,
       name: s.key,
       description: s.name,
+      short_description: STRATEGY_CONFIGS[s.index]?.shortDescription ?? '',
+      long_description: STRATEGY_CONFIGS[s.index]?.description ?? '',
+      relevantParams: STRATEGY_CONFIGS[s.index]?.relevantParams ?? [],
     })),
+    parameter_definitions: PARAM_META.map(p => ({
+      name: p.key,
+      type: 'u8',
+      min: p.min,
+      max: p.max,
+      default: p.defaultValue,
+      description: p.description,
+    })),
+    commitment: {
+      algorithm: 'SHA256',
+      byte_layout: [
+        { field: 'strategy', type: 'u8', offset: 0, description: 'Strategy enum index (0-8)' },
+        { field: 'forgiveness', type: 'u8', offset: 1 },
+        { field: 'retaliation_delay', type: 'u8', offset: 2 },
+        { field: 'noise_tolerance', type: 'u8', offset: 3 },
+        { field: 'initial_moves', type: 'u8', offset: 4 },
+        { field: 'cooperate_bias', type: 'u8', offset: 5 },
+        { field: 'salt', type: '[u8; 16]', offset: 6, description: 'Random salt (16 bytes)' },
+      ],
+      total_bytes: 22,
+      notes: 'commitment = SHA256(strategy_u8 || params_5_bytes || salt_16_bytes). Param order must match exactly.',
+    },
+    payoff_matrix: {
+      cooperate_cooperate: [3, 3],
+      cooperate_defect: [0, 5],
+      defect_cooperate: [5, 0],
+      defect_defect: [1, 1],
+    },
+    game_rules: {
+      round_config: {
+        standard: { min_rounds: 20, max_rounds: 50, end_probability_percent: 5, notes: 'Used when participant_count <= 1000' },
+        compressed: { min_rounds: 10, max_rounds: 30, end_probability_percent: 7, notes: 'Used when participant_count > 1000' },
+      },
+      winner_percentage: 25,
+      winner_selection: 'Top 25% of players by score (minimum 1 winner). All winners split prize pool equally.',
+      claim_window_seconds: 2_592_000,
+      claim_window_days: 30,
+    },
     instructions: {
       enter_tournament: {
         discriminator: [19, 21, 109, 109, 227, 108, 232, 25],
@@ -44,8 +86,22 @@ export async function GET(request: NextRequest) {
           'player (signer, mut)',
           'system_program',
         ],
-        data: { strategy: 'u8 (enum index)' },
-        notes: 'Player pays stake + rent for entry account + realloc rent delta',
+        data: { commitment: '[u8; 32] — SHA256(strategy_u8 || params_5_bytes || salt_16_bytes)' },
+        notes: 'Player pays stake + rent for entry account + realloc rent delta. Strategy is hidden until reveal.',
+      },
+      reveal_strategy: {
+        discriminator: [102, 15, 100, 245, 177, 6, 9, 198],
+        accounts: [
+          'entry (PDA, mut)',
+          'tournament (PDA, mut)',
+          'player (signer, mut)',
+        ],
+        data: {
+          strategy: 'u8 (enum index)',
+          params: '{ forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8 }',
+          salt: '[u8; 16]',
+        },
+        notes: 'Only during Reveal state, before reveal_ends. Program verifies SHA256(strategy || params || salt) == commitment.',
       },
       claim_refund: {
         discriminator: [15, 16, 30, 161, 255, 228, 97, 60],
@@ -56,7 +112,7 @@ export async function GET(request: NextRequest) {
           'system_program',
         ],
         data: {},
-        notes: 'Only during Registration state. Refunds stake + entry rent.',
+        notes: 'During Registration or Reveal state. Refunds stake + entry rent.',
       },
       claim_payout: {
         discriminator: [127, 240, 132, 62, 227, 198, 146, 133],

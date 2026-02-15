@@ -107,7 +107,7 @@ export default function HowItWorksPage() {
 
             <DetailBlock summary="Timing details">
               <ul className="list-disc list-inside text-sm text-[var(--muted)] space-y-1">
-                <li><strong>Registration duration:</strong> configured by admin (default 5 minutes on devnet)</li>
+                <li><strong>Registration duration:</strong> configured by admin</li>
                 <li><strong>Reveal duration:</strong> configured by admin, starts when registration closes</li>
                 <li><strong>Running:</strong> operator processes matches in batches of 5 until all complete</li>
                 <li><strong>Payout:</strong> winners have 30 days to claim; unclaimed funds go to house fees</li>
