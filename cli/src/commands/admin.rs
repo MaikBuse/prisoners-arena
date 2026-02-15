@@ -5,8 +5,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     signer::Signer,
 };
-#[allow(deprecated)]
-use solana_sdk::system_program;
+use solana_system_interface::program as system_program;
 use std::str::FromStr;
 
 use crate::config::ArenaConfig;

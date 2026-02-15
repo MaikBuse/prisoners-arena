@@ -4,8 +4,7 @@ use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     signer::Signer,
 };
-#[allow(deprecated)]
-use solana_sdk::system_program;
+use solana_system_interface::program as system_program;
 use sha2::{Sha256, Digest};
 
 use crate::config::ArenaConfig;
@@ -120,7 +119,7 @@ pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, forgiveness: u8, r
         arr
     } else {
         let mut arr = [0u8; 16];
-        getrandom::getrandom(&mut arr)?;
+        getrandom::fill(&mut arr)?;
         arr
     };
 
