@@ -46,8 +46,8 @@ Anyone can verify that the deployed program matches the public source code using
 
 \`\`\`bash
 solana-verify verify-from-repo \\
+    https://github.com/makoto-kusanagi/prisoners-arena-program \\
     --program-id ${programId} \\
-    --remote https://github.com/makoto-kusanagi/prisoners-arena-program \\
     --library-name prisoners_arena
 \`\`\`
 
