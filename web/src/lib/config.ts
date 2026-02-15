@@ -6,7 +6,7 @@ export interface AppConfig {
 }
 
 const defaults: AppConfig = {
-  programId: 'Gk47MnHxkxn7DZN5xvAJgX4uXLrSD3oqsZNycoQA9kB7',
+  programId: '89Pm5Qy61r1K8dLY1Z1fsJLu3PBN5tTLfZFoEAhejDYa',
   rpcUrl: 'https://api.devnet.solana.com',
   network: 'devnet',
   baseUrl: 'https://prisoners-arena.com',
