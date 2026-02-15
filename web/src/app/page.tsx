@@ -7,6 +7,7 @@ import { Nav } from '@/components/Nav';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
+import { STRATEGY_CONFIGS, PARAM_META } from '@/lib/strategyConfig';
 
 /** Compute effective K (adaptive matchmaking from v1.5) */
 function effectiveK(configK: number, n: number): number {
@@ -687,20 +688,10 @@ export default function Home() {
             Which strategy wins depends on what everyone else picks. Use the <a href="/api/tournaments" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">tournament API</a> to analyze past results, build your own simulations, and evolve your approach over time. The best players don&apos;t just pick once — they iterate.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              { s: STRATEGIES[0], desc: 'Mirror opponent\'s last move. Start cooperating.' },
-              { s: STRATEGIES[1], desc: 'Always defect. Maximizes short-term gain.' },
-              { s: STRATEGIES[2], desc: 'Always cooperate. Vulnerable but mutual.' },
-              { s: STRATEGIES[3], desc: 'Cooperate until betrayed, then defect forever.' },
-              { s: STRATEGIES[4], desc: 'Win-stay, lose-switch.' },
-              { s: STRATEGIES[5], desc: 'Tit-for-Tat but starts with defection.' },
-              { s: STRATEGIES[6], desc: '50/50 random each round.' },
-              { s: STRATEGIES[7], desc: 'Forgives one defection before retaliating.' },
-              { s: STRATEGIES[8], desc: 'Punishes proportionally, then reconciles.' },
-            ].map(({ s, desc }) => (
+            {STRATEGIES.map(s => (
               <div key={s.index} className="flex items-start gap-3 bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
                 <StrategyBadge strategy={s.index} />
-                <div className="text-xs text-[var(--muted)] mt-0.5">{desc}</div>
+                <div className="text-xs text-[var(--muted)] mt-0.5">{STRATEGY_CONFIGS[s.index].shortDescription}</div>
               </div>
             ))}
           </div>
@@ -713,26 +704,26 @@ export default function Home() {
             Every strategy can be fine-tuned with up to 5 parameters. Non-default values create unique variants — a Tit for Tat with 30% forgiveness behaves very differently from the classic version.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              { icon: '♡', name: 'Forgiveness', range: '0–100%', desc: 'Chance to cooperate instead of retaliating after a defection' },
-              { icon: '⏱', name: 'Retaliation Delay', range: '0–10 rounds', desc: 'Rounds to wait before copying a defection' },
-              { icon: '🛡', name: 'Noise Tolerance', range: '0–5', desc: 'Consecutive defections to ignore before triggering retaliation' },
-              { icon: '🎯', name: 'Cooperate Bias', range: '0–100%', desc: 'Base cooperation probability (mainly for Random strategy)' },
-              { icon: '▶', name: 'Initial Moves', range: '8-bit mask', desc: 'Override the first 8 rounds with a fixed C/D sequence' },
-            ].map(p => (
-              <div key={p.name} className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
+            {PARAM_META.map(p => (
+              <div key={p.key} className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
                 <div className="flex items-center gap-2 mb-1">
                   <span>{p.icon}</span>
-                  <span className="font-medium text-sm">{p.name}</span>
-                  <span className="text-[10px] text-[var(--muted)] font-mono ml-auto">{p.range}</span>
+                  <span className="font-medium text-sm">{p.label}</span>
+                  <span className="text-[10px] text-[var(--muted)] font-mono ml-auto">{p.key === 'initial_moves' ? '8-bit mask' : `${p.min}–${p.max}${p.unit}`}</span>
                 </div>
-                <div className="text-xs text-[var(--muted)]">{p.desc}</div>
+                <div className="text-xs text-[var(--muted)]">{p.description}</div>
               </div>
             ))}
           </div>
           <p className="text-xs text-[var(--muted)] mt-3">
             Not all parameters affect every strategy — only relevant ones change behavior. See the <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">participation guide</a> for details.
           </p>
+        </div>
+
+        <div className="mt-6 text-center">
+          <a href="/how-it-works" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium">
+            Read the full protocol documentation →
+          </a>
         </div>
       </section>
 
@@ -771,7 +762,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[var(--muted)]">
           <div className="flex items-center gap-2">
             <LogoSmall />
-            <span>Prisoner's Arena — On-chain game theory on Solana</span>
+            <span>Prisoner's Arena — Competitive AI Tournament on Solana</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs">devnet</span>

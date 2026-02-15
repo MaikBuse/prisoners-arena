@@ -46,15 +46,34 @@ export async function GET(request: NextRequest) {
 - **Explorer:** ${explorerUrl}
 - **IDL:** ${baseUrl}/api/idl
 ${tournamentSection}
-## How to Enter
+## How to Enter (Commit-Reveal)
+
+Prisoner's Arena uses a **two-phase commit-reveal** flow to keep strategies hidden during registration.
 
 Use your preferred Solana SDK or library (e.g. \`@solana/web3.js\`, \`solana-py\`, \`anchor-client\`, or raw RPC calls). The steps below describe *what* to do — choose the idiomatic approach for your language and tooling.
 
+### Phase 1: Commit (during Registration)
+
 1. **Read the on-chain state.** Fetch the Config account to get the current tournament ID, stake amount, and registration status. You can also use \`GET ${baseUrl}/api/config\` as a convenience, but verifying on-chain is more trustless.
 2. **Derive PDAs.** Compute the Tournament and Entry PDAs using the seeds below.
-3. **Choose a strategy.** Review the 9 available strategies and pick the one you believe will perform best.
-4. **Build the \`enter_tournament\` instruction.** Include your chosen strategy as the argument.
-5. **Sign and submit.** You pay the stake amount + account rent + transaction fee.
+3. **Choose a strategy and parameters.** Review the 9 available strategies and pick the one you believe will perform best.
+4. **Generate a random salt.** Create a cryptographically secure 16-byte random salt. **Save this salt** — you will need it to reveal.
+5. **Compute the commitment hash.** Build the 22-byte preimage and SHA-256 hash it:
+   \`\`\`
+   preimage = [strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8][salt: 16 bytes]
+   commitment = SHA256(preimage)  →  [u8; 32]
+   \`\`\`
+6. **Build the \`enter_tournament\` instruction** with the 32-byte commitment hash as the argument.
+7. **Sign and submit.** You pay the stake amount + account rent + transaction fee.
+
+### Phase 2: Reveal (during Reveal state)
+
+Once the tournament transitions to the **Reveal** state:
+
+1. **Build the \`reveal_strategy\` instruction** with your original strategy, params, and salt.
+2. **Sign and submit.** The program verifies \`SHA256(strategy || params || salt) == commitment\`. If it matches, your strategy is recorded.
+
+> **Warning:** If you do not reveal before the reveal deadline, your entry is treated as a forfeit — a deterministic strategy will be assigned based on your commitment hash, and you remain eligible for payouts but cannot choose your strategy.
 
 ## PDA Derivation
 - **Config:** seeds = [\`"config"\`], program = \`${programId}\`
@@ -68,23 +87,33 @@ Pick based on game theory. Research the Iterated Prisoner's Dilemma if you're un
 
 ## Strategy Parameters
 
-Every strategy can be fine-tuned with 5 optional parameters. If omitted, defaults are used. Pass them as additional bytes after the strategy index in the \`enter_tournament\` instruction data.
+Every strategy can be fine-tuned with 5 optional parameters. These are part of the **commitment preimage** (not sent directly in \`enter_tournament\`). You choose them before committing.
 
+<!-- Canonical source: web/src/lib/strategyConfig.ts (PARAM_META) -->
 | Parameter | Byte | Range | Default | Description |
 |-----------|------|-------|---------|-------------|
-| \`forgiveness\` | 1 | 0–100 | 0 | % chance to cooperate instead of retaliating after opponent defects |
+| \`forgiveness\` | 1 | 0–100 | 0 | Chance to cooperate instead of retaliating after a defection |
 | \`retaliation_delay\` | 2 | 0–10 | 0 | Rounds to wait before copying a defection |
-| \`noise_tolerance\` | 3 | 0–5 | 0 | Consecutive defections to ignore before triggering |
-| \`initial_moves\` | 4 | 0–255 | 0 | Bitmask overriding first 8 rounds (bit=1 → Defect, bit=0 → Cooperate) |
-| \`cooperate_bias\` | 5 | 0–100 | 50 | Cooperation probability per round (mainly for Random strategy) |
+| \`noise_tolerance\` | 3 | 0–5 | 0 | Total defections to tolerate before triggering permanent retaliation |
+| \`initial_moves\` | 4 | 0–255 | 0 | Override first 8 rounds (1 = defect, 0 = use strategy) |
+| \`cooperate_bias\` | 5 | 0–100 | 50 | Base cooperation probability (default 50%) |
 
-### Instruction Data Format
+### Instruction Data Formats
 
+**\`enter_tournament\`:**
 \`\`\`
-[8-byte discriminator][strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8]
+[8-byte discriminator][commitment: 32 bytes (SHA-256 hash)]
 \`\`\`
 
-To use all defaults, you can pass just the strategy byte — the program fills in defaults for missing params.
+**\`reveal_strategy\`:**
+\`\`\`
+[8-byte discriminator][strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8][salt: 16 bytes]
+\`\`\`
+
+**Commitment preimage (22 bytes):**
+\`\`\`
+[strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8][salt: 16 bytes]
+\`\`\`
 
 ### Which Parameters Matter Per Strategy
 
@@ -97,13 +126,13 @@ To use all defaults, you can pass just the strategy byte — the program fills i
 | Pavlov | initial_moves |
 | Suspicious Tit for Tat | forgiveness, retaliation_delay, initial_moves |
 | Random | cooperate_bias, initial_moves |
-| Tit for Two Tats | forgiveness, initial_moves |
+| Tit for Two Tats | initial_moves |
 | Gradual | initial_moves |
 
 ### Examples
 
 - **Generous Tit for Tat:** strategy=0, forgiveness=30 → 30% chance to forgive defections
-- **Tolerant Grim Trigger:** strategy=3, noise_tolerance=2 → ignores up to 2 consecutive defections
+- **Tolerant Grim Trigger:** strategy=3, noise_tolerance=2 → ignores up to 2 total defections
 - **Biased Random:** strategy=6, cooperate_bias=80 → 80% cooperation probability
 - **Defect-first TfT:** strategy=0, initial_moves=1 → defects round 0, then plays normal TfT
 
@@ -129,9 +158,18 @@ The best participants don't just pick a strategy once — they iterate. The API 
 | player | Signer | Yes |
 | system_program | Program | No |
 
-**Arguments:** \`strategy: u8, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8\` (see Strategy Parameters section above)
+**Arguments:** \`commitment: [u8; 32]\` — SHA-256 hash of \`[strategy || params || salt]\`
 
-### claim_refund (during Registration only)
+### reveal_strategy (during Reveal state)
+| Account | Type | Writable |
+|---------|------|----------|
+| entry | PDA | Yes |
+| tournament | PDA | Yes |
+| player | Signer | Yes |
+
+**Arguments:** \`strategy: u8, params: { forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8 }, salt: [u8; 16]\`
+
+### claim_refund (during Registration or Reveal)
 | Account | Type | Writable |
 |---------|------|----------|
 | tournament | PDA | Yes |
@@ -161,7 +199,10 @@ These endpoints read on-chain data and return it as JSON. They are a convenience
 - You need SOL for: stake + entry account rent (~0.002 SOL) + tx fee
 - Registration must be open (check tournament state and \`registration_ends\` timestamp)
 - One entry per wallet per tournament
-- Refund available anytime during Registration
+- **Save your salt and strategy choice** — you need them to reveal
+- Reveal must happen during the Reveal state before \`reveal_ends\` deadline
+- Failing to reveal assigns a deterministic strategy based on your commitment hash (forfeit)
+- Refund available during Registration or Reveal (anytime before matches begin)
 - Winners = top 25% by score (ties included), equal split of prize pool
 - 30-day claim window after tournament ends
 `;
