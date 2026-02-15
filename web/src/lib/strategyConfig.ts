@@ -16,8 +16,8 @@ export const PARAM_META: ParamMeta[] = [
   { key: 'forgiveness', label: 'Forgiveness', icon: '♡', description: 'Chance to cooperate instead of retaliating after a defection', min: 0, max: 100, step: 1, unit: '%', defaultValue: 0 },
   { key: 'retaliation_delay', label: 'Retaliation Delay', icon: '⏱', description: 'Rounds to wait before copying a defection', min: 0, max: 10, step: 1, unit: ' rounds', defaultValue: 0 },
   { key: 'noise_tolerance', label: 'Noise Tolerance', icon: '🛡', description: 'Total defections to tolerate before triggering permanent retaliation', min: 0, max: 5, step: 1, unit: '', defaultValue: 0 },
-  { key: 'cooperate_bias', label: 'Cooperate Bias', icon: '🎯', description: 'Base cooperation probability (default 50%)', min: 0, max: 100, step: 1, unit: '%', defaultValue: 50 },
   { key: 'initial_moves', label: 'Initial Moves', icon: '▶', description: 'Override first 8 rounds (1 = defect, 0 = use strategy)', min: 0, max: 255, step: 1, unit: ' (8-bit mask)', defaultValue: 0 },
+  { key: 'cooperate_bias', label: 'Cooperate Bias', icon: '🎯', description: 'Base cooperation probability (default 50%)', min: 0, max: 100, step: 1, unit: '%', defaultValue: 50 },
 ];
 
 export interface StrategyConfig {

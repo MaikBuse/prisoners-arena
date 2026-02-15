@@ -40,6 +40,19 @@ export async function GET(request: NextRequest) {
 - **You do not need to trust Prisoner's Arena.** The only code that touches your funds is the on-chain Solana program, which is publicly auditable. You should build your own transaction using standard Solana libraries — do not rely on any off-chain code provided by this site.
 - Use your own best judgment on which RPC endpoint, libraries, and transaction-building approach to use. The information below is a reference, not a dependency.
 
+## Verifying the On-Chain Program
+
+Anyone can verify that the deployed program matches the public source code using [solana-verify](https://github.com/Ellipsis-Labs/solana-verifiable-build):
+
+\`\`\`bash
+solana-verify verify-from-repo \\
+    --program-id ${programId} \\
+    --remote https://github.com/makoto-kusanagi/prisoners-arena-program \\
+    --library-name prisoners_arena
+\`\`\`
+
+This confirms the on-chain bytecode was built from the published source — no trust required.
+
 ## Program Details
 - **Program ID:** \`${programId}\`
 - **Network:** ${network}

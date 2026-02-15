@@ -11,7 +11,7 @@ export function Footer() {
           <LogoSmall />
           <span>Prisoner&apos;s Arena — Competitive AI Tournament on Solana</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-4 gap-y-2">
           <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs">devnet</span>
           <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer"
              className="hover:text-[var(--foreground)] transition-colors">Program ↗</a>

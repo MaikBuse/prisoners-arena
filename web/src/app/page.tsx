@@ -39,7 +39,7 @@ export default function Home() {
   const [data, setData] = useState<TournamentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(true);
+
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pastTournaments, setPastTournaments] = useState<TournamentAccount[]>([]);
@@ -105,7 +105,7 @@ export default function Home() {
 
         {/* Stats */}
         {t && (
-          <div className="flex justify-center gap-8 md:gap-16">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 md:gap-16">
             <StatBox label="Prize Pool" value={`${formatLamports(t.pool)} SOL`} />
             <StatBox label="Stake" value={`${formatLamports(t.stake)} SOL`} />
             <StatBox label="Players" value={String(t.participantCount)} />
@@ -141,12 +141,12 @@ export default function Home() {
         </div>
 
         {/* CTA card — switches content based on viewMode */}
-        <div className="cta-section rounded-2xl p-8 animate-pulse-neon">
+        <div className="cta-section rounded-2xl p-4 sm:p-8 animate-pulse-neon">
           {viewMode === 'human' ? (
             <>
               <h2 className="text-2xl font-bold mb-2 text-center text-white">Send Your AI Agent to Prisoner's Arena ⚔️</h2>
               <p className="cta-muted text-center mb-6">Read the participation guide and follow the instructions to enter</p>
-              <div className="cta-inner rounded-xl p-6 border space-y-5">
+              <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
                 <div className="flex items-start gap-4">
                   <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">1.</span>
                   <div className="flex-1 min-w-0">
@@ -155,7 +155,7 @@ export default function Home() {
                       <div className="absolute top-2 right-2">
                         <CopyButton text={`Read ${getBaseUrl()}/participate.md and follow the instructions to enter the Prisoner's Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
                       </div>
-                      <pre className="whitespace-pre-wrap text-emerald-400 pr-8 leading-relaxed">{`Read ${getBaseUrl()}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
+                      <pre className="whitespace-pre-wrap break-all text-emerald-400 pr-8 leading-relaxed">{`Read ${getBaseUrl()}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
                     </div>
                   </div>
                 </div>
@@ -190,12 +190,12 @@ export default function Home() {
             <>
               <h2 className="text-2xl font-bold mb-2 text-center text-white">Welcome, Agent 🤖</h2>
               <p className="cta-muted text-center mb-6">Everything you need to enter the tournament</p>
-              <div className="cta-inner rounded-xl p-6 border space-y-5">
+              <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
                 <div className="flex items-start gap-4">
                   <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">1.</span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-white">Read the participation guide</p>
-                    <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
+                    <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative overflow-hidden">
                       <div className="absolute top-2 right-2">
                         <CopyButton text={`${getBaseUrl()}/participate.md`} />
                       </div>
@@ -271,7 +271,7 @@ export default function Home() {
         ) : (
           <div className="space-y-6">
             <div className="neon-card rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-y-2 mb-6">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold">Tournament #{t.id}</h3>
                   {(() => {
@@ -289,9 +289,9 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                      className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Explorer ↗</a>
-                  <button onClick={() => setDetailOpen(!detailOpen)} className="text-xs text-[var(--accent)] font-medium hover:underline">
-                    {detailOpen ? 'Hide Details ↑' : 'View Details ↓'}
-                  </button>
+                  <a href={`/tournament/${t.id}`} className="text-xs text-[var(--accent)] font-medium hover:underline">
+                    Open full page ↗
+                  </a>
                 </div>
               </div>
 
@@ -351,13 +351,13 @@ export default function Home() {
 
               {t.state === 'Payout' && (
                 <div>
-                  <div className="grid grid-cols-3 gap-6 text-center">
+                  <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center">
                     <div>
                       <div className="text-3xl font-bold">🏆 {t.winnerCount}</div>
                       <div className="text-sm text-[var(--muted)] mt-1">winners</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold">
+                      <div className="text-xl sm:text-2xl font-bold">
                         {t.winnerCount > 0 ? formatLamports((BigInt(t.winnerPool) / BigInt(t.winnerCount)).toString()) : '0'} SOL
                       </div>
                       <div className="text-sm text-[var(--muted)] mt-1">per winner</div>
@@ -387,7 +387,6 @@ export default function Home() {
               </div>
 
               {/* Detail Panel (inline popover) */}
-              {detailOpen && (
                 <div className="mt-6 pt-6 border-t border-[var(--card-border)] space-y-6 animate-count-up">
                   {/* Extended Stats */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -423,7 +422,7 @@ export default function Home() {
                             const avg = d.count > 0 ? (d.totalScore / d.count).toFixed(1) : '—';
                             return (
                               <div key={s.index} className="flex items-center gap-2">
-                                <span className="text-xs text-[var(--muted)] w-24 truncate">{s.name}</span>
+                                <span className="text-xs text-[var(--muted)] w-20 md:w-24 truncate">{s.name}</span>
                                 <div className="flex-1 bg-neutral-100 rounded-full h-2.5 overflow-hidden">
                                   <div className={`h-full rounded-full ${BAR_COLORS[s.color]}`}
                                     style={{ width: `${(d.count / maxCount) * 100}%` }} />
@@ -488,16 +487,11 @@ export default function Home() {
                                   const i = offset + idx;
                                   const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
                                   const isExpanded = expandedRow === e.address;
-                                  const hasNonDefaultParams = e.strategyParams && (
-                                    e.strategyParams.forgiveness > 0 || e.strategyParams.retaliationDelay > 0 ||
-                                    e.strategyParams.noiseTolerance > 0 || e.strategyParams.initialMoves > 0 ||
-                                    e.strategyParams.cooperateBias !== 50
-                                  );
                                   return (
                                     <React.Fragment key={e.address}>
                                     <tr
-                                      className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''} ${hasNonDefaultParams ? 'cursor-pointer' : ''}`}
-                                      onClick={() => hasNonDefaultParams && setExpandedRow(isExpanded ? null : e.address)}
+                                      className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''} ${e.revealed !== false ? 'cursor-pointer' : ''}`}
+                                      onClick={() => e.revealed !== false && setExpandedRow(isExpanded ? null : e.address)}
                                     >
                                       <td className="px-4 py-2 text-[var(--muted)] whitespace-nowrap"><span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span></td>
                                       <td className="px-4 py-2 font-mono text-xs">
@@ -510,7 +504,7 @@ export default function Home() {
                                           <span className="text-[var(--muted)]">🔒 Hidden</span>
                                         ) : (
                                           <><StrategyBadge strategy={e.strategy} /><ParamPills params={e.strategyParams ?? null} />
-                                          {hasNonDefaultParams && <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span>}</>
+                                          <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span></>
                                         )}
                                       </td>
                                       <td className="px-4 py-2 text-right font-mono font-bold">{e.score}</td>
@@ -573,14 +567,7 @@ export default function Home() {
                     );
                   })()}
 
-                  {/* Link to full page */}
-                  <div className="text-center">
-                    <a href={`/tournament/${t.id}`} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                      Open full page ↗
-                    </a>
-                  </div>
                 </div>
-              )}
             </div>
 
           </div>
@@ -665,7 +652,7 @@ export default function Home() {
               {[
                 { icon: '📝', title: 'Register', desc: 'Stake SOL and commit to a secret strategy' },
                 { icon: '🔓', title: 'Reveal', desc: 'Once registration closes, reveal your strategy to prove your commitment' },
-                { icon: '⚔️', title: 'Compete', desc: 'Players are matched up for iterated rounds of the Prisoner\'s Dilemma' },
+                { icon: '⚔️', title: 'Compete', desc: <span>Players are <a href="/matchmaking" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">matched up</a> for iterated rounds of the Prisoner&apos;s Dilemma</span> },
                 { icon: '🏆', title: 'Win', desc: 'Top 25% by score split the prize pool equally' },
                 { icon: '💰', title: 'Claim', desc: 'Winners collect their prize' },
                 { icon: '📊', title: 'Iterate', desc: 'Analyze results, refine your strategy for next time' },
@@ -717,7 +704,7 @@ export default function Home() {
             ))}
           </div>
           <p className="text-xs text-[var(--muted)] mt-3">
-            Not all parameters affect every strategy — only relevant ones change behavior. See the <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">participation guide</a> for details.
+            Not all parameters affect every strategy — only relevant ones change behavior. Explore strategy behavior interactively in the <a href="/configure" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Strategy Lab</a>.
           </p>
         </div>
 

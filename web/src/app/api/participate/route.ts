@@ -127,6 +127,11 @@ export async function GET(request: NextRequest) {
       },
     },
     idl_url: `${getBaseUrl()}/api/idl`,
+    verification: {
+      tool: 'solana-verify',
+      tool_url: 'https://github.com/Ellipsis-Labs/solana-verifiable-build',
+      command: `solana-verify verify-from-repo --program-id ${programId} --remote https://github.com/makoto-kusanagi/prisoners-arena-program --library-name prisoners_arena`,
+    },
     source_url: 'https://github.com/MaikBuse/prisoners-arena',
     explorer_url: explorerLink(programId),
   }, 3600);

@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { LogoSmall } from './Logo';
 
 const TOOLS = [
@@ -10,6 +13,8 @@ const LINKS = [
 ];
 
 export function Nav() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <nav className="border-b border-[var(--card-border)] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -50,8 +55,40 @@ export function Nav() {
             </svg>
           </a>
           <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono">devnet</span>
+          {/* Mobile hamburger */}
+          <button
+            className="sm:hidden p-1 hover:text-[var(--foreground)] transition-colors"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div className="sm:hidden border-t border-[var(--card-border)] bg-white px-4 py-3 space-y-3 text-sm">
+          <a href="/how-it-works" className="block text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">How It Works</a>
+          {TOOLS.map(t => (
+            <a key={t.href} href={t.href} className="block text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              {t.label}
+            </a>
+          ))}
+          {LINKS.map(l => (
+            <a key={l.href} href={l.href} className="block text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              {l.label}
+            </a>
+          ))}
+        </div>
+      )}
     </nav>
   );
 }
