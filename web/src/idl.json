@@ -98,7 +98,7 @@
     {
       "name": "claim_refund",
       "docs": [
-        "Claim refund during registration (allowed anytime)"
+        "Claim refund during registration or reveal phase"
       ],
       "discriminator": [
         15,
@@ -290,7 +290,7 @@
     {
       "name": "close_registration",
       "docs": [
-        "Close registration and transition to Running state (or extend deadline)"
+        "Close registration and transition to Reveal phase (or extend deadline)"
       ],
       "discriminator": [
         44,
@@ -351,14 +351,89 @@
           }
         },
         {
+          "name": "operator",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_reveal",
+      "docs": [
+        "Close the reveal phase and transition to Running"
+      ],
+      "discriminator": [
+        178,
+        16,
+        118,
+        36,
+        7,
+        42,
+        184,
+        51
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  117,
+                  114,
+                  110,
+                  97,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "tournament.id",
+                "account": "Tournament"
+              }
+            ]
+          }
+        },
+        {
           "name": "slot_hashes",
           "address": "SysvarS1otHashes111111111111111111111111111"
         },
         {
           "name": "refund_entry",
           "docs": [
-            "Optional: Entry to refund if odd participant count",
-            "Only needed when participant_count is odd"
+            "Optional: Entry to refund if odd active participant count"
           ],
           "optional": true
         },
@@ -457,7 +532,7 @@
     {
       "name": "enter_tournament",
       "docs": [
-        "Enter the current tournament"
+        "Enter the current tournament with a commitment hash"
       ],
       "discriminator": [
         19,
@@ -554,11 +629,12 @@
       ],
       "args": [
         {
-          "name": "strategy",
+          "name": "commitment",
           "type": {
-            "defined": {
-              "name": "Strategy"
-            }
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]
@@ -644,6 +720,62 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "forfeit_unrevealed",
+      "docs": [
+        "Forfeit an unrevealed entry after reveal deadline"
+      ],
+      "discriminator": [
+        106,
+        138,
+        130,
+        170,
+        105,
+        11,
+        59,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "entry",
+          "writable": true
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "operator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         }
       ],
       "args": []
@@ -752,6 +884,74 @@
         {
           "name": "matches_per_player",
           "type": "u16"
+        },
+        {
+          "name": "reveal_duration",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "reveal_strategy",
+      "docs": [
+        "Reveal strategy during Reveal phase"
+      ],
+      "discriminator": [
+        102,
+        15,
+        100,
+        245,
+        177,
+        6,
+        9,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "entry",
+          "writable": true
+        },
+        {
+          "name": "tournament",
+          "writable": true,
+          "relations": [
+            "entry"
+          ]
+        },
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "entry"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "strategy",
+          "type": {
+            "defined": {
+              "name": "Strategy"
+            }
+          }
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "StrategyParams"
+            }
+          }
+        },
+        {
+          "name": "salt",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
         }
       ]
     },
@@ -911,6 +1111,12 @@
           "name": "matches_per_player",
           "type": {
             "option": "u16"
+          }
+        },
+        {
+          "name": "reveal_duration",
+          "type": {
+            "option": "i64"
           }
         }
       ]
@@ -1112,6 +1318,46 @@
       "code": 12020,
       "name": "TournamentNotCloseable",
       "msg": "Tournament closure period not yet reached (30 days after payout)"
+    },
+    {
+      "code": 12021,
+      "name": "InvalidParams",
+      "msg": "Invalid strategy parameters"
+    },
+    {
+      "code": 12022,
+      "name": "CommitmentMismatch",
+      "msg": "Commitment does not match revealed strategy"
+    },
+    {
+      "code": 12023,
+      "name": "AlreadyRevealed",
+      "msg": "Strategy already revealed"
+    },
+    {
+      "code": 12024,
+      "name": "RevealPeriodEnded",
+      "msg": "Reveal period has ended"
+    },
+    {
+      "code": 12025,
+      "name": "RevealPeriodNotEnded",
+      "msg": "Reveal period has not ended yet"
+    },
+    {
+      "code": 12026,
+      "name": "UnprocessedForfeits",
+      "msg": "Unrevealed entries must be forfeited before closing reveal"
+    },
+    {
+      "code": 12027,
+      "name": "UnrevealedStrategy",
+      "msg": "Unrevealed strategy in active player slot"
+    },
+    {
+      "code": 12028,
+      "name": "MinParticipantsNotReached",
+      "msg": "Minimum participants not reached"
     }
   ],
   "types": [
@@ -1194,6 +1440,13 @@
             "type": "u32"
           },
           {
+            "name": "reveal_duration",
+            "docs": [
+              "Reveal duration in seconds (e.g., 172800 = 48h)"
+            ],
+            "type": "i64"
+          },
+          {
             "name": "bump",
             "docs": [
               "PDA bump seed"
@@ -1233,15 +1486,45 @@
             "type": "u32"
           },
           {
+            "name": "commitment",
+            "docs": [
+              "SHA256 commitment hash (NEW v1.7)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
             "name": "strategy",
             "docs": [
-              "Player's strategy"
+              "Player's strategy (zeroed until reveal)"
             ],
             "type": {
               "defined": {
                 "name": "Strategy"
               }
             }
+          },
+          {
+            "name": "strategy_params",
+            "docs": [
+              "Strategy parameters (zeroed until reveal)"
+            ],
+            "type": {
+              "defined": {
+                "name": "StrategyParams"
+              }
+            }
+          },
+          {
+            "name": "revealed",
+            "docs": [
+              "Has player revealed? (NEW v1.7)"
+            ],
+            "type": "bool"
           },
           {
             "name": "score",
@@ -1284,7 +1567,7 @@
     {
       "name": "Strategy",
       "docs": [
-        "Strategy types (parameters deferred to v2)"
+        "Strategy types"
       ],
       "type": {
         "kind": "enum",
@@ -1315,6 +1598,37 @@
           },
           {
             "name": "Gradual"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StrategyParams",
+      "docs": [
+        "Strategy parameters for fine-tuning behavior"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "forgiveness",
+            "type": "u8"
+          },
+          {
+            "name": "retaliation_delay",
+            "type": "u8"
+          },
+          {
+            "name": "noise_tolerance",
+            "type": "u8"
+          },
+          {
+            "name": "initial_moves",
+            "type": "u8"
+          },
+          {
+            "name": "cooperate_bias",
+            "type": "u8"
           }
         ]
       }
@@ -1465,6 +1779,41 @@
             "type": "u32"
           },
           {
+            "name": "round_tier",
+            "docs": [
+              "Round tier: 0 = standard (20-50 rounds), 1 = compressed (10-30 rounds)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "reveal_ends",
+            "docs": [
+              "Reveal phase deadline (Unix timestamp, set when registration closes)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "reveal_duration",
+            "docs": [
+              "Reveal duration in seconds (snapshotted from config)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "reveals_completed",
+            "docs": [
+              "Number of players who have revealed"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "forfeits",
+            "docs": [
+              "Number of players who forfeited (didn't reveal in time)"
+            ],
+            "type": "u32"
+          },
+          {
             "name": "players",
             "docs": [
               "Ordered list of player pubkeys (index = entry order, default = refunded)"
@@ -1490,6 +1839,19 @@
             "type": "bytes"
           },
           {
+            "name": "strategy_params",
+            "docs": [
+              "Strategy parameters indexed by entry.index"
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "StrategyParams"
+                }
+              }
+            }
+          },
+          {
             "name": "bump",
             "docs": [
               "PDA bump seed"
@@ -1509,6 +1871,9 @@
         "variants": [
           {
             "name": "Registration"
+          },
+          {
+            "name": "Reveal"
           },
           {
             "name": "Running"

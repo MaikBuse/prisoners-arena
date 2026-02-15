@@ -60,6 +60,7 @@ export default function MatchmakingPage() {
       <Nav />
 
       <div className="max-w-4xl mx-auto px-4 py-12">
+        <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
         <h1 className="text-3xl font-bold mb-2">Matchmaking Calculator</h1>
         <p className="text-[var(--muted)] mb-8">
           Explore how tournament size affects matches per player, rounds per match, and total games.
@@ -201,7 +202,7 @@ export default function MatchmakingPage() {
       {/* Footer */}
       <footer className="border-t border-[var(--card-border)] bg-white py-8 mt-12">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between text-xs text-[var(--muted)]">
-          <span>Prisoner's Arena — On-chain game theory on Solana</span>
+          <span>Prisoner's Arena — Competitive AI Tournament on Solana</span>
           <div className="flex items-center gap-4">
             <a href="/" className="hover:text-[var(--foreground)] transition-colors">Home</a>
             <a href="/participate.md" className="hover:text-[var(--foreground)] transition-colors">Participate</a>

@@ -1,44 +1,52 @@
 'use client';
 import { useState } from 'react';
 import { CopyButton } from './CopyButton';
-import { CLI_KEYS, DEFAULT_PARAMS, type ParamValues } from '@/lib/strategyConfig';
+import { CLI_KEYS, type ParamValues } from '@/lib/strategyConfig';
 
 interface Props {
   strategy: number;
   params: ParamValues;
 }
 
-const TABS = ['CLI Command', 'Instruction Bytes', 'TypeScript'] as const;
+const TABS = ['Commitment', 'Reveal Data', 'TypeScript'] as const;
 
 export function ConfigOutput({ strategy, params }: Props) {
-  const [tab, setTab] = useState<(typeof TABS)[number]>('CLI Command');
+  const [tab, setTab] = useState<(typeof TABS)[number]>('TypeScript');
 
   const cliKey = CLI_KEYS[strategy] || 'unknown';
 
-  // Build CLI flags (only non-default)
-  const flags: string[] = [];
-  if (params.forgiveness !== DEFAULT_PARAMS.forgiveness) flags.push(`--forgiveness ${params.forgiveness}`);
-  if (params.retaliation_delay !== DEFAULT_PARAMS.retaliation_delay) flags.push(`--retaliation-delay ${params.retaliation_delay}`);
-  if (params.noise_tolerance !== DEFAULT_PARAMS.noise_tolerance) flags.push(`--noise-tolerance ${params.noise_tolerance}`);
-  if (params.initial_moves !== DEFAULT_PARAMS.initial_moves) flags.push(`--initial-moves 0x${params.initial_moves.toString(16).padStart(2, '0')}`);
-  if (params.cooperate_bias !== DEFAULT_PARAMS.cooperate_bias) flags.push(`--cooperate-bias ${params.cooperate_bias}`);
+  const preimageBytes = [strategy, params.forgiveness, params.retaliation_delay, params.noise_tolerance, params.initial_moves, params.cooperate_bias];
+  const preimageHex = preimageBytes.map(b => `0x${b.toString(16).padStart(2, '0')}`).join(', ');
 
-  const cli = `arena enter <WALLET_PATH> ${cliKey}${flags.length ? ' ' + flags.join(' ') : ''}`;
+  const commitmentStr = `// Commitment preimage (6 bytes + 16-byte salt):
+[${preimageHex}, ...salt(16 bytes)]
 
-  const bytes = [strategy, params.forgiveness, params.retaliation_delay, params.noise_tolerance, params.initial_moves, params.cooperate_bias];
-  const hex = bytes.map(b => `0x${b.toString(16).padStart(2, '0')}`).join(', ');
-  const bytesStr = `[${hex}]`;
+// commitment = SHA256(preimage) → 32 bytes
+// Pass commitment to enter_tournament`;
 
-  const tsSnippet = `Buffer.from([
-  ${strategy},    // strategy: ${cliKey}
-  ${params.forgiveness},    // forgiveness
-  ${params.retaliation_delay},    // retaliation_delay
-  ${params.noise_tolerance},    // noise_tolerance
-  ${params.initial_moves},    // initial_moves
-  ${params.cooperate_bias},   // cooperate_bias
-])`;
+  const revealStr = `// reveal_strategy instruction data:
+strategy: ${strategy}  // ${cliKey}
+params: { forgiveness: ${params.forgiveness}, retaliation_delay: ${params.retaliation_delay}, noise_tolerance: ${params.noise_tolerance}, initial_moves: ${params.initial_moves}, cooperate_bias: ${params.cooperate_bias} }
+salt: <your 16-byte salt>`;
 
-  const content = tab === 'CLI Command' ? cli : tab === 'Instruction Bytes' ? bytesStr : tsSnippet;
+  const tsSnippet = `import { createHash, randomBytes } from 'crypto';
+
+// 1. Choose strategy & params
+const strategy = ${strategy}; // ${cliKey}
+const params = [${params.forgiveness}, ${params.retaliation_delay}, ${params.noise_tolerance}, ${params.initial_moves}, ${params.cooperate_bias}];
+// [forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias]
+
+// 2. Generate salt (save this!)
+const salt = randomBytes(16);
+
+// 3. Compute commitment for enter_tournament
+const preimage = Buffer.from([strategy, ...params, ...salt]);
+const commitment = createHash('sha256').update(preimage).digest();
+
+// 4. Reveal data for reveal_strategy (same values)
+const revealData = { strategy, params, salt };`;
+
+  const content = tab === 'Commitment' ? commitmentStr : tab === 'Reveal Data' ? revealStr : tsSnippet;
 
   return (
     <div className="space-y-2">

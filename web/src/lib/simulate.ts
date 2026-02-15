@@ -44,7 +44,7 @@ export class SeededRng {
   }
 
   nextPercent(): number {
-    return this.nextU32() % 101;
+    return this.nextU32() % 100;
   }
 
   nextRange(max: number): number {
@@ -83,9 +83,24 @@ export function executeStrategy(
     case 0: { // TitForTat
       if (round === 0) {
         baseMove = 'C';
+      } else if (opponentHistory[round - 1] === 'C') {
+        baseMove = 'C';
       } else {
-        const lookback = Math.max(0, round - 1 - params.retaliation_delay);
-        baseMove = opponentHistory[lookback] === 'D' ? 'D' : 'C';
+        // Opponent's last move was Defect — check retaliation delay
+        if (params.retaliation_delay > 0) {
+          let lastDefectPos = -1;
+          for (let i = opponentHistory.length - 1; i >= 0; i--) {
+            if (opponentHistory[i] === 'D') { lastDefectPos = i; break; }
+          }
+          if (lastDefectPos >= 0) {
+            const roundsSince = opponentHistory.length - 1 - lastDefectPos;
+            if (roundsSince < params.retaliation_delay) {
+              baseMove = 'C';
+              break;
+            }
+          }
+        }
+        baseMove = 'D';
       }
       break;
     }
@@ -96,23 +111,8 @@ export function executeStrategy(
       baseMove = 'C';
       break;
     case 3: { // GrimTrigger
-      let consecutiveDefections = 0;
-      for (let i = opponentHistory.length - 1; i >= 0; i--) {
-        if (opponentHistory[i] === 'D') consecutiveDefections++;
-        else break;
-      }
-      // Also check total — grim triggers once threshold met
-      let triggered = false;
-      let streak = 0;
-      for (let i = 0; i < opponentHistory.length; i++) {
-        if (opponentHistory[i] === 'D') {
-          streak++;
-          if (streak > params.noise_tolerance) { triggered = true; break; }
-        } else {
-          streak = 0;
-        }
-      }
-      baseMove = triggered ? 'D' : 'C';
+      const totalDefections = opponentHistory.filter(m => m === 'D').length;
+      baseMove = totalDefections > params.noise_tolerance ? 'D' : 'C';
       break;
     }
     case 4: { // Pavlov
@@ -129,9 +129,24 @@ export function executeStrategy(
     case 5: { // SuspiciousTfT
       if (round === 0) {
         baseMove = 'D';
+      } else if (opponentHistory[round - 1] === 'C') {
+        baseMove = 'C';
       } else {
-        const lookback = Math.max(0, round - 1 - params.retaliation_delay);
-        baseMove = opponentHistory[lookback] === 'D' ? 'D' : 'C';
+        // Opponent's last move was Defect — check retaliation delay
+        if (params.retaliation_delay > 0) {
+          let lastDefectPos = -1;
+          for (let i = opponentHistory.length - 1; i >= 0; i--) {
+            if (opponentHistory[i] === 'D') { lastDefectPos = i; break; }
+          }
+          if (lastDefectPos >= 0) {
+            const roundsSince = opponentHistory.length - 1 - lastDefectPos;
+            if (roundsSince < params.retaliation_delay) {
+              baseMove = 'C';
+              break;
+            }
+          }
+        }
+        baseMove = 'D';
       }
       break;
     }
@@ -159,7 +174,7 @@ export function executeStrategy(
   }
 
   // Forgiveness override: if base is D and forgiveness > 0, chance to cooperate
-  if (baseMove === 'D' && params.forgiveness > 0 && strategy !== 1) {
+  if (baseMove === 'D' && params.forgiveness > 0 && (strategy === 0 || strategy === 5)) {
     if (rng.nextPercent() < params.forgiveness) {
       return 'C';
     }

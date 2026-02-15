@@ -57,11 +57,11 @@ export function ParamPills({ params }: { params: StrategyParams | null }) {
 /** Full params detail panel for expandable rows */
 export function ParamsDetail({ params }: { params: StrategyParams }) {
   const rows: { label: string; icon: string; value: number; unit: string; description: string; isDefault: boolean }[] = [
-    { label: 'Cooperate Bias', icon: '🎯', value: params.cooperateBias, unit: '%', description: 'Base cooperation probability for Random strategy', isDefault: params.cooperateBias === 50 },
-    { label: 'Forgiveness', icon: '♡', value: params.forgiveness, unit: '%', description: 'Chance to cooperate after opponent defects', isDefault: params.forgiveness === 0 },
-    { label: 'Retaliation Delay', icon: '⏱', value: params.retaliationDelay, unit: ' rounds', description: 'Rounds to wait before retaliating', isDefault: params.retaliationDelay === 0 },
-    { label: 'Noise Tolerance', icon: '🛡', value: params.noiseTolerance, unit: '', description: 'Consecutive defections before triggering', isDefault: params.noiseTolerance === 0 },
-    { label: 'Initial Moves', icon: '▶', value: params.initialMoves, unit: '', description: 'Bitmask of opening moves', isDefault: params.initialMoves === 0 },
+    { label: 'Cooperate Bias', icon: '🎯', value: params.cooperateBias, unit: '%', description: 'Base cooperation probability (default 50%)', isDefault: params.cooperateBias === 50 },
+    { label: 'Forgiveness', icon: '♡', value: params.forgiveness, unit: '%', description: 'Chance to cooperate instead of retaliating after a defection', isDefault: params.forgiveness === 0 },
+    { label: 'Retaliation Delay', icon: '⏱', value: params.retaliationDelay, unit: ' rounds', description: 'Rounds to wait before copying a defection', isDefault: params.retaliationDelay === 0 },
+    { label: 'Noise Tolerance', icon: '🛡', value: params.noiseTolerance, unit: '', description: 'Total defections to tolerate before triggering permanent retaliation', isDefault: params.noiseTolerance === 0 },
+    { label: 'Initial Moves', icon: '▶', value: params.initialMoves, unit: '', description: 'Override first 8 rounds (1 = defect, 0 = use strategy)', isDefault: params.initialMoves === 0 },
   ];
 
   return (
