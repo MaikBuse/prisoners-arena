@@ -4,8 +4,8 @@
 
 use anyhow::{bail, Result};
 use solana_client::rpc_client::RpcClient;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signature::Keypair,
@@ -16,7 +16,7 @@ use solana_sdk::{
 use solana_system_interface::program as system_program;
 use tracing::{info, warn};
 
-use crate::state::{self, Config, Tournament, TournamentState};
+use crate::state::{self, Config, Tournament};
 
 /// Number of matches to run per transaction
 const MATCHES_PER_TX: u32 = 5;
@@ -60,17 +60,7 @@ pub fn close_registration(
     };
     
     send_transaction(client, &[instruction], operator)?;
-
-    // Re-fetch to see what the contract actually did
-    let updated = state::fetch_tournament(client, program_id, tournament.id)?;
-    if updated.state == TournamentState::Reveal {
-        info!("Registration closed for tournament {} → Reveal phase", tournament.id);
-    } else {
-        info!(
-            "Tournament {} registration extended to {}",
-            tournament.id, updated.registration_ends
-        );
-    }
+    info!("Registration closed for tournament {} → Reveal phase", tournament.id);
 
     Ok(())
 }
@@ -101,7 +91,7 @@ pub fn forfeit_unrevealed(
     };
     
     send_transaction(client, &[instruction], operator)?;
-    info!("Forfeited unrevealed entry for player {}", entry_player);
+    info!("Assigned random strategy to unrevealed entry for player {}", entry_player);
     
     Ok(())
 }
@@ -114,28 +104,28 @@ pub fn forfeit_all_unrevealed(
     operator: &Keypair,
 ) -> Result<u32> {
     let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
-    let mut forfeited = 0u32;
-    
+    let mut assigned = 0u32;
+
     for player in &tournament.players {
         if *player == Pubkey::default() {
-            continue; // Already refunded/forfeited
+            continue; // Already refunded
         }
-        
+
         // Check if entry exists and is unrevealed
         match state::fetch_entry(client, program_id, &tournament_pda, player) {
             Ok(entry) => {
                 if !entry.revealed {
                     match forfeit_unrevealed(client, program_id, tournament, player, operator) {
-                        Ok(_) => forfeited += 1,
-                        Err(e) => warn!("Failed to forfeit entry for {}: {}", player, e),
+                        Ok(_) => assigned += 1,
+                        Err(e) => warn!("Failed to assign strategy for {}: {}", player, e),
                     }
                 }
             }
             Err(_) => continue, // Entry doesn't exist
         }
     }
-    
-    Ok(forfeited)
+
+    Ok(assigned)
 }
 
 /// Close reveal phase and transition to Running

@@ -14,6 +14,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use serde::Deserialize;
 use solana_client::rpc_client::RpcClient;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, Keypair, Signer};
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
@@ -161,7 +162,10 @@ async fn main() -> Result<()> {
         warn!("DRY RUN MODE - no transactions will be sent");
     }
 
-    let client = RpcClient::new(rpc_url);
+    let client = RpcClient::new_with_commitment(
+        rpc_url,
+        CommitmentConfig::confirmed(),
+    );
 
     let db_path = args.config.parent().unwrap_or(Path::new(".")).join("operator.db");
     let db = db::open(&db_path)?;
@@ -317,16 +321,16 @@ async fn run_cycle(
             if now > tournament.reveal_ends {
                 // Reveal deadline passed — forfeit unrevealed entries, then close reveal
                 if tournament.reveals_completed < active_count {
-                    info!("Forfeiting unrevealed entries...");
+                    info!("Assigning random strategies to unrevealed entries...");
                     if !dry_run {
-                        let forfeited = actions::forfeit_all_unrevealed(client, program_id, &tournament, operator)?;
-                        info!("Forfeited {} entries", forfeited);
+                        let assigned = actions::forfeit_all_unrevealed(client, program_id, &tournament, operator)?;
+                        info!("Assigned random strategies to {} entries", assigned);
                     }
                     return Ok(true);
                 }
-                
-                // All forfeits processed — close reveal
-                info!("All forfeits processed, closing reveal → Running");
+
+                // All unrevealed entries processed — close reveal
+                info!("All unrevealed entries processed, closing reveal → Running");
                 if !dry_run {
                     actions::close_reveal(client, program_id, &tournament, operator, &config)?;
                 }

@@ -1548,7 +1548,7 @@ describe("prisoners-arena", () => {
       }
     });
 
-    it("forfeit unrevealed player succeeds after deadline", async () => {
+    it("forfeit unrevealed player assigns random strategy after deadline", async () => {
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[1].publicKey);
       await program.methods
         .forfeitUnrevealed()
@@ -1559,16 +1559,21 @@ describe("prisoners-arena", () => {
         .signers([operator])
         .rpc();
 
+      // Entry still exists and is now revealed with an auto-assigned strategy
+      const entry = await program.account.entry.fetch(eKey);
+      expect(entry.revealed).to.equal(true);
+
       const t = await program.account.tournament.fetch(crTournamentKey);
-      expect(t.forfeits).to.be.greaterThan(0);
+      expect(t.forfeits).to.equal(0);
+      expect(t.revealsCompleted).to.equal(2);
+      // Player still in tournament
+      expect(t.players[1].toString()).to.equal(crPlayers[1].publicKey.toString());
+      expect(t.strategies[1]).to.not.equal(255);
     });
 
-    it("close_reveal with 1 active player refunds odd player and transitions to Running with 0 matches", async () => {
-      // After forfeit, only 1 revealed player remains (odd count).
-      // close_reveal refunds the last active player, leaving 0 active,
-      // then transitions to Running with 0 matches for finalization.
-      const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
-
+    it("close_reveal with 2 active players transitions to Running with matches", async () => {
+      // After auto-assign, both players are revealed (even count).
+      // close_reveal transitions directly to Running with real matches.
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           await program.methods
@@ -1576,7 +1581,7 @@ describe("prisoners-arena", () => {
             .accounts({
               config: configKey, tournament: crTournamentKey,
               slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
-              refundEntry: eKey, refundPlayer: crPlayers[0].publicKey,
+              refundEntry: null, refundPlayer: null,
               operator: operator.publicKey, systemProgram: SystemProgram.programId,
             })
             .signers([operator])
@@ -1593,8 +1598,7 @@ describe("prisoners-arena", () => {
 
       const t = await program.account.tournament.fetch(crTournamentKey);
       expect(t.state).to.deep.equal({ running: {} });
-      expect(t.matchesTotal).to.equal(0);
-      expect(t.matchesCompleted).to.equal(0);
+      expect(t.matchesTotal).to.be.greaterThan(0);
     });
   });
 
@@ -1808,28 +1812,31 @@ describe("prisoners-arena", () => {
   });
 
   // ================================================================
-  // 16. Zero Active Players — Full Finalization
+  // 16. T2 Full Lifecycle After Auto-Assign
   // ================================================================
-  describe("Zero Active Players — Full Finalization", () => {
-    // T2 should be in Running state with 0 matches after the commit-reveal
-    // tests (close_reveal refunded the last odd player → 0 active → Running).
+  describe("T2 Full Lifecycle After Auto-Assign", () => {
+    // T2 is in Running state with real matches after the commit-reveal
+    // tests (one player revealed manually, one got auto-assigned strategy).
     let t2Key: PublicKey;
 
     before(async () => {
       [t2Key] = deriveT(pid, 2);
     });
 
-    it("T2 is in Running state with 0 matches after all players forfeited/refunded", async () => {
+    it("T2 is in Running state with real matches", async () => {
       const t2 = await program.account.tournament.fetch(t2Key);
       expect(t2.state).to.deep.equal({ running: {} });
-      expect(t2.matchesTotal).to.equal(0);
-      expect(t2.matchesCompleted).to.equal(0);
+      expect(t2.matchesTotal).to.be.greaterThan(0);
     });
 
-    it("finalize_tournament with 0 active players sweeps pool to fees and creates T3", async () => {
+    it("runs all matches for T2", async () => {
+      const t2 = await runAllMatches(t2Key);
+      expect(t2.matchesCompleted).to.equal(t2.matchesTotal);
+      expect(t2.scores.some((s: number) => s > 0)).to.be.true;
+    });
+
+    it("finalize_tournament creates T3 with winners", async () => {
       const [t3Key] = deriveT(pid, 3);
-      const cfgBefore = await program.account.config.fetch(configKey);
-      const feesBefore = cfgBefore.accumulatedFees.toNumber();
 
       await program.methods
         .finalizeTournament()
@@ -1842,29 +1849,29 @@ describe("prisoners-arena", () => {
 
       const t2 = await program.account.tournament.fetch(t2Key);
       expect(t2.state).to.deep.equal({ payout: {} });
-      expect(t2.winnerCount).to.equal(0);
-      expect(t2.winnerPool.toNumber()).to.equal(0);
-      expect(t2.minWinningScore).to.equal(0);
+      expect(t2.winnerCount).to.be.greaterThan(0);
 
-      // Forfeited stakes swept to accumulated fees
-      const cfgAfter = await program.account.config.fetch(configKey);
-      expect(cfgAfter.accumulatedFees.toNumber()).to.be.greaterThanOrEqual(feesBefore);
-      expect(cfgAfter.currentTournamentId).to.equal(3);
+      const cfg = await program.account.config.fetch(configKey);
+      expect(cfg.currentTournamentId).to.equal(3);
 
-      // T3 created in Registration state
       const t3 = await program.account.tournament.fetch(t3Key);
       expect(t3.id).to.equal(3);
       expect(t3.state).to.deep.equal({ registration: {} });
     });
 
-    it("close_tournament succeeds on zero-winner tournament after expiry", async () => {
+    it("close expired entries and close tournament after expiry", async () => {
       // Wait for claim/closure expiry (2 seconds with testing feature)
       await sleep(3000);
 
-      // Player 6's entry still exists (close_reveal refund doesn't close it)
-      const refundedPlayer = players[6];
-      const [eKey] = deriveE(pid, t2Key, refundedPlayer.publicKey);
-      try {
+      const t2 = await program.account.tournament.fetch(t2Key);
+      for (let i = 0; i < t2.players.length; i++) {
+        if (t2.players[i].toString() === PublicKey.default.toString()) continue;
+        const [eKey] = deriveE(pid, t2Key, t2.players[i]);
+        try {
+          await program.account.entry.fetch(eKey);
+        } catch {
+          continue; // Entry already closed
+        }
         await program.methods
           .closeExpiredEntry()
           .accounts({
@@ -1873,12 +1880,10 @@ describe("prisoners-arena", () => {
           })
           .signers([operator])
           .rpc();
-      } catch {
-        // Entry might already be closed
       }
 
-      const t2 = await program.account.tournament.fetch(t2Key);
-      expect(t2.entriesRemaining).to.equal(0);
+      const t2After = await program.account.tournament.fetch(t2Key);
+      expect(t2After.entriesRemaining).to.equal(0);
 
       await program.methods
         .closeTournament()
