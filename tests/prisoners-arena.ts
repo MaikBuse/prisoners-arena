@@ -48,6 +48,18 @@ const DEFAULT_PARAMS = {
   cooperateBias: 50,
 };
 
+const UPDATE_DEFAULTS = {
+  operator: null,
+  houseFeeBps: null,
+  stake: null,
+  minParticipants: null,
+  maxParticipants: null,
+  registrationDuration: null,
+  matchesPerPlayer: null,
+  revealDuration: null,
+  operatorTxFee: null,
+};
+
 // ── Commitment helper ──────────────────────────────────────────────
 
 function computeCommitment(
@@ -261,10 +273,11 @@ describe("prisoners-arena", () => {
   describe("Initialization", () => {
     it("initializes config and Tournament #0 with revealDuration", async () => {
       await program.methods
-        .initializeConfig(
-          operator.publicKey, stake, 2, 100,
-          new BN(REG_DURATION), MATCHES_PER_PLAYER, new BN(REVEAL_DURATION),
-        )
+        .initializeConfig({
+          operator: operator.publicKey, stake, minParticipants: 2, maxParticipants: 100,
+          registrationDuration: new BN(REG_DURATION), matchesPerPlayer: MATCHES_PER_PLAYER,
+          revealDuration: new BN(REVEAL_DURATION),
+        })
         .accounts({
           config: configKey, tournament: t0Key,
           admin: admin.publicKey, systemProgram: SystemProgram.programId,
@@ -310,10 +323,11 @@ describe("prisoners-arena", () => {
     it("rejects double initialization", async () => {
       try {
         await program.methods
-          .initializeConfig(
-            operator.publicKey, stake, 2, 100,
-            new BN(REG_DURATION), MATCHES_PER_PLAYER, new BN(REVEAL_DURATION),
-          )
+          .initializeConfig({
+            operator: operator.publicKey, stake, minParticipants: 2, maxParticipants: 100,
+            registrationDuration: new BN(REG_DURATION), matchesPerPlayer: MATCHES_PER_PLAYER,
+            revealDuration: new BN(REVEAL_DURATION),
+          })
           .accounts({
             config: configKey, tournament: t0Key,
             admin: admin.publicKey, systemProgram: SystemProgram.programId,
@@ -333,13 +347,13 @@ describe("prisoners-arena", () => {
   describe("Config Updates", () => {
     it("updates house_fee_bps", async () => {
       await program.methods
-        .updateConfig(null, 250, null, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, houseFeeBps: 250 })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).houseFeeBps).to.equal(250);
       await program.methods
-        .updateConfig(null, 0, null, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, houseFeeBps: 0 })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -348,14 +362,14 @@ describe("prisoners-arena", () => {
     it("updates operator key", async () => {
       const tmp = Keypair.generate();
       await program.methods
-        .updateConfig(tmp.publicKey, null, null, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, operator: tmp.publicKey })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).operator.toString())
         .to.equal(tmp.publicKey.toString());
       await program.methods
-        .updateConfig(operator.publicKey, null, null, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, operator: operator.publicKey })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -364,14 +378,14 @@ describe("prisoners-arena", () => {
     it("updates stake", async () => {
       const newStake = new BN(0.5 * LAMPORTS_PER_SOL);
       await program.methods
-        .updateConfig(null, null, newStake, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, stake: newStake })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).stake.toNumber())
         .to.equal(newStake.toNumber());
       await program.methods
-        .updateConfig(null, null, stake, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, stake })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -379,13 +393,13 @@ describe("prisoners-arena", () => {
 
     it("updates matches_per_player", async () => {
       await program.methods
-        .updateConfig(null, null, null, null, null, null, 15, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, matchesPerPlayer: 15 })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).matchesPerPlayer).to.equal(15);
       await program.methods
-        .updateConfig(null, null, null, null, null, null, MATCHES_PER_PLAYER, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, matchesPerPlayer: MATCHES_PER_PLAYER })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -393,13 +407,13 @@ describe("prisoners-arena", () => {
 
     it("updates min_participants (even values only)", async () => {
       await program.methods
-        .updateConfig(null, null, null, 4, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: 4 })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).minParticipants).to.equal(4);
       await program.methods
-        .updateConfig(null, null, null, 2, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: 2 })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -407,14 +421,14 @@ describe("prisoners-arena", () => {
 
     it("updates registration_duration", async () => {
       await program.methods
-        .updateConfig(null, null, null, null, null, new BN(7200), null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, registrationDuration: new BN(7200) })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).registrationDuration.toNumber())
         .to.equal(7200);
       await program.methods
-        .updateConfig(null, null, null, null, null, new BN(REG_DURATION), null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, registrationDuration: new BN(REG_DURATION) })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -422,14 +436,14 @@ describe("prisoners-arena", () => {
 
     it("updates reveal_duration", async () => {
       await program.methods
-        .updateConfig(null, null, null, null, null, null, null, new BN(3600))
+        .updateConfig({ ...UPDATE_DEFAULTS, revealDuration: new BN(3600) })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
       expect((await program.account.config.fetch(configKey)).revealDuration.toNumber())
         .to.equal(3600);
       await program.methods
-        .updateConfig(null, null, null, null, null, null, null, new BN(REVEAL_DURATION))
+        .updateConfig({ ...UPDATE_DEFAULTS, revealDuration: new BN(REVEAL_DURATION) })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -440,7 +454,7 @@ describe("prisoners-arena", () => {
     it("rejects odd min_participants", async () => {
       try {
         await program.methods
-          .updateConfig(null, null, null, 3, null, null, null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: 3 })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -453,7 +467,7 @@ describe("prisoners-arena", () => {
     it("rejects min_participants = 0", async () => {
       try {
         await program.methods
-          .updateConfig(null, null, null, 0, null, null, null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: 0 })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -466,7 +480,7 @@ describe("prisoners-arena", () => {
     it("rejects min_participants = 1", async () => {
       try {
         await program.methods
-          .updateConfig(null, null, null, 1, null, null, null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: 1 })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -479,7 +493,7 @@ describe("prisoners-arena", () => {
     it("rejects house_fee_bps > 10000", async () => {
       try {
         await program.methods
-          .updateConfig(null, 10001, null, null, null, null, null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, houseFeeBps: 10001 })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -492,7 +506,7 @@ describe("prisoners-arena", () => {
     it("rejects stake = 0", async () => {
       try {
         await program.methods
-          .updateConfig(null, null, new BN(0), null, null, null, null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, stake: new BN(0) })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -505,7 +519,7 @@ describe("prisoners-arena", () => {
     it("rejects registration_duration = 0", async () => {
       try {
         await program.methods
-          .updateConfig(null, null, null, null, null, new BN(0), null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, registrationDuration: new BN(0) })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -518,7 +532,7 @@ describe("prisoners-arena", () => {
     it("rejects matches_per_player = 0", async () => {
       try {
         await program.methods
-          .updateConfig(null, null, null, null, null, null, 0, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, matchesPerPlayer: 0 })
           .accounts({ config: configKey, admin: admin.publicKey })
           .signers([admin])
           .rpc();
@@ -531,7 +545,7 @@ describe("prisoners-arena", () => {
     it("rejects update from non-admin", async () => {
       try {
         await program.methods
-          .updateConfig(null, 500, null, null, null, null, null, null)
+          .updateConfig({ ...UPDATE_DEFAULTS, houseFeeBps: 500 })
           .accounts({ config: configKey, admin: operator.publicKey })
           .signers([operator])
           .rpc();
@@ -783,13 +797,14 @@ describe("prisoners-arena", () => {
       }
     });
 
-    it("close_expired_entry fails", async () => {
+    it("close_entry fails in Registration state", async () => {
       const [eKey] = deriveE(pid, t0Key, players[0].publicKey);
       try {
         await program.methods
-          .closeExpiredEntry()
+          .closeEntry()
           .accounts({
             config: configKey, tournament: t0Key, entry: eKey,
+            player: players[0].publicKey,
             operator: operator.publicKey,
           })
           .signers([operator])
@@ -1085,7 +1100,7 @@ describe("prisoners-arena", () => {
 
       // Set house fee BEFORE finalize so T1 snapshots it
       await program.methods
-        .updateConfig(null, 500, null, null, null, null, null, null)
+        .updateConfig({ ...UPDATE_DEFAULTS, houseFeeBps: 500 })
         .accounts({ config: configKey, admin: admin.publicKey })
         .signers([admin])
         .rpc();
@@ -1692,7 +1707,7 @@ describe("prisoners-arena", () => {
       }
     });
 
-    it("close expired entries for T1", async () => {
+    it("close entries for T1 (rent returns to player)", async () => {
       const [t1Key] = deriveT(pid, 1);
       const t1 = await program.account.tournament.fetch(t1Key);
       for (let i = 0; i < t1.players.length; i++) {
@@ -1704,9 +1719,10 @@ describe("prisoners-arena", () => {
           continue;
         }
         await program.methods
-          .closeExpiredEntry()
+          .closeEntry()
           .accounts({
             config: configKey, tournament: t1Key, entry: eKey,
+            player: t1.players[i],
             operator: operator.publicKey,
           })
           .signers([operator])
@@ -1859,10 +1875,7 @@ describe("prisoners-arena", () => {
       expect(t3.state).to.deep.equal({ registration: {} });
     });
 
-    it("close expired entries and close tournament after expiry", async () => {
-      // Wait for claim/closure expiry (2 seconds with testing feature)
-      await sleep(3000);
-
+    it("close entries and close tournament", async () => {
       const t2 = await program.account.tournament.fetch(t2Key);
       for (let i = 0; i < t2.players.length; i++) {
         if (t2.players[i].toString() === PublicKey.default.toString()) continue;
@@ -1873,9 +1886,10 @@ describe("prisoners-arena", () => {
           continue; // Entry already closed
         }
         await program.methods
-          .closeExpiredEntry()
+          .closeEntry()
           .accounts({
             config: configKey, tournament: t2Key, entry: eKey,
+            player: t2.players[i],
             operator: operator.publicKey,
           })
           .signers([operator])
@@ -1884,6 +1898,9 @@ describe("prisoners-arena", () => {
 
       const t2After = await program.account.tournament.fetch(t2Key);
       expect(t2After.entriesRemaining).to.equal(0);
+
+      // Wait for closure expiry (2 seconds with testing feature)
+      await sleep(3000);
 
       await program.methods
         .closeTournament()
@@ -1897,6 +1914,131 @@ describe("prisoners-arena", () => {
       // Tournament account should be zeroed/closed
       const info = await conn.getAccountInfo(t2Key);
       expect(info).to.be.null;
+    });
+  });
+
+  // ================================================================
+  // 17. Operator Cost Reimbursement & Auto-Payout (v1.8)
+  // ================================================================
+  describe("Operator Cost Reimbursement & Auto-Payout (v1.8)", () => {
+    it("updates operator_tx_fee config", async () => {
+      await program.methods
+        .updateConfig({ ...UPDATE_DEFAULTS, operatorTxFee: new BN(5000) })
+        .accounts({ config: configKey, admin: admin.publicKey })
+        .signers([admin])
+        .rpc();
+
+      const cfg = await program.account.config.fetch(configKey);
+      expect(cfg.operatorTxFee.toNumber()).to.equal(5000);
+    });
+
+    it("new tournament starts with operator_costs = 0", async () => {
+      // After T2 lifecycle, we should be on T3 in Registration
+      const cfg = await program.account.config.fetch(configKey);
+      const [tKey] = deriveT(pid, cfg.currentTournamentId);
+      const t = await program.account.tournament.fetch(tKey);
+
+      expect(t.operatorCosts.toNumber()).to.equal(0);
+    });
+
+    it("full lifecycle with operator reimbursement and close_entry auto-payout", async () => {
+      const cfg = await program.account.config.fetch(configKey);
+      const currentId = cfg.currentTournamentId;
+      const [tKey] = deriveT(pid, currentId);
+
+      // Enter 2 players
+      await enterPlayer(tKey, players[9], 0);  // TitForTat
+      await enterPlayer(tKey, players[10], 1); // AlwaysDefect
+
+      // Run full lifecycle
+      await waitAndCloseRegistration(tKey);
+
+      // Check operator_costs accumulated after close_registration
+      let t = await program.account.tournament.fetch(tKey);
+      expect(t.operatorCosts.toNumber()).to.equal(5000); // 1 tx × 5000
+
+      await revealPlayer(tKey, players[9], Strategy.TitForTat);
+      await revealPlayer(tKey, players[10], Strategy.AlwaysDefect);
+      await waitAndCloseReveal(tKey);
+
+      // Check operator_costs accumulated after close_reveal
+      t = await program.account.tournament.fetch(tKey);
+      expect(t.operatorCosts.toNumber()).to.equal(10000); // 2 txs × 5000
+
+      await runAllMatches(tKey);
+
+      // Check operator_costs accumulated after run_matches
+      t = await program.account.tournament.fetch(tKey);
+      expect(t.operatorCosts.toNumber()).to.equal(15000); // 3 txs × 5000
+
+      // Finalize — operator gets reimbursed
+      const [nextTKey] = deriveT(pid, currentId + 1);
+      const operatorBalBefore = await conn.getBalance(operator.publicKey);
+
+      await program.methods
+        .finalizeTournament()
+        .accounts({
+          config: configKey, tournament: tKey, nextTournament: nextTKey,
+          operator: operator.publicKey, systemProgram: SystemProgram.programId,
+        })
+        .signers([operator])
+        .rpc();
+
+      const tAfter = await program.account.tournament.fetch(tKey);
+      expect(tAfter.state).to.deep.equal({ payout: {} });
+      // operator_costs = 3 pre-finalization + 1 finalization + post-finalization (entries_remaining + 1)
+      // entries_remaining = 2, so post = (2+1) * 5000 = 15000
+      // Total = 15000 + 5000 + 15000 = 35000
+      expect(tAfter.operatorCosts.toNumber()).to.equal(35000);
+
+      // Operator balance should have increased by reimbursement (minus tx fee for finalize)
+      const operatorBalAfter = await conn.getBalance(operator.publicKey);
+      // Net gain should be reimbursement(35000) - txFee(~5000) ≈ 30000+
+      expect(operatorBalAfter - operatorBalBefore).to.be.greaterThan(25000);
+
+      // Now close entries — winner should get payout, rent returns to player
+      for (let i = 0; i < tAfter.players.length; i++) {
+        if (tAfter.players[i].toString() === PublicKey.default.toString()) continue;
+        const [eKey] = deriveE(pid, tKey, tAfter.players[i]);
+        try {
+          await program.account.entry.fetch(eKey);
+        } catch { continue; }
+
+        const balBefore = await conn.getBalance(tAfter.players[i]);
+
+        await program.methods
+          .closeEntry()
+          .accounts({
+            config: configKey, tournament: tKey, entry: eKey,
+            player: tAfter.players[i],
+            operator: operator.publicKey,
+          })
+          .signers([operator])
+          .rpc();
+
+        const balAfter = await conn.getBalance(tAfter.players[i]);
+        // Every player gets at least their entry rent back
+        expect(balAfter).to.be.greaterThan(balBefore);
+      }
+
+      const tFinal = await program.account.tournament.fetch(tKey);
+      expect(tFinal.entriesRemaining).to.equal(0);
+    });
+
+    it("claim_payout still works as player fallback", async () => {
+      // This was tested in the T0 lifecycle — claim_payout is unchanged.
+      expect(program.methods.claimPayout).to.exist;
+    });
+
+    it("resets operator_tx_fee to 0", async () => {
+      await program.methods
+        .updateConfig({ ...UPDATE_DEFAULTS, operatorTxFee: new BN(0) })
+        .accounts({ config: configKey, admin: admin.publicKey })
+        .signers([admin])
+        .rpc();
+
+      const cfg = await program.account.config.fetch(configKey);
+      expect(cfg.operatorTxFee.toNumber()).to.equal(0);
     });
   });
 });

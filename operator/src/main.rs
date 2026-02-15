@@ -32,9 +32,6 @@ use state::TournamentState;
 /// Minimum balance to keep running (0.1 SOL)
 const MIN_BALANCE: u64 = LAMPORTS_PER_SOL / 10;
 
-/// 30 days in seconds
-const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
-
 // --- Config file structs (mirrors cli/src/config.rs, operator only needs network + wallets) ---
 
 #[derive(Debug, Deserialize)]
@@ -363,27 +360,27 @@ async fn run_cycle(
 
         TournamentState::Payout => {
             let time_since_payout = now - tournament.payout_started_at;
-            let expired = time_since_payout >= CLAIM_EXPIRY_SECONDS;
-            let all_winners_claimed = tournament.claims_processed >= tournament.winner_count;
 
             info!(
-                "Tournament #{} in Payout | {}/{} claims | {} days since start{}{}",
+                "Tournament #{} in Payout | {}/{} claims | {} entries remaining | {} days since start",
                 tournament.id,
                 tournament.claims_processed,
                 tournament.winner_count,
+                tournament.entries_remaining,
                 time_since_payout / 86400,
-                if expired { " [EXPIRED]" } else { "" },
-                if all_winners_claimed { " [ALL CLAIMED]" } else { "" }
             );
 
-            if expired || all_winners_claimed {
+            if tournament.entries_remaining > 0 {
                 if !dry_run {
-                    let closed = actions::close_expired_entries(client, program_id, &tournament, operator)?;
+                    let closed = actions::close_entries(client, program_id, &tournament, operator)?;
                     if closed > 0 {
-                        info!("Closed {} expired entries", closed);
+                        info!("Closed {} entries (distributed payouts)", closed);
                         return Ok(true);
                     }
-
+                }
+            } else {
+                // All entries closed, close tournament
+                if !dry_run {
                     match actions::close_tournament(client, program_id, &tournament, operator, &config) {
                         Ok(_) => {
                             info!("Tournament {} account closed, rent recovered", tournament.id);
@@ -408,25 +405,21 @@ async fn run_cycle(
         match state::fetch_tournament(client, program_id, prev_id) {
             Ok(prev) if prev.state == TournamentState::Payout => {
                 let time_since_payout = now - prev.payout_started_at;
-                let expired = time_since_payout >= CLAIM_EXPIRY_SECONDS;
-                let all_winners_claimed = prev.claims_processed >= prev.winner_count;
 
                 info!(
-                    "Past Tournament #{} in Payout | {}/{} claims | {} entries remaining | {} days{}{}",
+                    "Past Tournament #{} in Payout | {}/{} claims | {} entries remaining | {} days",
                     prev.id, prev.claims_processed, prev.winner_count,
                     prev.entries_remaining, time_since_payout / 86400,
-                    if expired { " [EXPIRED]" } else { "" },
-                    if all_winners_claimed { " [ALL CLAIMED]" } else { "" }
                 );
 
-                if (expired || all_winners_claimed) && !dry_run {
-                    let closed = actions::close_expired_entries(client, program_id, &prev, operator)?;
-                    if closed > 0 {
-                        info!("Closed {} expired entries from tournament #{}", closed, prev.id);
-                        return Ok(true);
-                    }
-
-                    if prev.entries_remaining == 0 {
+                if !dry_run {
+                    if prev.entries_remaining > 0 {
+                        let closed = actions::close_entries(client, program_id, &prev, operator)?;
+                        if closed > 0 {
+                            info!("Closed {} entries from tournament #{}", closed, prev.id);
+                            return Ok(true);
+                        }
+                    } else {
                         match actions::close_tournament(client, program_id, &prev, operator, &config) {
                             Ok(_) => {
                                 info!("Tournament #{} account closed, rent recovered", prev.id);

@@ -50,6 +50,7 @@ pub struct Tournament {
     pub strategies: Vec<u8>,
     pub strategy_params: Vec<[u8; 5]>,
     pub bump: u8,
+    pub operator_costs: u64,        // NEW v1.8
 }
 
 /// Global config account data
@@ -68,6 +69,7 @@ pub struct Config {
     pub current_tournament_id: u32,
     pub reveal_duration: i64,       // NEW v1.7
     pub bump: u8,
+    pub operator_tx_fee: u64,       // NEW v1.8
 }
 
 /// Entry account data
@@ -127,7 +129,15 @@ impl Config {
         offset += 8;
         
         let bump = data[offset];
-        
+        offset += 1;
+
+        // NEW v1.8: operator_tx_fee (reads from padding on old accounts → 0)
+        let operator_tx_fee = if offset + 8 <= data.len() {
+            u64::from_le_bytes(data[offset..offset + 8].try_into()?)
+        } else {
+            0
+        };
+
         Ok(Config {
             admin,
             operator,
@@ -141,6 +151,7 @@ impl Config {
             current_tournament_id,
             reveal_duration,
             bump,
+            operator_tx_fee,
         })
     }
 }
@@ -266,7 +277,15 @@ impl Tournament {
         }
         
         let bump = data[offset];
-        
+        offset += 1;
+
+        // NEW v1.8: operator_costs (reads from padding on old accounts → 0)
+        let operator_costs = if offset + 8 <= data.len() {
+            u64::from_le_bytes(data[offset..offset + 8].try_into()?)
+        } else {
+            0
+        };
+
         Ok(Tournament {
             id,
             state,
@@ -296,6 +315,7 @@ impl Tournament {
             strategies,
             strategy_params,
             bump,
+            operator_costs,
         })
     }
 }

@@ -2630,7 +2630,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "match-logic",
- "solana-sha256-hasher 2.3.0",
+ "solana-sha256-hasher 3.1.0",
 ]
 
 [[package]]

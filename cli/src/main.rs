@@ -143,6 +143,8 @@ enum ConfigAction {
         #[arg(long)]
         reveal_duration: Option<i64>,
         #[arg(long)]
+        operator_tx_fee: Option<u64>,
+        #[arg(long)]
         dry_run: bool,
     },
 }
@@ -158,11 +160,11 @@ fn main() -> Result<()> {
             ConfigAction::Update {
                 stake, min_participants, max_participants,
                 registration_duration, matches_per_player, house_fee_bps,
-                operator, reveal_duration, dry_run,
+                operator, reveal_duration, operator_tx_fee, dry_run,
             } => commands::admin::config_update(
                 &cfg, stake, min_participants, max_participants,
                 registration_duration, matches_per_player, house_fee_bps,
-                operator, reveal_duration, dry_run,
+                operator, reveal_duration, operator_tx_fee, dry_run,
             ),
         },
         Commands::WithdrawFees { dry_run } => commands::admin::withdraw_fees(&cfg, dry_run),

@@ -140,6 +140,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     return (
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                         dState === 'Registration' ? 'badge-registration' :
+                        dState === 'Reveal' ? 'badge-reveal' :
                         dState === 'Running' ? 'badge-running' :
                         dState === 'Completed' ? 'badge-completed' : 'badge-payout'
                       }`}>{dState}</span>
@@ -192,6 +193,23 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 );
               })()}
 
+              {t.state === 'Reveal' && (
+                <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CountdownTimer
+                      targetTimestamp={Number(t.revealEnds)}
+                      label="Reveal Ends"
+                      expiredText="Closing soon"
+                      expiredClassName="text-amber-500"
+                    />
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="text-4xl font-bold">{t.revealsCompleted} / {t.participantCount}</div>
+                      <div className="text-sm text-[var(--muted)] mt-1">strategies revealed</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {t.state === 'Running' && (
                 <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
                   <div className="flex items-center justify-between text-sm text-[var(--muted)] mb-2">
@@ -219,8 +237,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       Tournament completed. All prizes distributed.
                     </div>
                   ) : t.payoutStartedAt !== '0' && (
-                    <div className="text-xs text-[var(--muted)] mt-3">
-                      Claim deadline: {new Date((Number(t.payoutStartedAt) + 30 * 86400) * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    <div className="mt-4">
+                      <CountdownTimer
+                        targetTimestamp={Number(t.payoutStartedAt) + 30 * 86400}
+                        label="Claim Deadline"
+                        expiredText="Claims expired"
+                      />
                     </div>
                   )}
                 </div>

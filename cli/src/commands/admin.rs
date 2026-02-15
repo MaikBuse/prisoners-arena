@@ -70,6 +70,7 @@ pub fn config_show(cfg: &ArenaConfig) -> Result<()> {
     println!("  Registration Duration: {}s", config.registration_duration);
     println!("  Matches Per Player:    {}", config.matches_per_player);
     println!("  Reveal Duration:       {}s", config.reveal_duration);
+    println!("  Operator Tx Fee:       {} lamports", config.operator_tx_fee);
     println!("  Accumulated Fees:      {} lamports ({:.4} SOL)", config.accumulated_fees, config.accumulated_fees as f64 / 1e9);
     println!("  Current Tournament ID: {}", config.current_tournament_id);
     Ok(())
@@ -85,6 +86,7 @@ pub fn config_update(
     house_fee_bps: Option<u16>,
     operator: Option<String>,
     reveal_duration: Option<i64>,
+    operator_tx_fee: Option<u64>,
     dry_run: bool,
 ) -> Result<()> {
     let client = RpcClient::new(&cfg.network.rpc_url);
@@ -132,6 +134,7 @@ pub fn config_update(
     push_option_i64(&mut data, &registration_duration);
     push_option_u16(&mut data, &matches_per_player);
     push_option_i64(&mut data, &reveal_duration);
+    push_option_u64(&mut data, &operator_tx_fee);
 
     let accounts = vec![
         AccountMeta::new(config_pda, false),

@@ -164,6 +164,7 @@ export interface ConfigAccount {
   currentTournamentId: number;
   revealDuration: string;  // v1.7
   bump: number;
+  operatorTxFee: string;   // v1.8
   address: string;
 }
 
@@ -180,8 +181,10 @@ export function deserializeConfig(data: Buffer, address: string): ConfigAccount 
   const accumulatedFees = readU64LE(data, offset).toString(); offset += 8;
   const currentTournamentId = readU32LE(data, offset); offset += 4;
   const revealDuration = readI64LE(data, offset).toString(); offset += 8;  // v1.7
-  const bump = readU8(data, offset);
-  return { admin, operator, houseFeeBps, stake, minParticipants, maxParticipants, registrationDuration, matchesPerPlayer, accumulatedFees, currentTournamentId, revealDuration, bump, address };
+  const bump = readU8(data, offset); offset += 1;
+  // v1.8: operator_tx_fee (reads from padding on old accounts → 0)
+  const operatorTxFee = (offset + 8 <= data.length) ? readU64LE(data, offset).toString() : '0'; offset += 8;
+  return { admin, operator, houseFeeBps, stake, minParticipants, maxParticipants, registrationDuration, matchesPerPlayer, accumulatedFees, currentTournamentId, revealDuration, bump, operatorTxFee, address };
 }
 
 export type TournamentState = 'Registration' | 'Reveal' | 'Running' | 'Payout';
@@ -215,6 +218,7 @@ export interface TournamentAccount {
   strategies: number[];
   strategyParams: number[][];
   bump: number;
+  operatorCosts: string;   // v1.8
   address: string;
 }
 
@@ -279,9 +283,11 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
     offset += 5;
   }
 
-  const bump = readU8(data, offset);
+  const bump = readU8(data, offset); offset += 1;
+  // v1.8: operator_costs (reads from padding on old accounts → 0)
+  const operatorCosts = (offset + 8 <= data.length) ? readU64LE(data, offset).toString() : '0';
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, forfeits, players, scores, strategies, strategyParams, bump, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, forfeits, players, scores, strategies, strategyParams, bump, operatorCosts, address };
 }
 
 export interface EntryAccount {

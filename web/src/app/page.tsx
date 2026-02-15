@@ -277,6 +277,7 @@ export default function Home() {
                     return (
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                         dState === 'Registration' ? 'badge-registration' :
+                        dState === 'Reveal' ? 'badge-reveal' :
                         dState === 'Running' ? 'badge-running' :
                         dState === 'Completed' ? 'badge-completed' : 'badge-payout'
                       }`}>{dState}</span>
@@ -311,6 +312,21 @@ export default function Home() {
                 );
               })()}
 
+              {t.state === 'Reveal' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <CountdownTimer
+                    targetTimestamp={Number(t.revealEnds)}
+                    label="Reveal Ends"
+                    expiredText="Closing soon"
+                    expiredClassName="text-amber-500"
+                  />
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="text-4xl font-bold">{t.revealsCompleted} / {t.participantCount}</div>
+                    <div className="text-sm text-[var(--muted)] mt-1">strategies revealed</div>
+                  </div>
+                </div>
+              )}
+
               {t.state === 'Running' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col items-center relative">
@@ -332,21 +348,32 @@ export default function Home() {
               )}
 
               {t.state === 'Payout' && (
-                <div className="grid grid-cols-3 gap-6 text-center">
-                  <div>
-                    <div className="text-3xl font-bold">🏆 {t.winnerCount}</div>
-                    <div className="text-sm text-[var(--muted)] mt-1">winners</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">
-                      {t.winnerCount > 0 ? formatLamports((BigInt(t.winnerPool) / BigInt(t.winnerCount)).toString()) : '0'} SOL
+                <div>
+                  <div className="grid grid-cols-3 gap-6 text-center">
+                    <div>
+                      <div className="text-3xl font-bold">🏆 {t.winnerCount}</div>
+                      <div className="text-sm text-[var(--muted)] mt-1">winners</div>
                     </div>
-                    <div className="text-sm text-[var(--muted)] mt-1">per winner</div>
+                    <div>
+                      <div className="text-2xl font-bold">
+                        {t.winnerCount > 0 ? formatLamports((BigInt(t.winnerPool) / BigInt(t.winnerCount)).toString()) : '0'} SOL
+                      </div>
+                      <div className="text-sm text-[var(--muted)] mt-1">per winner</div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold">{t.claimsProcessed}/{t.winnerCount}</div>
+                      <div className="text-sm text-[var(--muted)] mt-1">claimed</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-3xl font-bold">{t.claimsProcessed}/{t.winnerCount}</div>
-                    <div className="text-sm text-[var(--muted)] mt-1">claimed</div>
-                  </div>
+                  {displayState(t) !== 'Completed' && t.payoutStartedAt !== '0' && (
+                    <div className="mt-4">
+                      <CountdownTimer
+                        targetTimestamp={Number(t.payoutStartedAt) + 30 * 86400}
+                        label="Claim Deadline"
+                        expiredText="Claims expired"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -574,6 +601,7 @@ export default function Home() {
                       return (
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                           dState === 'Registration' ? 'badge-registration' :
+                          dState === 'Reveal' ? 'badge-reveal' :
                           dState === 'Running' ? 'badge-running' :
                           dState === 'Completed' ? 'badge-completed' : 'badge-payout'
                         }`}>{dState}</span>

@@ -155,6 +155,7 @@ export function getTournament(programId: string, id: number): TournamentAccount 
     strategies: playerRows.map(r => r.strategy as number),
     strategyParams: playerRows.map(r => JSON.parse(r.strategy_params as string) as number[]),
     bump: row.bump as number,
+    operatorCosts: (row.operator_costs as string) || '0',
     address: row.address as string,
   };
 }

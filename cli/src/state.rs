@@ -49,11 +49,13 @@ pub struct Tournament {
     pub reveal_duration: i64,       // NEW v1.7
     pub reveals_completed: u32,     // NEW v1.7
     pub forfeits: u32,              // NEW v1.7
+    // Note: players vec comes next in serialization, followed by bump, then operator_costs
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
     pub strategy_params: Vec<[u8; 5]>,
     pub bump: u8,
+    pub operator_costs: u64,        // NEW v1.8
 }
 
 #[allow(dead_code)]
@@ -71,6 +73,7 @@ pub struct Config {
     pub current_tournament_id: u32,
     pub reveal_duration: i64,       // NEW v1.7
     pub bump: u8,
+    pub operator_tx_fee: u64,       // NEW v1.8
 }
 
 #[allow(dead_code)]
@@ -105,8 +108,14 @@ impl Config {
         let accumulated_fees = u64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let current_tournament_id = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let reveal_duration = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
-        let bump = data[o];
-        Ok(Config { admin, operator, house_fee_bps, stake, min_participants, max_participants, registration_duration, matches_per_player, accumulated_fees, current_tournament_id, reveal_duration, bump })
+        let bump = data[o]; o += 1;
+        // NEW v1.8: operator_tx_fee (reads from padding on old accounts → 0)
+        let operator_tx_fee = if o + 8 <= data.len() {
+            u64::from_le_bytes(data[o..o + 8].try_into()?)
+        } else {
+            0
+        };
+        Ok(Config { admin, operator, house_fee_bps, stake, min_participants, max_participants, registration_duration, matches_per_player, accumulated_fees, current_tournament_id, reveal_duration, bump, operator_tx_fee })
     }
 }
 
@@ -157,8 +166,14 @@ impl Tournament {
         let params_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
         let mut strategy_params = Vec::with_capacity(params_len);
         for _ in 0..params_len { let mut p = [0u8; 5]; p.copy_from_slice(&data[o..o + 5]); o += 5; strategy_params.push(p); }
-        let bump = data[o];
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, forfeits, players, scores, strategies, strategy_params, bump })
+        let bump = data[o]; o += 1;
+        // NEW v1.8: operator_costs (reads from padding on old accounts → 0)
+        let operator_costs = if o + 8 <= data.len() {
+            u64::from_le_bytes(data[o..o + 8].try_into()?)
+        } else {
+            0
+        };
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, forfeits, players, scores, strategies, strategy_params, bump, operator_costs })
     }
 }
 

@@ -99,9 +99,23 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
         println!("  Forfeits:           {}", t.forfeits);
     }
     println!("  Matches:            {}/{}", t.matches_completed, t.matches_total);
+    if t.operator_costs > 0 {
+        println!("  Operator Costs:     {} lamports", t.operator_costs);
+    }
     println!("  Winners:            {}", t.winner_count);
     println!("  Winner Pool:        {} lamports", t.winner_pool);
     println!("  Claims Processed:   {}", t.claims_processed);
+    if t.payout_started_at > 0 {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let elapsed = now - t.payout_started_at;
+        let days = elapsed / 86400;
+        let hours = (elapsed % 86400) / 3600;
+        let mins = (elapsed % 3600) / 60;
+        println!("  Payout Started At:  {} ({}d {}h {}m ago)", t.payout_started_at, days, hours, mins);
+    }
 
     if !t.players.is_empty() {
         println!("\n  Players:");

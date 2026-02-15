@@ -28,7 +28,7 @@ mod discriminator {
     pub const FORFEIT_UNREVEALED: [u8; 8] = [106, 138, 130, 170, 105, 11, 59, 183];
     pub const RUN_MATCHES: [u8; 8] = [231, 195, 232, 182, 30, 237, 182, 246];
     pub const FINALIZE_TOURNAMENT: [u8; 8] = [205, 30, 149, 11, 108, 122, 120, 11];
-    pub const CLOSE_EXPIRED_ENTRY: [u8; 8] = [241, 64, 198, 246, 182, 114, 87, 149];
+    pub const CLOSE_ENTRY: [u8; 8] = [132, 26, 202, 145, 190, 37, 114, 67];
     pub const CLOSE_TOURNAMENT: [u8; 8] = [14, 80, 54, 9, 221, 239, 201, 35];
 }
 
@@ -300,67 +300,54 @@ pub fn finalize_tournament(
     Ok(())
 }
 
-/// Close expired entry accounts after 30-day claim window
-pub fn close_expired_entries(
+/// Close entry accounts — distributes payouts and returns rent to players
+pub fn close_entries(
     client: &RpcClient,
     program_id: &Pubkey,
     tournament: &Tournament,
     operator: &Keypair,
 ) -> Result<u32> {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_secs() as i64;
-    
-    const CLAIM_EXPIRY_SECONDS: i64 = 2_592_000;
+    info!("Closing entries for tournament {}", tournament.id);
 
-    let time_expired = now >= tournament.payout_started_at + CLAIM_EXPIRY_SECONDS;
-    let all_winners_claimed = tournament.claims_processed >= tournament.winner_count;
-
-    if !time_expired && !all_winners_claimed {
-        return Ok(0);
-    }
-    
-    info!("Closing expired entries for tournament {}", tournament.id);
-    
     let (config_pda, _) = state::get_config_pda(program_id);
     let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
-    
+
     let mut closed = 0u32;
-    
+
     for player in &tournament.players {
         if *player == Pubkey::default() {
             continue;
         }
-        
+
         let (entry_pda, _) = state::get_entry_pda(program_id, &tournament_pda, player);
-        
-        match client.get_account(&entry_pda) {
+
+        if client.get_account(&entry_pda).is_err() {
+            continue;
+        }
+
+        let accounts = vec![
+            AccountMeta::new(config_pda, false),
+            AccountMeta::new(tournament_pda, false),
+            AccountMeta::new(entry_pda, false),
+            AccountMeta::new(*player, false),
+            AccountMeta::new(operator.pubkey(), true),
+        ];
+
+        let instruction = Instruction {
+            program_id: *program_id,
+            accounts,
+            data: discriminator::CLOSE_ENTRY.to_vec(),
+        };
+
+        match send_transaction(client, &[instruction], operator) {
             Ok(_) => {
-                let accounts = vec![
-                    AccountMeta::new(config_pda, false),
-                    AccountMeta::new(tournament_pda, false),
-                    AccountMeta::new(entry_pda, false),
-                    AccountMeta::new(operator.pubkey(), true),
-                ];
-                
-                let instruction = Instruction {
-                    program_id: *program_id,
-                    accounts,
-                    data: discriminator::CLOSE_EXPIRED_ENTRY.to_vec(),
-                };
-                
-                match send_transaction(client, &[instruction], operator) {
-                    Ok(_) => {
-                        info!("Closed expired entry for {}", player);
-                        closed += 1;
-                    }
-                    Err(e) => warn!("Failed to close entry for {}: {}", player, e),
-                }
+                info!("Closed entry for {}", player);
+                closed += 1;
             }
-            Err(_) => {}
+            Err(e) => warn!("Failed to close entry for {}: {}", player, e),
         }
     }
-    
+
     Ok(closed)
 }
 
