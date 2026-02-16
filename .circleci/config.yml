@@ -41,7 +41,7 @@ jobs:
     resource_class: medium
     steps:
       - run:
-          name: Update Helm values and push
+          name: Update web Helm values in pub-talos-cluster
           command: |
             git clone git@github.com:MaikBuse/pub-talos-cluster.git
             cd pub-talos-cluster
@@ -56,13 +56,27 @@ jobs:
             echo '  container:' >> helm/prisoners-arena/web/Values.yaml
             echo "    image: \"m9kusanagi/prisoners-arena-web:$IMAGE_TAG\"" >> helm/prisoners-arena/web/Values.yaml
 
+            git add helm/prisoners-arena/web/Values.yaml
+            git commit -m "chore: update prisoners-arena-web image to $IMAGE_TAG"
+            git push origin main
+      - run:
+          name: Update operator Helm values in sec-talos-cluster
+          command: |
+            git clone git@github.com:MaikBuse/sec-talos-cluster.git
+            cd sec-talos-cluster
+
+            git config user.email "ci@circleci.com"
+            git config user.name "CircleCI"
+
+            IMAGE_TAG=${CIRCLE_SHA1}-amd64
+
             rm -f helm/prisoners-arena/operator/Values.yaml
             echo 'operator:' > helm/prisoners-arena/operator/Values.yaml
             echo '  container:' >> helm/prisoners-arena/operator/Values.yaml
             echo "    image: \"m9kusanagi/prisoners-arena-operator:$IMAGE_TAG\"" >> helm/prisoners-arena/operator/Values.yaml
 
-            git add helm/prisoners-arena/web/Values.yaml helm/prisoners-arena/operator/Values.yaml
-            git commit -m "chore: update prisoners-arena images to $IMAGE_TAG"
+            git add helm/prisoners-arena/operator/Values.yaml
+            git commit -m "chore: update prisoners-arena-operator image to $IMAGE_TAG"
             git push origin main
 
 workflows:
