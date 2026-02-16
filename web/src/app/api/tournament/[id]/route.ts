@@ -1,4 +1,4 @@
-import { fetchTournament, getAllEntries, getProgramId } from '@/lib/solana';
+import { fetchTournament, fetchConfig, getAllEntries, getProgramId } from '@/lib/solana';
 import { upsertTournament, getTournament } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 import { NextRequest } from 'next/server';
@@ -18,7 +18,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       try { upsertTournament(getProgramId().toBase58(), tournament); } catch {}
     } else {
       // Chain miss — try SQLite fallback
-      try { tournament = getTournament(getProgramId().toBase58(), idNum); } catch {}
+      const programId = getProgramId().toBase58();
+      try { tournament = getTournament(programId, idNum); } catch {}
+      if (tournament && tournament.state !== 'Payout') {
+        const config = await fetchConfig();
+        if (config && idNum < config.currentTournamentId) {
+          tournament = { ...tournament, state: 'Payout' };
+          try { upsertTournament(programId, tournament); } catch {}
+        }
+      }
     }
 
     if (!tournament) return apiError('Tournament not found', 'NOT_FOUND', 404);

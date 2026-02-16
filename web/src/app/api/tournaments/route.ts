@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
         try { upsertTournament(programId, t); } catch {}
       } else {
         try { t = getTournament(programId, i); } catch {}
+        if (t && t.state !== 'Payout' && i < config.currentTournamentId) {
+          t = { ...t, state: 'Payout' };
+          try { upsertTournament(programId, t); } catch {}
+        }
       }
       if (t) tournaments.push(t);
     }

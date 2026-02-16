@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { fetchCurrentTournament, fetchConfig, getAllEntries } from '@/lib/solana';
+import { fetchCurrentTournament, fetchConfig, getAllEntries, getProgramId } from '@/lib/solana';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
+import { upsertTournament } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const limited = rateLimited(request);
@@ -8,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const tournament = await fetchCurrentTournament();
     if (!tournament) return apiError('No tournament found', 'NOT_FOUND', 404);
+    try { upsertTournament(getProgramId().toBase58(), tournament); } catch {}
     const [entries, config] = await Promise.all([
       getAllEntries(tournament.address),
       fetchConfig(),
