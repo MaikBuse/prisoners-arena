@@ -1,0 +1,25 @@
+# Build artifacts
+target/
+
+# Git
+.git/
+.gitmodules
+
+# Directories not needed for operator build
+web/
+cli/
+tests/
+contract/programs/
+
+# Config & docs
+*.md
+.env*
+arena*.toml
+Anchor.toml
+
+# IDE
+.vscode/
+.idea/
+
+# CI
+.circleci/

@@ -1,7 +1,7 @@
 version: 2.1
 
 jobs:
-  build_amd64:
+  build_web:
     machine:
       image: ubuntu-2404:current
     resource_class: medium
@@ -15,6 +15,25 @@ jobs:
           command: |
             docker build -t m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64 web/
             docker push m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64
+
+  build_operator:
+    machine:
+      image: ubuntu-2404:current
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Init submodules
+          command: git submodule update --init
+      - run:
+          name: Docker login
+          command: echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Build and push operator image
+          no_output_timeout: 20m
+          command: |
+            docker build -f operator/Dockerfile -t m9kusanagi/prisoners-arena-operator:${CIRCLE_SHA1}-amd64 .
+            docker push m9kusanagi/prisoners-arena-operator:${CIRCLE_SHA1}-amd64
 
   deploy:
     machine:
@@ -31,25 +50,36 @@ jobs:
             git config user.name "CircleCI"
 
             IMAGE_TAG=${CIRCLE_SHA1}-amd64
+
             rm -f helm/prisoners-arena/web/Values.yaml
             echo 'web:' > helm/prisoners-arena/web/Values.yaml
             echo '  container:' >> helm/prisoners-arena/web/Values.yaml
             echo "    image: \"m9kusanagi/prisoners-arena-web:$IMAGE_TAG\"" >> helm/prisoners-arena/web/Values.yaml
 
-            git add helm/prisoners-arena/web/Values.yaml
-            git commit -m "chore: update prisoners-arena-web image to $IMAGE_TAG"
+            rm -f helm/prisoners-arena/operator/Values.yaml
+            echo 'operator:' > helm/prisoners-arena/operator/Values.yaml
+            echo '  container:' >> helm/prisoners-arena/operator/Values.yaml
+            echo "    image: \"m9kusanagi/prisoners-arena-operator:$IMAGE_TAG\"" >> helm/prisoners-arena/operator/Values.yaml
+
+            git add helm/prisoners-arena/web/Values.yaml helm/prisoners-arena/operator/Values.yaml
+            git commit -m "chore: update prisoners-arena images to $IMAGE_TAG"
             git push origin main
 
 workflows:
   build_and_deploy:
     jobs:
-      - build_amd64:
+      - build_web:
+          filters:
+            branches:
+              only: main
+      - build_operator:
           filters:
             branches:
               only: main
       - deploy:
           requires:
-            - build_amd64
+            - build_web
+            - build_operator
           filters:
             branches:
               only: main
