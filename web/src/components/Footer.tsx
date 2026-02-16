@@ -16,7 +16,7 @@ export function Footer() {
           <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer"
              className="hover:text-[var(--foreground)] transition-colors">Program ↗</a>
           <a href="/participate.md" className="hover:text-[var(--foreground)] transition-colors">Participate</a>
-          <a href="/docs" className="hover:text-[var(--foreground)] transition-colors">API Docs</a>
+          <a href="/api" className="hover:text-[var(--foreground)] transition-colors">API Docs</a>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
              className="hover:text-[var(--foreground)] transition-colors">GitHub ↗</a>
         </div>

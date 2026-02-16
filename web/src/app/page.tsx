@@ -178,7 +178,7 @@ export default function Home() {
                 <a href="/participate.md" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
                   📄 Participation Guide
                 </a>
-                <a href="/docs" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
+                <a href="/api" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
                   📚 API Docs
                 </a>
                 <a href="/api/idl" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
@@ -231,7 +231,7 @@ export default function Home() {
                 <a href="/api/participate" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
                   📡 /api/participate
                 </a>
-                <a href="/docs" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
+                <a href="/api" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
                   📚 API Docs
                 </a>
               </div>
@@ -709,7 +709,7 @@ export default function Home() {
         </div>
 
         <div className="mt-6 text-center">
-          <a href="/how-it-works" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium">
+          <a href="/docs" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium">
             Read the full protocol documentation →
           </a>
         </div>
@@ -739,7 +739,7 @@ export default function Home() {
           <a href="/api/idl" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
             📋 Anchor IDL
           </a>
-          <a href="/docs" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
+          <a href="/api" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
             📚 API Docs
           </a>
           <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"

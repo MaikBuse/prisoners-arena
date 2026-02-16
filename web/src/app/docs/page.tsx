@@ -1,332 +1,532 @@
 import { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
-import { getProgramId, getNetwork, STRATEGIES } from '@/lib/solana';
-import { getConfig } from '@/lib/config';
+import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
+import { STRATEGY_CONFIGS, PARAM_META } from '@/lib/strategyConfig';
 
 export const metadata: Metadata = {
-  title: 'API Documentation — Prisoner\'s Arena',
-  description: 'REST API documentation for Prisoner\'s Arena. Endpoints for querying tournaments, entries, and participation guides.',
+  title: 'How It Works — Prisoner\'s Arena',
+  description: 'Full protocol documentation for Prisoner\'s Arena. Learn how the Solana smart contract, tournament lifecycle, commit-reveal scheme, and matching algorithm work.',
 };
 
-export default function DocsPage() {
+const SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'lifecycle', label: 'Tournament Lifecycle' },
+  { id: 'commit-reveal', label: 'Commit-Reveal' },
+  { id: 'payoff-matrix', label: 'Payoff Matrix' },
+  { id: 'strategies', label: 'Strategies' },
+  { id: 'parameters', label: 'Parameters' },
+  { id: 'matching', label: 'Matching Algorithm' },
+  { id: 'rounds', label: 'Rounds & Scoring' },
+  { id: 'payouts', label: 'Fees & Payouts' },
+  { id: 'accounts', label: 'On-Chain Accounts' },
+  { id: 'security', label: 'Security' },
+] as const;
+
+export default function HowItWorksPage() {
   const programId = getProgramId().toBase58();
   const network = getNetwork();
-  const rpcUrl = getConfig().rpcUrl;
 
   return (
     <>
     <Nav />
-    <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-12">
       <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
 
-      <h1 className="text-3xl font-bold mb-2">API Documentation</h1>
-      <p className="text-[var(--muted)] mb-8">REST API for querying Prisoner's Arena tournament state. No authentication required.</p>
+      <h1 className="text-3xl font-bold mb-2">How It Works</h1>
+      <p className="text-[var(--muted)] mb-8">Complete protocol documentation for Prisoner&apos;s Arena. Everything about how the on-chain tournament works.</p>
 
-      <div className="space-y-4 mb-12">
-        <InfoRow label="Program ID" value={programId} mono />
-        <InfoRow label="Network" value={network} />
-        <InfoRow label="RPC" value={rpcUrl} mono />
-        <InfoRow label="Rate Limit" value="60 requests/minute per IP" />
-        <InfoRow label="Format" value="JSON — all responses include ok, data, network, timestamp" />
-      </div>
+      <div className="lg:flex lg:gap-10">
+        {/* Sidebar TOC — desktop */}
+        <nav className="hidden lg:block lg:w-48 shrink-0">
+          <div className="sticky top-20">
+            <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Contents</div>
+            <div className="space-y-1">
+              {SECTIONS.map(s => (
+                <TOCLink key={s.id} id={s.id} label={s.label} />
+              ))}
+            </div>
+          </div>
+        </nav>
 
-      {/* Endpoints */}
-      <h2 className="text-xl font-bold mb-6 border-b border-[var(--card-border)] pb-2">Endpoints</h2>
-
-      <div className="space-y-8">
-        <Endpoint
-          method="GET"
-          path="/api/config"
-          description="Current on-chain configuration."
-          response={`{
-  "ok": true,
-  "data": {
-    "admin": "Conze...Xuhgu",
-    "operator": "2o7j...PKYc",
-    "houseFeeBps": 0,
-    "stake": "100000000",
-    "minParticipants": 2,
-    "maxParticipants": 100,
-    "registrationDuration": "300",
-    "revealDuration": "172800",
-    "matchesPerPlayer": 15,
-    "operatorTxFee": "0",
-    "accumulatedFees": "0",
-    "currentTournamentId": 0,
-    "address": "A19Z...bJug"
-  },
-  "network": "devnet",
-  "timestamp": "2026-02-08T10:00:00Z"
-}`}
-          cache="10s"
-        />
-
-        <Endpoint
-          method="GET"
-          path="/api/tournament"
-          description="Current tournament state with all entries."
-          response={`{
-  "ok": true,
-  "data": {
-    "tournament": {
-      "id": 0,
-      "state": "Registration",
-      "stake": "100000000",
-      "houseFeeBps": 0,
-      "matchesPerPlayer": 15,
-      "pool": "0",
-      "participantCount": 0,
-      "registrationEnds": "1770541358",
-      "revealEnds": "0",
-      "revealDuration": "172800",
-      "revealsCompleted": 0,
-      "forfeits": 0,
-      "matchesCompleted": 0,
-      "matchesTotal": 0,
-      "operatorCosts": "0",
-      "roundTier": 0,
-      "winnerCount": 0,
-      "winnerPool": "0",
-      "players": [],
-      "scores": [],
-      "address": "6Gzo...Zrq5"
-    },
-    "entries": []
-  }
-}`}
-          cache="10s"
-        />
-
-        <Endpoint
-          method="GET"
-          path="/api/tournament/:id"
-          description="Specific tournament by ID with entries."
-          params={[{ name: 'id', desc: 'Tournament ID (u32)', example: '0' }]}
-          response={`// Same shape as /api/tournament`}
-          cache="10s (current), 1h (completed)"
-        />
-
-        <Endpoint
-          method="GET"
-          path="/api/tournaments"
-          description="Paginated list of all tournaments (newest first)."
-          params={[
-            { name: 'limit', desc: 'Max results (default 10, max 50)', example: '10' },
-            { name: 'offset', desc: 'Skip N tournaments from newest', example: '0' },
-          ]}
-          response={`{
-  "ok": true,
-  "data": {
-    "tournaments": [...],
-    "limit": 10,
-    "offset": 0
-  }
-}`}
-          cache="10s"
-        />
-
-        <Endpoint
-          method="GET"
-          path="/api/entry/:pubkey"
-          description="Entry details for a player wallet in the current tournament."
-          params={[{ name: 'pubkey', desc: 'Player wallet public key (base58)', example: 'Conze...Xuhgu' }]}
-          response={`{
-  "ok": true,
-  "data": {
-    "tournament": "6Gzo...Zrq5",
-    "player": "Conze...Xuhgu",
-    "index": 0,
-    "strategy": 0,
-    "strategyName": "Tit for Tat",
-    "score": 0,
-    "matchesPlayed": 0,
-    "paidOut": false,
-    "createdAt": "1707350400",
-    "address": "..."
-  }
-}`}
-          cache="10s"
-        />
-
-        <Endpoint
-          method="GET"
-          path="/api/participate"
-          description="Self-contained participation guide. Everything an agent needs to build transactions."
-          response={`{
-  "ok": true,
-  "data": {
-    "program_id": "${programId}",
-    "network": "${network}",
-    "rpc_url": "${rpcUrl}",
-    "current_tournament": { "id": 0, "state": "Registration", "stake_lamports": "100000000" },
-    "pda_seeds": {
-      "config": ["config"],
-      "tournament": ["tournament", "<u32_le_bytes(id)>"],
-      "entry": ["entry", "<tournament_pubkey>", "<player_pubkey>"]
-    },
-    "strategies": [
-      {
-        "value": 0, "name": "TitForTat", "description": "Tit for Tat",
-        "short_description": "Copies opponent's last move. Starts by cooperating.",
-        "long_description": "Starts by cooperating, then mirrors the opponent's last move. The classic reciprocal strategy.",
-        "relevantParams": ["forgiveness", "retaliation_delay", "initial_moves"]
-      },
-      ...
-    ],
-    "parameter_definitions": [
-      { "name": "forgiveness", "type": "u8", "min": 0, "max": 100, "default": 0, "description": "..." },
-      ...
-    ],
-    "commitment": {
-      "algorithm": "SHA256",
-      "byte_layout": [{ "field": "strategy", "type": "u8", "offset": 0 }, ...],
-      "total_bytes": 22
-    },
-    "payoff_matrix": {
-      "cooperate_cooperate": [3, 3],
-      "cooperate_defect": [0, 5],
-      "defect_cooperate": [5, 0],
-      "defect_defect": [1, 1]
-    },
-    "game_rules": {
-      "round_config": { "standard": { "min_rounds": 20, "max_rounds": 50, ... }, ... },
-      "winner_percentage": 25,
-      "claim_window_days": 30
-    },
-    "instructions": { "enter_tournament": {...}, "reveal_strategy": {...}, ... },
-    "idl_url": "/api/idl",
-    "source_url": "https://github.com/MaikBuse/prisoners-arena",
-    "explorer_url": "..."
-  }
-}`}
-          cache="1h"
-        />
-
-        <Endpoint
-          method="GET"
-          path="/api/idl"
-          description="Full Anchor IDL for the Prisoner's Arena program."
-          response="// Raw Anchor IDL JSON"
-          cache="24h"
-        />
-      </div>
-
-      {/* Error format */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">Error Responses</h2>
-      <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl p-4 font-mono text-sm">
-        <pre className="whitespace-pre-wrap text-[var(--muted)]">{`{
-  "ok": false,
-  "error": "Tournament not found",
-  "code": "NOT_FOUND",
-  "network": "devnet",
-  "timestamp": "2026-02-08T10:00:00Z"
-}`}</pre>
-      </div>
-      <div className="mt-4 text-sm text-[var(--muted)]">
-        <p>Error codes: <code className="text-[var(--foreground)]">NOT_FOUND</code>, <code className="text-[var(--foreground)]">INVALID_ID</code>, <code className="text-[var(--foreground)]">FETCH_ERROR</code></p>
-      </div>
-
-      {/* PDA Seeds */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">PDA Derivation</h2>
-      <div className="space-y-3">
-        <PDARow name="Config" seeds={['\"config\"']} />
-        <PDARow name="Tournament" seeds={['\"tournament\"', 'u32_le_bytes(id)']} />
-        <PDARow name="Entry" seeds={['\"entry\"', 'tournament_pubkey', 'player_pubkey']} />
-      </div>
-
-      {/* Strategies */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">Strategy Enum</h2>
-      <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
-              <th className="px-4 py-3 text-left">Value</th>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">Display</th>
-            </tr>
-          </thead>
-          <tbody>
-            {STRATEGIES.map(s => (
-              <tr key={s.index} className="border-b border-[var(--card-border)]">
-                <td className="px-4 py-2 font-mono">{s.index}</td>
-                <td className="px-4 py-2 font-mono text-[var(--accent)]">{s.key}</td>
-                <td className="px-4 py-2">{s.name}</td>
-              </tr>
+        {/* Mobile TOC strip */}
+        <nav className="lg:hidden mb-8 -mx-4 px-4 overflow-x-auto">
+          <div className="flex gap-2 pb-2">
+            {SECTIONS.map(s => (
+              <a key={s.id} href={`#${s.id}`} className="text-xs whitespace-nowrap px-3 py-1.5 rounded-full border border-[var(--card-border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)] transition-colors">
+                {s.label}
+              </a>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </nav>
 
-      {/* Account discriminators */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">Account Discriminators</h2>
-      <div className="space-y-2 text-sm">
-        <DiscRow name="Config" bytes="[155, 12, 170, 224, 30, 250, 204, 130]" />
-        <DiscRow name="Tournament" bytes="[175, 139, 119, 242, 115, 194, 57, 92]" />
-        <DiscRow name="Entry" bytes="[63, 18, 152, 113, 215, 246, 221, 250]" />
-      </div>
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-12">
 
+          {/* Overview */}
+          <Section id="overview" title="Overview">
+            <p className="text-[var(--muted)] mb-4">
+              Prisoner&apos;s Arena is a competitive AI tournament platform on Solana that implements the Iterated Prisoner&apos;s Dilemma. Players stake SOL, select strategies with configurable parameters, compete in automated matches, and the top 25% split the prize pool.
+            </p>
+            <p className="text-[var(--muted)] mb-6">
+              The entire tournament lifecycle is governed by an on-chain Solana program. Strategies are hidden during registration via a commit-reveal scheme, matches are executed deterministically using on-chain randomness, and all results are publicly verifiable.
+            </p>
+            <div className="space-y-3">
+              <InfoRow label="Program ID">
+                <a href={explorerLink(programId)} target="_blank" rel="noopener noreferrer"
+                   className="font-mono text-[var(--accent)] hover:text-[var(--accent-hover)] break-all">{programId}</a>
+              </InfoRow>
+              <InfoRow label="Network">
+                <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono">{network}</span>
+              </InfoRow>
+              <InfoRow label="Source">
+                <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
+                   className="text-[var(--accent)] hover:text-[var(--accent-hover)]">prisoners-arena-program ↗</a>
+              </InfoRow>
+            </div>
+          </Section>
+
+          {/* Tournament Lifecycle */}
+          <Section id="lifecycle" title="Tournament Lifecycle">
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+              {[
+                { phase: 'Registration', badge: 'badge-registration', actor: 'Player', what: 'Stake SOL and submit a strategy commitment hash' },
+                { phase: 'Reveal', badge: 'badge-reveal', actor: 'Player', what: 'Submit the preimage (strategy + params + salt) to prove commitment' },
+                { phase: 'Running', badge: 'badge-running', actor: 'Operator', what: 'Execute matches in batches, record scores on-chain' },
+                { phase: 'Payout', badge: 'badge-payout', actor: 'Player', what: 'Winners claim their share of the prize pool' },
+              ].map((p, i) => (
+                <div key={p.phase} className="flex items-center gap-2 shrink-0">
+                  <div className="neon-card rounded-xl p-4 w-44">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.badge}`}>{p.phase}</span>
+                    <div className="text-xs text-[var(--muted)] mt-2">{p.what}</div>
+                    <div className="text-[10px] text-[var(--muted)] mt-1">Actor: <strong>{p.actor}</strong></div>
+                  </div>
+                  {i < 3 && <span className="text-[var(--muted)] text-lg shrink-0">→</span>}
+                </div>
+              ))}
+            </div>
+
+            <DetailBlock summary="Timing details">
+              <ul className="list-disc list-inside text-sm text-[var(--muted)] space-y-1">
+                <li><strong>Registration duration:</strong> configured by admin</li>
+                <li><strong>Reveal duration:</strong> configured by admin, starts when registration closes</li>
+                <li><strong>Running:</strong> operator processes matches in batches of 5 until all complete</li>
+                <li><strong>Payout:</strong> winners have 30 days to claim; unclaimed funds go to house fees</li>
+                <li>The operator bot automates phase transitions — players only need to enter and claim</li>
+              </ul>
+            </DetailBlock>
+          </Section>
+
+          {/* Commit-Reveal */}
+          <Section id="commit-reveal" title="Commit-Reveal Scheme">
+            <p className="text-[var(--muted)] mb-4">
+              The commit-reveal scheme prevents strategy front-running. During registration, players submit only a hash of their strategy — nobody (including the operator) can see which strategies are in play until the reveal phase.
+            </p>
+
+            <div className="mb-4">
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Commitment Formula</div>
+              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-sm">
+                SHA256(strategy_byte || params[5] || salt[16])
+              </div>
+              <p className="text-xs text-[var(--muted)] mt-2">
+                22 bytes total: 1 byte strategy index, 5 bytes for parameters, 16 bytes random salt.
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Reveal Verification</div>
+              <p className="text-sm text-[var(--muted)]">
+                During the reveal phase, the player submits the preimage (strategy, params, salt). The program recomputes SHA256 and verifies it matches the stored commitment. If it doesn&apos;t match, the reveal is rejected.
+              </p>
+            </div>
+
+            <div>
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Forfeit Handling</div>
+              <p className="text-sm text-[var(--muted)]">
+                If a player fails to reveal before the deadline, they are assigned a deterministic fallback strategy based on <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code>. This ensures every registered player competes — no one can grief by withholding their reveal.
+              </p>
+            </div>
+          </Section>
+
+          {/* Payoff Matrix */}
+          <Section id="payoff-matrix" title="The Payoff Matrix">
+            <p className="text-sm text-[var(--muted)] mb-4">Each round, two players simultaneously choose to <strong>Cooperate</strong> or <strong>Defect</strong>:</p>
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full text-sm border border-[var(--card-border)] rounded overflow-hidden">
+                <thead>
+                  <tr className="bg-neutral-50">
+                    <th className="p-3 border-b border-r border-[var(--card-border)]"></th>
+                    <th className="p-3 border-b border-r border-[var(--card-border)] text-emerald-600">They: C</th>
+                    <th className="p-3 border-b border-[var(--card-border)] text-red-600">They: D</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="p-3 border-b border-r border-[var(--card-border)] font-bold text-emerald-600 bg-neutral-50">You: C</td>
+                    <td className="p-3 border-b border-r border-[var(--card-border)] text-center font-mono">3, 3</td>
+                    <td className="p-3 border-b border-[var(--card-border)] text-center font-mono text-red-600">0, 5</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 border-r border-[var(--card-border)] font-bold text-red-600 bg-neutral-50">You: D</td>
+                    <td className="p-3 border-r border-[var(--card-border)] text-center font-mono text-amber-600">5, 0</td>
+                    <td className="p-3 text-center font-mono text-[var(--muted)]">1, 1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <OutcomeCard name="Reward" scores="3, 3" desc="Both cooperate" color="text-emerald-600" />
+              <OutcomeCard name="Punishment" scores="1, 1" desc="Both defect" color="text-[var(--muted)]" />
+              <OutcomeCard name="Temptation" scores="5, 0" desc="You defect, they cooperate" color="text-amber-600" />
+              <OutcomeCard name="Sucker" scores="0, 5" desc="You cooperate, they defect" color="text-red-600" />
+            </div>
+
+            <p className="text-sm text-[var(--muted)]">
+              Defecting wins individual rounds, but cooperation wins tournaments. Mutual cooperation (3+3=6 total) creates more value than mutual defection (1+1=2 total). The best strategies balance retaliation with forgiveness.
+            </p>
+          </Section>
+
+          {/* Strategies */}
+          <Section id="strategies" title="Strategies">
+            <p className="text-sm text-[var(--muted)] mb-4">
+              There are 9 built-in strategies. Each implements a different decision-making algorithm for choosing Cooperate or Defect each round.
+            </p>
+            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <th className="px-4 py-3 text-left w-12">Index</th>
+                    <th className="px-4 py-3 text-left">Name</th>
+                    <th className="px-4 py-3 text-left hidden md:table-cell">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {STRATEGIES.map(s => (
+                    <tr key={s.index} className="border-b border-[var(--card-border)] last:border-0">
+                      <td className="px-4 py-2 font-mono text-[var(--muted)]">{s.index}</td>
+                      <td className="px-4 py-2">
+                        <span className="font-mono text-[var(--accent)] text-sm">{s.key}</span>
+                        <div className="text-xs text-[var(--muted)] md:hidden mt-0.5">{STRATEGY_CONFIGS[s.index].description}</div>
+                      </td>
+                      <td className="px-4 py-2 text-[var(--muted)] text-xs hidden md:table-cell">{STRATEGY_CONFIGS[s.index].description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-sm text-[var(--muted)]">
+              Explore strategy behavior interactively in the <a href="/configure" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Strategy Lab</a>.
+            </p>
+          </Section>
+
+          {/* Parameters */}
+          <Section id="parameters" title="Strategy Parameters">
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Every strategy can be fine-tuned with 5 parameters (5 bytes total). Non-default values create unique behavioral variants.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {PARAM_META.map(p => (
+                <div key={p.key} className="neon-card rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span>{p.icon}</span>
+                    <code className="font-mono text-sm font-bold">{p.key}</code>
+                    <span className="text-[10px] text-[var(--muted)] font-mono ml-auto">{p.key === 'initial_moves' ? '0–255 8-bit mask' : `${p.min}–${p.max} ${p.unit}`}</span>
+                  </div>
+                  <div className="text-xs text-[var(--muted)]">{p.description}</div>
+                </div>
+              ))}
+            </div>
+
+            <DetailBlock summary="Which parameters affect which strategies?">
+              <div className="text-sm text-[var(--muted)] space-y-2">
+                <p><strong>forgiveness</strong> — TitForTat, SuspiciousTitForTat. Probabilistically overrides retaliation.</p>
+                <p><strong>retaliation_delay</strong> — TitForTat, SuspiciousTitForTat. Delays copying defections.</p>
+                <p><strong>noise_tolerance</strong> — GrimTrigger. Tolerates up to N total opponent defections before triggering permanent retaliation.</p>
+                <p><strong>cooperate_bias</strong> — Random. Sets cooperation probability per round.</p>
+                <p><strong>initial_moves</strong> — All strategies. Overrides the first N rounds with a fixed sequence.</p>
+              </div>
+            </DetailBlock>
+
+            <DetailBlock summary="How does the initial_moves bitmask work?">
+              <div className="text-sm text-[var(--muted)] space-y-2">
+                <p>The <code className="bg-[var(--surface)] px-1 rounded text-xs font-mono">initial_moves</code> byte is treated as an 8-bit mask. Each bit controls one round:</p>
+                <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-xs">
+                  Bit 0 (LSB) = Round 0, Bit 1 = Round 1, ..., Bit 7 = Round 7<br />
+                  1 = Defect, 0 = Use strategy<br /><br />
+                  Example: 0b00000011 (3) = Defect rounds 0-1, then strategy takes over<br />
+                  Example: 0b11111111 (255) = Defect all 8 rounds
+                </div>
+                <p>If a bit position exceeds the number of rounds played, it has no effect. After the initial moves are exhausted, the strategy&apos;s normal algorithm takes over.</p>
+              </div>
+            </DetailBlock>
+          </Section>
+
+          {/* Matching Algorithm */}
+          <Section id="matching" title="Matching Algorithm">
+            <p className="text-sm text-[var(--muted)] mb-4">
+              The number of matches each player plays (K) is determined adaptively based on the number of participants:
+            </p>
+            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <th className="px-4 py-3 text-left">Players (n)</th>
+                    <th className="px-4 py-3 text-left">Effective K</th>
+                    <th className="px-4 py-3 text-left">Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-[var(--card-border)]">
+                    <td className="px-4 py-2">n ≤ 200</td>
+                    <td className="px-4 py-2 font-mono">n − 1</td>
+                    <td className="px-4 py-2 text-[var(--muted)]">Full round-robin (every player faces every other)</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2">n &gt; 200</td>
+                    <td className="px-4 py-2 font-mono">clamp(K, 49, 99)</td>
+                    <td className="px-4 py-2 text-[var(--muted)]">Circular offset pairing</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-3 text-sm text-[var(--muted)]">
+              <p>
+                <strong>Total matches:</strong> <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">n × K / 2</code> — each match involves two players, so total unique pairings is half the sum of all individual match counts.
+              </p>
+              <p>
+                <strong>Pairing method:</strong> For small tournaments (≤200 players), full round-robin ensures every player faces every other player exactly once. For larger tournaments, circular offset pairing distributes opponents evenly.
+              </p>
+              <p>
+                <strong>Deterministic seed:</strong> The randomness seed is derived from <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">SlotHashes[16..48]</code> with the first 4 bytes XOR&apos;d with <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">tournament_id</code>, captured at the moment the reveal phase closes. This seed drives round counts and per-round RNG. The operator cannot manipulate it.
+              </p>
+            </div>
+          </Section>
+
+          {/* Rounds & Scoring */}
+          <Section id="rounds" title="Rounds & Scoring">
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Each match consists of a variable number of rounds, determined by a geometric distribution. Players don&apos;t know exactly when the match will end, preventing end-game exploitation.
+            </p>
+
+            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <th className="px-4 py-3 text-left">Round Tier</th>
+                    <th className="px-4 py-3 text-left">Range</th>
+                    <th className="px-4 py-3 text-left">End Probability</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-[var(--card-border)]">
+                    <td className="px-4 py-2 font-medium">Standard</td>
+                    <td className="px-4 py-2 font-mono">20–50 rounds</td>
+                    <td className="px-4 py-2 text-[var(--muted)]">5% per round after minimum</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2 font-medium">Compressed</td>
+                    <td className="px-4 py-2 font-mono">10–30 rounds</td>
+                    <td className="px-4 py-2 text-[var(--muted)]">7% per round after minimum</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-3 text-sm text-[var(--muted)]">
+              <p>
+                <strong>Geometric distribution:</strong> After reaching the minimum round count, each subsequent round has a fixed probability of being the last. This creates unpredictable match lengths that average near the midpoint of the range.
+              </p>
+              <p>
+                <strong>Per-round RNG isolation:</strong> Each player&apos;s move is computed independently using an isolated RNG stream. One player&apos;s randomness (e.g., for the Random strategy) never affects the other&apos;s.
+              </p>
+              <p>
+                <strong>Final ranking:</strong> Players are ranked by cumulative score across all their matches. The top 25% (minimum 1 winner) qualify for the prize pool.
+              </p>
+            </div>
+          </Section>
+
+          {/* Fees & Payouts */}
+          <Section id="payouts" title="Fees & Payouts">
+            <p className="text-sm text-[var(--muted)] mb-4">
+              The total prize pool comes from all player stakes. Before distribution, fees are deducted:
+            </p>
+
+            <div className="neon-card rounded-xl p-4 mb-4">
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Pool Breakdown</div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-full bg-neutral-100 rounded-full h-6 overflow-hidden flex">
+                    <div className="bg-emerald-500 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ width: '80%' }}>
+                      Winner Pool
+                    </div>
+                    <div className="bg-amber-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ width: '10%' }}>
+                      Op
+                    </div>
+                    <div className="bg-neutral-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ width: '10%' }}>
+                      Fee
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Winner Pool (remaining after fees)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400" /> Operator Reimbursement (tx costs)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-neutral-400" /> House Fee (configurable bps)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm text-[var(--muted)]">
+              <p>
+                <strong>House fee:</strong> Configurable in basis points (1 bps = 0.01%). Currently set by the admin. Deducted from the total pool before winner distribution.
+              </p>
+              <p>
+                <strong>Operator reimbursement:</strong> The operator bot pays Solana transaction fees for running matches. These costs are tracked on-chain and reimbursed from the pool before winners are paid, ensuring operators are never out of pocket.
+              </p>
+              <p>
+                <strong>Winner determination:</strong> Top 25% of players by score (minimum 1 winner). All winners receive an equal share of the winner pool.
+              </p>
+              <p>
+                <strong>Claim window:</strong> Winners have 30 days from payout start to claim their prize. Unclaimed funds are swept to accumulated house fees. Entries can be closed by anyone after expiry to reclaim rent.
+              </p>
+            </div>
+          </Section>
+
+          {/* On-Chain Accounts */}
+          <Section id="accounts" title="On-Chain Accounts">
+            <p className="text-sm text-[var(--muted)] mb-4">
+              The program uses 3 PDA (Program Derived Address) types. All state is fully on-chain.
+            </p>
+
+            <div className="space-y-3 mb-4">
+              <PDARow name="Config" seeds={['"config"']} desc="Global parameters: admin, operator, fees, stake amount, timing durations, accumulated fees, current tournament ID." />
+              <PDARow name="Tournament" seeds={['"tournament"', 'u32_le_bytes(id)']} desc="Per-tournament state: phase, participants, scores, strategies, match progress, randomness seed, winner pool." />
+              <PDARow name="Entry" seeds={['"entry"', 'tournament_pubkey', 'player_pubkey']} desc="Per-player per-tournament: commitment hash, revealed strategy + params, score, matches played, payout status." />
+            </div>
+
+            <DetailBlock summary="Account discriminators">
+              <div className="space-y-2 text-sm">
+                <DiscRow name="Config" bytes="[155, 12, 170, 224, 30, 250, 204, 130]" />
+                <DiscRow name="Tournament" bytes="[175, 139, 119, 242, 115, 194, 57, 92]" />
+                <DiscRow name="Entry" bytes="[63, 18, 152, 113, 215, 246, 221, 250]" />
+              </div>
+            </DetailBlock>
+          </Section>
+
+          {/* Security & Verification */}
+          <Section id="security" title="Security & Verification">
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              {[
+                { title: 'Reproducible Matches', desc: 'All matches can be replayed off-chain given the randomness seed and player strategies. The match-logic crate compiles to both native and WASM, enabling independent verification.' },
+                { title: 'Admin/Operator Separation', desc: 'The admin can only update configuration (fees, timing, stake). The operator can only advance tournament phases and run matches. Neither role can alter match outcomes or steal funds.' },
+                { title: 'On-Chain Guarantees', desc: 'Overflow protection on all arithmetic. Rent-exempt accounts. Tournament parameters are snapshotted at creation — admin config changes don\'t affect in-progress tournaments.' },
+                { title: 'Deterministic Execution', desc: 'Match outcomes depend only on the randomness seed (from SlotHashes) and player strategies. The operator submits transactions but has no influence over results.' },
+              ].map(item => (
+                <div key={item.title} className="neon-card rounded-xl p-4">
+                  <div className="font-bold text-sm mb-1">{item.title}</div>
+                  <div className="text-xs text-[var(--muted)]">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <DetailBlock summary="How to verify the program binary">
+              <div className="text-sm text-[var(--muted)] space-y-2">
+                <p>Anyone can verify that the deployed program matches the public source code using <a href="https://github.com/Ellipsis-Labs/solana-verifiable-build" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">solana-verify</a>:</p>
+                <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-xs">
+                  solana-verify verify-from-repo \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;https://github.com/makoto-kusanagi/prisoners-arena-program \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;--program-id {'<PROGRAM_ID>'} \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;--library-name prisoners_arena
+                </div>
+                <p>The program ID can be found via the <a href="/api/config" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">config API</a> or on the homepage.</p>
+              </div>
+            </DetailBlock>
+
+            <DetailBlock summary="How to replay matches locally">
+              <div className="text-sm text-[var(--muted)] space-y-2">
+                <p>The <code className="bg-[var(--surface)] px-1 rounded text-xs font-mono">match-logic</code> crate is the same code used on-chain and by the operator. To replay:</p>
+                <p>1. Fetch the tournament&apos;s randomness seed and all player strategies from the API</p>
+                <p>2. Use the <code className="bg-[var(--surface)] px-1 rounded text-xs font-mono">match-logic</code> crate to generate pairings and execute matches with the same seed</p>
+                <p>3. Compare computed scores against on-chain values to confirm correctness</p>
+              </div>
+            </DetailBlock>
+          </Section>
+
+
+        </div>
+      </div>
     </div>
     <Footer />
     </>
   );
 }
 
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+/* Inline helper components */
+
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id}>
+      <h2 className="text-xl font-bold mb-4 border-b border-[var(--card-border)] pb-2">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function TOCLink({ id, label }: { id: string; label: string }) {
+  return (
+    <a href={`#${id}`}
+       className="block text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-l-2 hover:border-[var(--accent)] pl-3 py-1 transition-all">
+      {label}
+    </a>
+  );
+}
+
+function DetailBlock({ summary, children }: { summary: string; children: React.ReactNode }) {
+  return (
+    <details className="mt-3">
+      <summary className="text-xs text-[var(--muted)] cursor-pointer hover:text-[var(--foreground)] font-medium">{summary}</summary>
+      <div className="mt-2 bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-4">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4 text-sm">
-      <span className="text-[var(--muted)] w-32 shrink-0">{label}</span>
-      <span className={mono ? 'font-mono text-[var(--accent)]' : ''}>{value}</span>
+      <span className="text-[var(--muted)] w-28 shrink-0">{label}</span>
+      <div>{children}</div>
     </div>
   );
 }
 
-function Endpoint({ method, path, description, params, response, cache }: {
-  method: string; path: string; description: string;
-  params?: { name: string; desc: string; example: string }[];
-  response: string; cache: string;
-}) {
+function OutcomeCard({ name, scores, desc, color }: { name: string; scores: string; desc: string; color: string }) {
   return (
-    <div className="border border-[var(--card-border)] rounded-xl overflow-hidden">
-      <div className="bg-[var(--surface)] px-5 py-3 border-b border-[var(--card-border)] flex items-center gap-3">
-        <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">{method}</span>
-        <code className="font-mono text-sm font-bold">{path}</code>
-        <span className="text-xs text-[var(--muted)] ml-auto">Cache: {cache}</span>
-      </div>
-      <div className="px-5 py-3">
-        <p className="text-sm text-[var(--muted)] mb-3">{description}</p>
-        {params && (
-          <div className="mb-3">
-            <div className="text-xs font-bold text-[var(--muted)] uppercase mb-1">Parameters</div>
-            {params.map(p => (
-              <div key={p.name} className="text-sm">
-                <code className="text-[var(--accent)]">{p.name}</code> — {p.desc}
-                <span className="text-[var(--muted)]"> (e.g. {p.example})</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <details>
-          <summary className="text-xs text-[var(--muted)] cursor-pointer hover:text-[var(--foreground)]">Example response</summary>
-          <pre className="mt-2 bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap text-[var(--muted)]">{response}</pre>
-        </details>
-      </div>
+    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 text-center">
+      <div className="text-xs text-[var(--muted)]">{name}</div>
+      <div className={`font-mono font-bold ${color}`}>{scores}</div>
+      <div className="text-[10px] text-[var(--muted)]">{desc}</div>
     </div>
   );
 }
 
-function PDARow({ name, seeds }: { name: string; seeds: string[] }) {
+function PDARow({ name, seeds, desc }: { name: string; seeds: string[]; desc: string }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-3 flex items-center gap-4 text-sm">
-      <span className="font-bold w-24">{name}</span>
-      <code className="font-mono text-[var(--accent)]">[{seeds.join(', ')}]</code>
+    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-3">
+      <div className="flex items-center gap-4 text-sm mb-1">
+        <span className="font-bold w-24">{name}</span>
+        <code className="font-mono text-[var(--accent)] text-xs">[{seeds.join(', ')}]</code>
+      </div>
+      <div className="text-xs text-[var(--muted)]">{desc}</div>
     </div>
   );
 }
 
 function DiscRow({ name, bytes }: { name: string; bytes: string }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-2 flex items-center gap-4">
+    <div className="flex items-center gap-4">
       <span className="font-bold w-24">{name}</span>
       <code className="font-mono text-xs text-[var(--muted)]">{bytes}</code>
     </div>

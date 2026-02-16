@@ -9,7 +9,7 @@ const TOOLS = [
 ];
 
 const LINKS = [
-  { href: '/docs', label: 'API Docs' },
+  { href: '/api', label: 'API Docs' },
 ];
 
 export function Nav() {
@@ -23,7 +23,7 @@ export function Nav() {
           <span className="font-bold text-lg">Prisoner&apos;s Arena</span>
         </a>
         <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
-          <a href="/how-it-works" className="hover:text-[var(--foreground)] transition-colors hidden sm:inline">How It Works</a>
+          <a href="/docs" className="hover:text-[var(--foreground)] transition-colors hidden sm:inline">How It Works</a>
           {/* Tools dropdown */}
           <div className="relative group hidden sm:block">
             <button className="hover:text-[var(--foreground)] transition-colors flex items-center gap-1">
@@ -76,7 +76,7 @@ export function Nav() {
       {/* Mobile dropdown */}
       {menuOpen && (
         <div className="sm:hidden border-t border-[var(--card-border)] bg-white px-4 py-3 space-y-3 text-sm">
-          <a href="/how-it-works" className="block text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">How It Works</a>
+          <a href="/docs" className="block text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">How It Works</a>
           {TOOLS.map(t => (
             <a key={t.href} href={t.href} className="block text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               {t.label}
