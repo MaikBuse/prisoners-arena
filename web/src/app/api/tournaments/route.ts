@@ -25,8 +25,14 @@ export async function GET(req: NextRequest) {
         try { upsertTournament(programId, t); } catch {}
       } else {
         try { t = getTournament(programId, i); } catch {}
-        if (t && t.state !== 'Payout' && i < config.currentTournamentId) {
-          t = { ...t, state: 'Payout' };
+        if (t && i < config.currentTournamentId) {
+          // Account is gone → operator closed it → mark fully completed
+          t = {
+            ...t,
+            state: 'Payout',
+            claimsProcessed: t.winnerCount,
+            entriesRemaining: 0,
+          };
           try { upsertTournament(programId, t); } catch {}
         }
       }

@@ -17,13 +17,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       // Archive to SQLite
       try { upsertTournament(getProgramId().toBase58(), tournament); } catch {}
     } else {
-      // Chain miss — try SQLite fallback
+      // Chain miss — account closed by operator, try SQLite fallback
       const programId = getProgramId().toBase58();
       try { tournament = getTournament(programId, idNum); } catch {}
-      if (tournament && tournament.state !== 'Payout') {
+      if (tournament) {
         const config = await fetchConfig();
         if (config && idNum < config.currentTournamentId) {
-          tournament = { ...tournament, state: 'Payout' };
+          // Account is gone → operator closed it → mark fully completed
+          tournament = {
+            ...tournament,
+            state: 'Payout',
+            claimsProcessed: tournament.winnerCount,
+            entriesRemaining: 0,
+          };
           try { upsertTournament(programId, tournament); } catch {}
         }
       }
