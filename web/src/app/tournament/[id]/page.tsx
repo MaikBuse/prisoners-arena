@@ -1,12 +1,13 @@
 'use client';
-import { useEffect, useState, useCallback, use, Fragment } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
 import type { ScoreboardEntry, StrategyParams } from '@/lib/api';
 import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, getProgramId } from '@/lib/solana';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
+import { StrategyBadge, ParamPills } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { Nav } from '@/components/Nav';
+import { PlayerDetailModal } from '@/components/PlayerDetailModal';
 import { displayState } from '@/lib/tournament-utils';
 
 function effectiveK(configK: number, n: number): number {
@@ -296,72 +297,61 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-[var(--muted)] text-xs border-b border-[var(--card-border)]">
-                        <th className="px-5 py-3 text-left w-12">#</th>
-                        <th className="px-5 py-3 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('player')}>
+                        <th className="px-3 sm:px-5 py-3 text-left w-12">#</th>
+                        <th className="px-3 sm:px-5 py-3 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('player')}>
                           Player{sortIcon('player')}
                         </th>
-                        <th className="px-5 py-3 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('strategy')}>
+                        <th className="px-3 sm:px-5 py-3 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('strategy')}>
                           Strategy{sortIcon('strategy')}
                         </th>
-                        <th className="px-5 py-3 text-right cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('score')}>
+                        <th className="px-3 sm:px-5 py-3 text-right cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('score')}>
                           Score{sortIcon('score')}
                         </th>
-                        <th className="px-5 py-3 text-right">Matches</th>
-                        {t.state === 'Payout' && <th className="px-5 py-3 text-center">Status</th>}
+                        <th className="px-3 sm:px-5 py-3 text-right hidden sm:table-cell">Matches</th>
+                        {t.state === 'Payout' && <th className="px-3 sm:px-5 py-3 text-center">Status</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {sorted.map((e, i) => {
                         const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
-                        const isExpanded = expandedPlayer === e.player;
-                        const colCount = t.state === 'Payout' ? 6 : 5;
+                        const isSelected = expandedPlayer === e.player;
                         return (
-                          <Fragment key={e.player}>
-                            <tr
-                              className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors cursor-pointer ${
-                                isWinner ? 'bg-amber-50/50' : ''
-                              } ${isExpanded ? 'bg-neutral-50' : ''}`}
-                              onClick={() => setExpandedPlayer(isExpanded ? null : e.player)}
-                            >
-                              <td className="px-5 py-3 text-[var(--muted)] whitespace-nowrap">
-                                <span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span>
+                          <tr
+                            key={e.player}
+                            className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors cursor-pointer ${
+                              isWinner ? 'bg-amber-50/50' : ''
+                            } ${isSelected ? 'bg-neutral-50' : ''}`}
+                            onClick={() => setExpandedPlayer(isSelected ? null : e.player)}
+                          >
+                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-[var(--muted)] whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span>
+                            </td>
+                            <td className="px-3 sm:px-5 py-2 sm:py-3 font-mono text-sm">
+                              <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
+                                 className="text-[var(--accent)] hover:text-[var(--accent-hover)]"
+                                 onClick={(ev) => ev.stopPropagation()}>{truncateAddress(e.player, 6)}</a>
+                              <CopyButton text={e.player} />
+                            </td>
+                            <td className="px-3 sm:px-5 py-2 sm:py-3">
+                              <span className="inline-flex items-center flex-wrap gap-y-1">
+                                {e.revealed === false ? (
+                                  <span className="text-[var(--muted)]">🔒 Hidden</span>
+                                ) : (
+                                  <>{e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
+                                  <span className="hidden sm:inline-flex"><ParamPills params={e.strategyParams} /></span></>
+                                )}
+                              </span>
+                            </td>
+                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-right font-mono font-bold">{e.score}</td>
+                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-right text-[var(--muted)] hidden sm:table-cell">
+                              {`${e.matchesPlayed} / ${effectiveK(t.matchesPerPlayer, t.participantCount)}`}
+                            </td>
+                            {t.state === 'Payout' && (
+                              <td className="px-3 sm:px-5 py-2 sm:py-3 text-center text-sm">
+                                {e.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : '—'}
                               </td>
-                              <td className="px-5 py-3 font-mono text-sm">
-                                <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
-                                   className="text-[var(--accent)] hover:text-[var(--accent-hover)]"
-                                   onClick={(ev) => ev.stopPropagation()}>{truncateAddress(e.player, 6)}</a>
-                                <CopyButton text={e.player} />
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="inline-flex items-center flex-wrap gap-y-1">
-                                  {e.revealed === false ? (
-                                    <span className="text-[var(--muted)]">🔒 Hidden</span>
-                                  ) : (
-                                    <>{e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
-                                    <ParamPills params={e.strategyParams} />
-                                    <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span></>
-                                  )}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3 text-right font-mono font-bold">{e.score}</td>
-                              <td className="px-5 py-3 text-right text-[var(--muted)]">
-                                {`${e.matchesPlayed} / ${effectiveK(t.matchesPerPlayer, t.participantCount)}`}
-                              </td>
-                              {t.state === 'Payout' && (
-                                <td className="px-5 py-3 text-center text-sm">
-                                  {e.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : '—'}
-                                </td>
-                              )}
-                            </tr>
-                            {isExpanded && e.revealed !== false && e.strategyParams && (
-                              <tr className="border-b border-[var(--card-border)] bg-neutral-50/80">
-                                <td colSpan={colCount} className="px-5 py-4">
-                                  <div className="text-xs font-bold text-[var(--muted)] mb-2">⚙️ Strategy Parameters</div>
-                                  <ParamsDetail params={e.strategyParams} />
-                                </td>
-                              </tr>
                             )}
-                          </Fragment>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -369,6 +359,26 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 </div>
               </div>
             )}
+
+            {/* Player Detail Modal */}
+            {expandedPlayer && (() => {
+              const entry = sorted.find(e => e.player === expandedPlayer);
+              if (!entry || entry.revealed === false) return null;
+              const pIdx = t.players.indexOf(expandedPlayer);
+              if (pIdx < 0) return null;
+              const rank = sorted.indexOf(entry) + 1;
+              const isWinner = t.state === 'Payout' && entry.score >= t.minWinningScore;
+              return (
+                <PlayerDetailModal
+                  tournament={t}
+                  entry={entry}
+                  playerIndex={pIdx}
+                  rank={rank}
+                  isWinner={isWinner}
+                  onClose={() => setExpandedPlayer(null)}
+                />
+              );
+            })()}
 
             {/* Empty state */}
             {entries.length === 0 && t.state === 'Registration' && (

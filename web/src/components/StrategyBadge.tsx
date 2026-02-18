@@ -18,7 +18,7 @@ export function StrategyBadge({ strategy }: { strategy: number }) {
   if (!s) return <span className="text-neutral-500">Unknown</span>;
   const style = BADGE_STYLES[s.color] || BADGE_STYLES.gray;
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border ${style}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border whitespace-nowrap ${style}`}>
       {s.name}
     </span>
   );

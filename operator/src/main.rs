@@ -32,6 +32,9 @@ use state::TournamentState;
 /// Minimum balance to keep running (0.1 SOL)
 const MIN_BALANCE: u64 = LAMPORTS_PER_SOL / 10;
 
+/// Number of newest tournament accounts to retain on-chain (older ones are closed to reclaim rent)
+const TOURNAMENT_RETAIN_COUNT: u32 = 10;
+
 // --- Config file structs (mirrors cli/src/config.rs, operator only needs network + wallets) ---
 
 #[derive(Debug, Deserialize)]
@@ -399,8 +402,8 @@ async fn run_cycle(
                         return Ok(true);
                     }
                 }
-            } else {
-                // All entries closed, close tournament
+            } else if tournament.id < config.current_tournament_id.saturating_sub(TOURNAMENT_RETAIN_COUNT - 1) {
+                // All entries closed and tournament is old enough to close
                 if !dry_run {
                     match actions::close_tournament(client, program_id, &tournament, operator, &config) {
                         Ok(_) => {
@@ -412,6 +415,8 @@ async fn run_cycle(
                         }
                     }
                 }
+            } else {
+                info!("Tournament #{} retained on-chain ({} newest kept)", tournament.id, TOURNAMENT_RETAIN_COUNT);
             }
         }
     }
@@ -443,7 +448,7 @@ async fn run_cycle(
                             info!("Closed {} entries from tournament #{}", closed, prev.id);
                             return Ok(true);
                         }
-                    } else {
+                    } else if prev.id < config.current_tournament_id.saturating_sub(TOURNAMENT_RETAIN_COUNT - 1) {
                         match actions::close_tournament(client, program_id, &prev, operator, &config) {
                             Ok(_) => {
                                 info!("Tournament #{} account closed, rent recovered", prev.id);
@@ -452,6 +457,8 @@ async fn run_cycle(
                             }
                             Err(e) => warn!("Could not close tournament #{}: {}", prev.id, e),
                         }
+                    } else {
+                        info!("Tournament #{} retained on-chain ({} newest kept)", prev.id, TOURNAMENT_RETAIN_COUNT);
                     }
                 }
             }

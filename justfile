@@ -40,7 +40,8 @@ build-match-logic:
 
 # Build WASM for frontend
 build-wasm:
-    cd contract/crates/match-logic && wasm-pack build --target web --features wasm --out-dir ../../../web/src/wasm
+    cd contract/crates/match-logic && wasm-pack build --target web --features wasm
+    mkdir -p web/src/wasm && cp contract/crates/match-logic/pkg/* web/src/wasm/
 
 # Build contract (fast, for local dev)
 build-contract:
