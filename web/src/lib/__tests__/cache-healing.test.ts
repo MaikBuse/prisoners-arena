@@ -8,8 +8,9 @@ import {
   getTournament,
   getCachedEntryData,
   listTournamentIds,
+  healClosedTournament,
 } from '@/lib/db';
-import type { CachedEntryData } from '@/lib/db';
+import type { CachedEntryData, CachedTournament } from '@/lib/db';
 import { displayState } from '@/lib/tournament-utils';
 import { buildScoreboard } from '@/lib/api';
 
@@ -336,5 +337,217 @@ describe('entry data persistence', () => {
     const carol = scoreboard.find(s => s.player === 'Carol333')!;
     expect(carol.matchesPlayed).toBe(0);
     expect(carol.paidOut).toBe(false);
+  });
+});
+
+// ── E. healClosedTournament() ─────────────────────────────────────────
+
+function makeCachedTournament(overrides: Partial<CachedTournament> = {}): CachedTournament {
+  return {
+    ...makeTournament(),
+    accountClosed: false,
+    ...overrides,
+  };
+}
+
+describe('healClosedTournament()', () => {
+  it('heals Running → Payout with inferred winners', () => {
+    // Simulate a tournament cached in Running state but already closed on-chain
+    const t = makeCachedTournament({
+      state: 'Running',
+      matchesCompleted: 24,
+      matchesTotal: 24,
+      winnerCount: 0,
+      winnerPool: '0',
+      minWinningScore: 0,
+      claimsProcessed: 0,
+      entriesRemaining: 4,
+      participantCount: 4,
+      forfeits: 0,
+      pool: '400000000',    // 4 SOL
+      houseFeeBps: 500,     // 5%
+      operatorCosts: '0',
+    });
+    upsertTournament(PROGRAM_ID, t);
+
+    healClosedTournament(PROGRAM_ID, t);
+
+    expect(t.state).toBe('Payout');
+    expect(t.accountClosed).toBe(true);
+    expect(t.entriesRemaining).toBe(0);
+    // 4 active players → floor(4/4) = 1 winner
+    expect(t.winnerCount).toBe(1);
+    // claimsProcessed should match winnerCount
+    expect(t.claimsProcessed).toBe(1);
+    // winnerPool = 400000000 - (400000000 * 500 / 10000) - 0 = 380000000
+    expect(t.winnerPool).toBe('380000000');
+    // minWinningScore = top score (sorted desc: [80, 60, 40, 20], idx 0 = 80)
+    expect(t.minWinningScore).toBe(80);
+
+    // Verify it was persisted
+    const got = getTournament(PROGRAM_ID, t.id)!;
+    expect(got.state).toBe('Payout');
+    expect(got.accountClosed).toBe(true);
+    expect(got.winnerCount).toBe(1);
+    expect(got.winnerPool).toBe('380000000');
+  });
+
+  it('already-Payout tournament only sets accountClosed and entriesRemaining', () => {
+    const t = makeCachedTournament({
+      state: 'Payout',
+      winnerCount: 1,
+      winnerPool: '380000000',
+      minWinningScore: 80,
+      claimsProcessed: 0,
+      entriesRemaining: 2,
+      pool: '400000000',
+      houseFeeBps: 500,
+      operatorCosts: '0',
+    });
+    upsertTournament(PROGRAM_ID, t);
+
+    healClosedTournament(PROGRAM_ID, t);
+
+    expect(t.state).toBe('Payout');
+    expect(t.accountClosed).toBe(true);
+    expect(t.entriesRemaining).toBe(0);
+    // winnerCount was already correct
+    expect(t.winnerCount).toBe(1);
+    // claimsProcessed healed to winnerCount
+    expect(t.claimsProcessed).toBe(1);
+  });
+
+  it('computes winnerPool correctly with BigInt (large values)', () => {
+    // 100 SOL pool (100_000_000_000 lamports)
+    const t = makeCachedTournament({
+      state: 'Running',
+      matchesCompleted: 100,
+      matchesTotal: 100,
+      winnerCount: 0,
+      winnerPool: '0',
+      minWinningScore: 0,
+      claimsProcessed: 0,
+      entriesRemaining: 20,
+      participantCount: 20,
+      forfeits: 0,
+      pool: '100000000000',
+      houseFeeBps: 1000,  // 10%
+      operatorCosts: '500000000',  // 0.5 SOL
+      scores: Array.from({ length: 20 }, (_, i) => 100 - i),
+      players: Array.from({ length: 20 }, (_, i) => `Player${String(i).padStart(3, '0')}`),
+      strategies: Array(20).fill(0),
+      strategyParams: Array(20).fill([0, 0, 0, 0, 0]),
+    });
+    upsertTournament(PROGRAM_ID, t);
+
+    healClosedTournament(PROGRAM_ID, t);
+
+    // 20 players → floor(20/4) = 5 winners
+    expect(t.winnerCount).toBe(5);
+    // pool=100_000_000_000, fee=10_000_000_000, opCost=500_000_000
+    // winnerPool = 100_000_000_000 - 10_000_000_000 - 500_000_000 = 89_500_000_000
+    expect(t.winnerPool).toBe('89500000000');
+  });
+
+  it('full roundtrip: heal → upsert → get → buildScoreboard', () => {
+    const t = makeCachedTournament({
+      state: 'Running',
+      matchesCompleted: 24,
+      matchesTotal: 24,
+      matchesPerPlayer: 10,
+      winnerCount: 0,
+      winnerPool: '0',
+      minWinningScore: 0,
+      claimsProcessed: 0,
+      entriesRemaining: 4,
+      pool: '400000000',
+      houseFeeBps: 500,
+      operatorCosts: '0',
+    });
+    upsertTournament(PROGRAM_ID, t);
+
+    // Heal the tournament
+    healClosedTournament(PROGRAM_ID, t);
+
+    // Read back from DB
+    const got = getTournament(PROGRAM_ID, t.id)!;
+    expect(got.state).toBe('Payout');
+    expect(got.accountClosed).toBe(true);
+    expect(got.winnerCount).toBe(1);
+
+    // Build scoreboard (no entries, no cached entry data — pure inference)
+    const scoreboard = buildScoreboard(got, []);
+    expect(scoreboard).toHaveLength(4);
+
+    // All players should have inferred matchesPlayed since state is Payout
+    for (const entry of scoreboard) {
+      expect(entry.matchesPlayed).toBe(10);
+    }
+
+    // Winner (Alice with score 80) should be inferred as paid out
+    const alice = scoreboard.find(s => s.player === 'Alice111')!;
+    expect(alice.paidOut).toBe(true);
+    expect(alice.score).toBe(80);
+  });
+
+  it('does not re-upsert when nothing needs healing', () => {
+    // A tournament already fully healed
+    const t = makeCachedTournament({
+      state: 'Payout',
+      matchesCompleted: 24,
+      matchesTotal: 24,
+      winnerCount: 1,
+      winnerPool: '380000000',
+      minWinningScore: 80,
+      claimsProcessed: 1,
+      entriesRemaining: 0,
+      pool: '400000000',
+      houseFeeBps: 500,
+      operatorCosts: '0',
+    });
+    upsertTournament(PROGRAM_ID, t);
+
+    // Heal should only need to set accountClosed
+    healClosedTournament(PROGRAM_ID, t);
+    expect(t.accountClosed).toBe(true);
+
+    const got = getTournament(PROGRAM_ID, t.id)!;
+    expect(got.state).toBe('Payout');
+    expect(got.winnerCount).toBe(1);
+    // accountClosed must be persisted to DB, not just set in memory
+    expect(got.accountClosed).toBe(true);
+  });
+
+  it('heals winnerCount for 8-player tournament (floor(8/4)=2)', () => {
+    const players = Array.from({ length: 8 }, (_, i) => `Player${i}`);
+    const scores = [100, 90, 80, 70, 60, 50, 40, 30];
+    const t = makeCachedTournament({
+      state: 'Running',
+      participantCount: 8,
+      matchesCompleted: 50,
+      matchesTotal: 50,
+      winnerCount: 0,
+      winnerPool: '0',
+      minWinningScore: 0,
+      claimsProcessed: 0,
+      entriesRemaining: 8,
+      pool: '800000000',
+      houseFeeBps: 0,
+      operatorCosts: '0',
+      forfeits: 0,
+      players,
+      scores,
+      strategies: Array(8).fill(0),
+      strategyParams: Array(8).fill([0, 0, 0, 0, 0]),
+    });
+    upsertTournament(PROGRAM_ID, t);
+
+    healClosedTournament(PROGRAM_ID, t);
+
+    expect(t.winnerCount).toBe(2);
+    // minWinningScore = scores sorted desc at index 1 = 90
+    expect(t.minWinningScore).toBe(90);
+    // No fees → winnerPool = pool
+    expect(t.winnerPool).toBe('800000000');
   });
 });

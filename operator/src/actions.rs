@@ -412,3 +412,32 @@ pub fn check_balance(client: &RpcClient, operator: &Pubkey) -> Result<u64> {
     let balance = client.get_balance(operator)?;
     Ok(balance)
 }
+
+/// Shared HTTP client for pre-cache requests (avoids rebuilding connection pools).
+fn http_client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_default()
+    })
+}
+
+/// Fire-and-forget HTTP GET to pre-cache a tournament in the web API's SQLite
+/// before the operator closes entry/tournament accounts on-chain.
+pub async fn pre_cache_tournament(web_url: &str, tournament_id: u32) {
+    let url = format!("{}/api/tournament/{}", web_url.trim_end_matches('/'), tournament_id);
+    info!("Pre-caching tournament {} via {}", tournament_id, url);
+    match http_client().get(&url).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            info!("Pre-cache OK for tournament {}", tournament_id);
+        }
+        Ok(resp) => {
+            warn!("Pre-cache returned {} for tournament {}", resp.status(), tournament_id);
+        }
+        Err(e) => {
+            warn!("Pre-cache failed for tournament {}: {}", tournament_id, e);
+        }
+    }
+}

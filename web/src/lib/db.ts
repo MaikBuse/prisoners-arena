@@ -94,7 +94,13 @@ export function getDb(): Database.Database {
 
   fs.mkdirSync(DB_DIR, { recursive: true });
   db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
+  const VALID_JOURNAL_MODES = ['WAL', 'DELETE', 'TRUNCATE', 'PERSIST', 'MEMORY', 'OFF'];
+  const journalMode = process.env.SQLITE_JOURNAL_MODE || 'WAL';
+  if (!VALID_JOURNAL_MODES.includes(journalMode.toUpperCase())) {
+    throw new Error(`Invalid SQLITE_JOURNAL_MODE: ${journalMode}`);
+  }
+  db.pragma(`journal_mode = ${journalMode}`);
+  db.pragma('busy_timeout = 5000');
   db.pragma('foreign_keys = ON');
 
   db.exec(SCHEMA_SQL);
@@ -239,4 +245,84 @@ export function listTournamentIds(programId: string): number[] {
     'SELECT tournament_id FROM tournaments WHERE program_id = ? ORDER BY tournament_id DESC'
   ).all(programId) as Array<{ tournament_id: number }>;
   return rows.map(r => r.tournament_id);
+}
+
+/**
+ * Heal stale cached data for a closed tournament.
+ *
+ * When the operator closes entry and tournament accounts before the web cache
+ * captures the final state, the cache may contain stale fields (e.g.
+ * state="Running", winnerCount=0). This function infers the correct final
+ * values and persists them so the computation happens only once.
+ *
+ * Mutates `tournament` in place and calls `upsertTournament()`.
+ */
+export function healClosedTournament(
+  programId: string,
+  tournament: CachedTournament,
+): void {
+  let healed = false;
+
+  // Ensure state is Payout (the terminal on-chain state before closure)
+  if (tournament.state !== 'Payout') {
+    tournament.state = 'Payout';
+    healed = true;
+  }
+
+  // All entries have been closed by the operator
+  if (tournament.entriesRemaining !== 0) {
+    tournament.entriesRemaining = 0;
+    healed = true;
+  }
+
+  // Infer winnerCount if matches ran to completion but it was never set
+  const activePlayerCount = tournament.participantCount - tournament.forfeits;
+  if (
+    tournament.matchesCompleted >= tournament.matchesTotal &&
+    tournament.matchesTotal > 0 &&
+    tournament.winnerCount === 0
+  ) {
+    // Mirrors on-chain logic: MIN_WINNER_RATIO = 4 → top 25% win (at least 1)
+    tournament.winnerCount = Math.max(1, Math.floor(activePlayerCount / 4));
+    healed = true;
+  }
+
+  // Compute minWinningScore from sorted scores
+  if (tournament.winnerCount > 0 && tournament.scores.length > 0) {
+    const sorted = [...tournament.scores].sort((a, b) => b - a);
+    const idx = Math.min(tournament.winnerCount - 1, sorted.length - 1);
+    const computed = sorted[idx];
+    if (tournament.minWinningScore !== computed) {
+      tournament.minWinningScore = computed;
+      healed = true;
+    }
+  }
+
+  // Compute winnerPool using BigInt: pool - houseFee - operatorCosts
+  if (tournament.winnerCount > 0) {
+    const pool = BigInt(tournament.pool);
+    const houseFee = pool * BigInt(tournament.houseFeeBps) / 10000n;
+    const operatorCosts = BigInt(tournament.operatorCosts || '0');
+    const computed = (pool - houseFee - operatorCosts).toString();
+    if (tournament.winnerPool !== computed) {
+      tournament.winnerPool = computed;
+      healed = true;
+    }
+  }
+
+  // All entries closed means all payouts distributed
+  if (tournament.claimsProcessed !== tournament.winnerCount) {
+    tournament.claimsProcessed = tournament.winnerCount;
+    healed = true;
+  }
+
+  // Mark account as closed
+  if (!tournament.accountClosed) {
+    tournament.accountClosed = true;
+    healed = true;
+  }
+
+  if (healed) {
+    upsertTournament(programId, tournament, true);
+  }
 }

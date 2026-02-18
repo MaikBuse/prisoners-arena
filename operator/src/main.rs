@@ -38,6 +38,7 @@ const MIN_BALANCE: u64 = LAMPORTS_PER_SOL / 10;
 struct ArenaConfig {
     network: NetworkConfig,
     wallets: WalletConfig,
+    web: Option<WebConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,6 +50,11 @@ struct NetworkConfig {
 #[derive(Debug, Deserialize)]
 struct WalletConfig {
     operator: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct WebConfig {
+    url: String,
 }
 
 impl ArenaConfig {
@@ -93,6 +99,10 @@ struct Args {
     /// Exit codes: 0 = action taken, 1 = nothing to do, 2 = error
     #[arg(long)]
     manual: bool,
+
+    /// Web frontend URL for pre-caching tournaments before closing accounts
+    #[arg(long)]
+    web_url: Option<String>,
 }
 
 #[tokio::main]
@@ -155,6 +165,13 @@ async fn main() -> Result<()> {
 
     info!("Operator wallet: {}", keypair.pubkey());
 
+    let web_url = args.web_url
+        .or_else(|| file_config.as_ref().and_then(|c| c.web.as_ref()).map(|w| w.url.clone()));
+
+    if let Some(ref url) = web_url {
+        info!("Web pre-cache URL: {}", url);
+    }
+
     if args.dry_run {
         warn!("DRY RUN MODE - no transactions will be sent");
     }
@@ -181,7 +198,7 @@ async fn main() -> Result<()> {
 
     if args.manual {
         info!("Manual mode: running single cycle");
-        match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
+        match run_cycle(&client, &program_id, &keypair, args.dry_run, &db, web_url.as_deref()).await {
             Ok(action_taken) => {
                 if action_taken {
                     info!("Action taken, exiting");
@@ -196,7 +213,7 @@ async fn main() -> Result<()> {
                 if is_state_conflict(&err_str) {
                     warn!("State conflict, retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
+                    match run_cycle(&client, &program_id, &keypair, args.dry_run, &db, web_url.as_deref()).await {
                         Ok(action_taken) => {
                             std::process::exit(if action_taken { 0 } else { 1 });
                         }
@@ -214,16 +231,16 @@ async fn main() -> Result<()> {
     }
 
     let poll_interval = Duration::from_secs(args.poll_interval);
-    
+
     loop {
-        match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
+        match run_cycle(&client, &program_id, &keypair, args.dry_run, &db, web_url.as_deref()).await {
             Ok(_) => {}
             Err(e) => {
                 let err_str = format!("{}", e);
                 if is_state_conflict(&err_str) {
                     warn!("State conflict (stale RPC data), retrying in 3s...");
                     tokio::time::sleep(Duration::from_secs(3)).await;
-                    match run_cycle(&client, &program_id, &keypair, args.dry_run, &db).await {
+                    match run_cycle(&client, &program_id, &keypair, args.dry_run, &db, web_url.as_deref()).await {
                         Ok(_) => {}
                         Err(e2) => error!("Retry failed: {}", e2),
                     }
@@ -259,6 +276,7 @@ async fn run_cycle(
     operator: &Keypair,
     dry_run: bool,
     db: &rusqlite::Connection,
+    web_url: Option<&str>,
 ) -> Result<bool> {
     let config = state::fetch_config(client, program_id)?;
     
@@ -372,6 +390,9 @@ async fn run_cycle(
 
             if tournament.entries_remaining > 0 {
                 if !dry_run {
+                    if let Some(url) = web_url {
+                        actions::pre_cache_tournament(url, tournament.id).await;
+                    }
                     let closed = actions::close_entries(client, program_id, &tournament, operator)?;
                     if closed > 0 {
                         info!("Closed {} entries (distributed payouts)", closed);
@@ -414,6 +435,9 @@ async fn run_cycle(
 
                 if !dry_run {
                     if prev.entries_remaining > 0 {
+                        if let Some(url) = web_url {
+                            actions::pre_cache_tournament(url, prev.id).await;
+                        }
                         let closed = actions::close_entries(client, program_id, &prev, operator)?;
                         if closed > 0 {
                             info!("Closed {} entries from tournament #{}", closed, prev.id);

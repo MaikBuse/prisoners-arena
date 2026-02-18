@@ -112,8 +112,10 @@ export function buildScoreboard(
     const entry = entryMap.get(player);
     const cached = cachedEntryData?.get(player);
 
-    // If entry is closed and tournament is in Payout, all matches were completed
-    const inferredMatchesPlayed = tournament.state === 'Payout' ? tournament.matchesPerPlayer : 0;
+    // If entry is closed and all matches ran, infer matchesPlayed from matchesPerPlayer
+    const inferredMatchesPlayed =
+      (tournament.state === 'Payout' || tournament.matchesCompleted >= tournament.matchesTotal)
+        ? tournament.matchesPerPlayer : 0;
 
     // Use tournament.strategies (persists after entry closure) as primary source
     const stratIdx = tournament.strategies?.[i];

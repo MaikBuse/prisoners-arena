@@ -2668,6 +2668,7 @@ dependencies = [
  "anyhow",
  "clap",
  "match-logic",
+ "reqwest",
  "rusqlite",
  "serde",
  "serde_json",

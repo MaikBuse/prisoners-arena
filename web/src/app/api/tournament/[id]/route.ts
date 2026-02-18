@@ -1,5 +1,5 @@
 import { fetchTournament, fetchConfig, getAllEntries, getProgramId } from '@/lib/solana';
-import { upsertTournament, getTournament, getCachedEntryData } from '@/lib/db';
+import { upsertTournament, getTournament, getCachedEntryData, healClosedTournament } from '@/lib/db';
 import type { CachedEntryData } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 import { NextRequest } from 'next/server';
@@ -42,12 +42,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const cached = (() => { try { return getTournament(programId, idNum); } catch { return null; } })();
     if (!cached) return apiError('Tournament not found', 'NOT_FOUND', 404);
 
-    // Mark as accountClosed if this is a past tournament
+    // Heal and mark as accountClosed if this is a past tournament
     if (!cached.accountClosed) {
       const config = await fetchConfig();
       if (config && idNum < config.currentTournamentId) {
-        try { upsertTournament(programId, cached, true); } catch {}
-        cached.accountClosed = true;
+        try { healClosedTournament(programId, cached); } catch {}
       }
     }
 

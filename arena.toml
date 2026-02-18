@@ -6,6 +6,9 @@ program_id = "89Pm5Qy61r1K8dLY1Z1fsJLu3PBN5tTLfZFoEAhejDYa"
 admin = "~/.config/solana/id.json"
 operator = "~/.config/solana/operator.json"
 
+[web]
+url = "https://prisoners-arena.com"
+
 [defaults]
 stake = 50000000
 min_participants = 2
