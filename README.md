@@ -87,5 +87,20 @@ just build
 
 ```bash
 just test-match-logic  # Test game logic
-just test-contract     # Test smart contract
+just test-contract     # Test smart contract (integration tests)
 ```
+
+### Contract Test Setup
+
+Integration tests (`just test-contract`) require the BPF binary at `target/deploy/prisoners_arena.so` to be compiled with the `testing` feature flag, which lowers timing constants (claim expiry, closure delay) from 30 days to 2 seconds.
+
+`anchor test` caches the binary — if a stale binary exists from a previous build without the feature flag, tests will silently use wrong timing and fail. If you see timing-related test failures (e.g. `ClaimExpired` not triggering, `TournamentNotCloseable` vs `EntriesRemaining`), do a clean rebuild:
+
+```bash
+cargo clean --manifest-path contract/Cargo.toml
+anchor build -- --features testing
+cp contract/target/deploy/prisoners_arena.so target/deploy/
+just test-contract
+```
+
+> **Why the copy?** The contract lives in a git submodule, so Cargo outputs to `contract/target/deploy/`. Anchor's test validator looks for the binary in the monorepo root's `target/deploy/`.

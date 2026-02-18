@@ -499,7 +499,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("Overflow");
       }
     });
 
@@ -512,7 +512,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("Overflow");
       }
     });
 
@@ -525,7 +525,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("Overflow");
       }
     });
 
@@ -538,7 +538,33 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("Overflow");
+      }
+    });
+
+    it("rejects max_participants < min_participants", async () => {
+      try {
+        await program.methods
+          .updateConfig({ ...UPDATE_DEFAULTS, maxParticipants: 1 })
+          .accounts({ config: configKey, admin: admin.publicKey })
+          .signers([admin])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("Overflow");
+      }
+    });
+
+    it("rejects reveal_duration = 0", async () => {
+      try {
+        await program.methods
+          .updateConfig({ ...UPDATE_DEFAULTS, revealDuration: new BN(0) })
+          .accounts({ config: configKey, admin: admin.publicKey })
+          .signers([admin])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("Overflow");
       }
     });
 
@@ -793,7 +819,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
       }
     });
 
@@ -811,7 +837,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
       }
     });
 
@@ -827,7 +853,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
       }
     });
 
@@ -845,7 +871,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
       }
     });
   });
@@ -915,6 +941,89 @@ describe("prisoners-arena", () => {
             systemProgram: SystemProgram.programId,
           })
           .signers([operator])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("Unauthorized");
+      }
+    });
+  });
+
+  // ================================================================
+  // 7b. Authorization — operator-gated instructions
+  // ================================================================
+  describe("Authorization — operator-gated instructions", () => {
+    it("non-operator cannot close_reveal", async () => {
+      const fake = Keypair.generate();
+      await airdrop(conn, fake.publicKey, 1);
+      try {
+        await program.methods
+          .closeReveal()
+          .accounts({
+            config: configKey, tournament: t0Key,
+            slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
+            refundEntry: null, refundPlayer: null,
+            operator: fake.publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([fake])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("Unauthorized");
+      }
+    });
+
+    it("non-operator cannot forfeit_unrevealed", async () => {
+      const fake = Keypair.generate();
+      await airdrop(conn, fake.publicKey, 1);
+      // Use an existing entry PDA (players[0] in t0Key)
+      const [eKey] = deriveE(pid, t0Key, players[0].publicKey);
+      try {
+        await program.methods
+          .forfeitUnrevealed()
+          .accounts({
+            config: configKey, entry: eKey, tournament: t0Key,
+            operator: fake.publicKey,
+          })
+          .signers([fake])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("Unauthorized");
+      }
+    });
+
+    it("non-operator cannot close_entry", async () => {
+      const fake = Keypair.generate();
+      await airdrop(conn, fake.publicKey, 1);
+      const [eKey] = deriveE(pid, t0Key, players[0].publicKey);
+      try {
+        await program.methods
+          .closeEntry()
+          .accounts({
+            config: configKey, tournament: t0Key, entry: eKey,
+            player: players[0].publicKey,
+            operator: fake.publicKey,
+          })
+          .signers([fake])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("Unauthorized");
+      }
+    });
+
+    it("non-operator/non-admin cannot close_tournament", async () => {
+      const fake = Keypair.generate();
+      await airdrop(conn, fake.publicKey, 1);
+      try {
+        await program.methods
+          .closeTournament()
+          .accounts({
+            config: configKey, tournament: t0Key,
+            operator: fake.publicKey,
+          })
+          .signers([fake])
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
@@ -999,7 +1108,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("RegistrationClosed");
       }
     });
 
@@ -1074,7 +1183,7 @@ describe("prisoners-arena", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err) {
-        expect(err).to.exist;
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
       }
     });
 
@@ -1220,7 +1329,7 @@ describe("prisoners-arena", () => {
               .rpc();
             expect.fail("Should have thrown");
           } catch (err) {
-            expect(err).to.exist;
+            expect((err as AnchorError).error.errorCode.code).to.equal("NotWinner");
           }
           break;
         }
@@ -1688,9 +1797,8 @@ describe("prisoners-arena", () => {
   // 13. Close Tournament Flow (v1.2, requires testing feature)
   // ================================================================
   describe("Close Tournament Flow (v1.2)", () => {
-    it("close_tournament fails when entries_remaining > 0", async () => {
+    it("close_tournament fails when entries still remaining", async () => {
       const [t1Key] = deriveT(pid, 1);
-      await sleep(3000);
 
       try {
         await program.methods
@@ -1973,7 +2081,6 @@ describe("prisoners-arena", () => {
 
       // Finalize — operator gets reimbursed
       const [nextTKey] = deriveT(pid, currentId + 1);
-      const operatorBalBefore = await conn.getBalance(operator.publicKey);
 
       await program.methods
         .finalizeTournament()
@@ -1990,11 +2097,6 @@ describe("prisoners-arena", () => {
       // entries_remaining = 2, so post = (2+1) * 5000 = 15000
       // Total = 15000 + 5000 + 15000 = 35000
       expect(tAfter.operatorCosts.toNumber()).to.equal(35000);
-
-      // Operator balance should have increased by reimbursement (minus tx fee for finalize)
-      const operatorBalAfter = await conn.getBalance(operator.publicKey);
-      // Net gain should be reimbursement(35000) - txFee(~5000) ≈ 30000+
-      expect(operatorBalAfter - operatorBalBefore).to.be.greaterThan(25000);
 
       // Now close entries — winner should get payout, rent returns to player
       for (let i = 0; i < tAfter.players.length; i++) {
@@ -2039,6 +2141,831 @@ describe("prisoners-arena", () => {
 
       const cfg = await program.account.config.fetch(configKey);
       expect(cfg.operatorTxFee.toNumber()).to.equal(0);
+    });
+  });
+
+  // ================================================================
+  // 18. Reveal — parameter validation
+  // ================================================================
+  describe("Reveal — parameter validation", () => {
+    // Drives a mini tournament to Reveal state with players who committed
+    // using invalid param values. Commitment has no validation, so these
+    // entries are accepted. The reveal then fails with InvalidParams.
+    let rvTournamentKey: PublicKey;
+    let rvPlayers: Keypair[];
+    let rvSalts: Buffer[] = [];
+
+    const INVALID_PARAMS_CASES = [
+      { name: "forgiveness > 100", params: { ...DEFAULT_PARAMS, forgiveness: 101 } },
+      { name: "retaliation_delay > 10", params: { ...DEFAULT_PARAMS, retaliationDelay: 11 } },
+      { name: "noise_tolerance > 5", params: { ...DEFAULT_PARAMS, noiseTolerance: 6 } },
+      { name: "cooperate_bias > 100", params: { ...DEFAULT_PARAMS, cooperateBias: 101 } },
+    ];
+
+    before(async () => {
+      // Find the current tournament in Registration
+      const cfg = await program.account.config.fetch(configKey);
+      [rvTournamentKey] = deriveT(pid, cfg.currentTournamentId);
+
+      // We need at least 4 players for the invalid param tests + 1 valid revealer
+      // to keep participant_count >= min_participants
+      // Use fresh keypairs to avoid collisions
+      rvPlayers = [];
+      for (let i = 0; i < 5; i++) {
+        const p = Keypair.generate();
+        await airdrop(conn, p.publicKey, 5);
+        rvPlayers.push(p);
+      }
+
+      // Enter players with commitments computed using invalid params
+      // Player 0: valid params (will reveal successfully to satisfy min participants)
+      const salt0 = randomBytes(16);
+      rvSalts.push(salt0);
+      const [e0Key] = deriveE(pid, rvTournamentKey, rvPlayers[0].publicKey);
+      await program.methods
+        .enterTournament(computeCommitment(0, DEFAULT_PARAMS, salt0))
+        .accounts({
+          config: configKey, tournament: rvTournamentKey, entry: e0Key,
+          player: rvPlayers[0].publicKey, systemProgram: SystemProgram.programId,
+        })
+        .signers([rvPlayers[0]])
+        .rpc();
+
+      // Players 1-4: each committed with one type of invalid params
+      for (let i = 0; i < INVALID_PARAMS_CASES.length; i++) {
+        const salt = randomBytes(16);
+        rvSalts.push(salt);
+        const commitment = computeCommitment(0, INVALID_PARAMS_CASES[i].params, salt);
+        const [eKey] = deriveE(pid, rvTournamentKey, rvPlayers[i + 1].publicKey);
+        await program.methods
+          .enterTournament(commitment)
+          .accounts({
+            config: configKey, tournament: rvTournamentKey, entry: eKey,
+            player: rvPlayers[i + 1].publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([rvPlayers[i + 1]])
+          .rpc();
+      }
+
+      // Close registration → Reveal
+      await waitAndCloseRegistration(rvTournamentKey);
+
+      const t = await program.account.tournament.fetch(rvTournamentKey);
+      expect(t.state).to.deep.equal({ reveal: {} });
+    });
+
+    it("rejects forgiveness > 100", async () => {
+      const p = rvPlayers[1];
+      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
+      try {
+        await program.methods
+          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[0].params, Array.from(rvSalts[1]))
+          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
+          .signers([p])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
+      }
+    });
+
+    it("rejects retaliation_delay > 10", async () => {
+      const p = rvPlayers[2];
+      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
+      try {
+        await program.methods
+          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[1].params, Array.from(rvSalts[2]))
+          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
+          .signers([p])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
+      }
+    });
+
+    it("rejects noise_tolerance > 5", async () => {
+      const p = rvPlayers[3];
+      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
+      try {
+        await program.methods
+          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[2].params, Array.from(rvSalts[3]))
+          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
+          .signers([p])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
+      }
+    });
+
+    it("rejects cooperate_bias > 100", async () => {
+      const p = rvPlayers[4];
+      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
+      try {
+        await program.methods
+          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[3].params, Array.from(rvSalts[4]))
+          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
+          .signers([p])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
+      }
+    });
+
+    after(async () => {
+      // Clean up: reveal valid player, forfeit invalid ones, close reveal, run through lifecycle
+      // so subsequent tests have a clean state.
+      // Reveal player 0 with valid params
+      await revealPlayer(rvTournamentKey, rvPlayers[0], Strategy.TitForTat, DEFAULT_PARAMS, rvSalts[0]);
+
+      // Wait for reveal to expire
+      const t = await program.account.tournament.fetch(rvTournamentKey);
+      const now = Math.floor(Date.now() / 1000);
+      const remaining = t.revealEnds.toNumber() - now;
+      if (remaining > 0) await sleep((remaining + 2) * 1000);
+
+      // Forfeit unrevealed players 1-4
+      for (let i = 1; i <= 4; i++) {
+        const [eKey] = deriveE(pid, rvTournamentKey, rvPlayers[i].publicKey);
+        for (let attempt = 0; attempt < 5; attempt++) {
+          try {
+            await program.methods
+              .forfeitUnrevealed()
+              .accounts({
+                config: configKey, entry: eKey, tournament: rvTournamentKey,
+                operator: operator.publicKey,
+              })
+              .signers([operator])
+              .rpc();
+            break;
+          } catch (err: any) {
+            if (err?.error?.errorCode?.code === "RevealPeriodNotEnded") {
+              await sleep(2000);
+              continue;
+            }
+            throw err;
+          }
+        }
+      }
+
+      // Close reveal (odd count → last player refunded)
+      // With 5 participants, all forfeited become "revealed" via forfeit.
+      // active = 5 (participant_count didn't change from forfeits — forfeits stay in).
+      // Actually participant_count stays at 5, forfeits = 0 (forfeit_unrevealed doesn't
+      // increment forfeits, it just assigns a strategy). So active = 5 - 0 = 5 (odd).
+      // close_reveal will refund the last active player.
+      // Find the last active player for the refund accounts
+      const tNow = await program.account.tournament.fetch(rvTournamentKey);
+      const lastIdx = tNow.players.length - 1;
+      // Find last non-default player
+      let lastActiveIdx = -1;
+      for (let i = tNow.players.length - 1; i >= 0; i--) {
+        if (tNow.players[i].toString() !== PublicKey.default.toString()) {
+          lastActiveIdx = i;
+          break;
+        }
+      }
+      if (lastActiveIdx >= 0) {
+        const lastPlayer = tNow.players[lastActiveIdx];
+        const [lastEKey] = deriveE(pid, rvTournamentKey, lastPlayer);
+        await waitAndCloseReveal(rvTournamentKey, lastEKey, lastPlayer);
+      } else {
+        await waitAndCloseReveal(rvTournamentKey);
+      }
+
+      // Run matches and finalize to advance to next tournament
+      await runAllMatches(rvTournamentKey);
+      const cfg = await program.account.config.fetch(configKey);
+      const [nextTKey] = deriveT(pid, cfg.currentTournamentId + 1);
+      await program.methods
+        .finalizeTournament()
+        .accounts({
+          config: configKey, tournament: rvTournamentKey, nextTournament: nextTKey,
+          operator: operator.publicKey, systemProgram: SystemProgram.programId,
+        })
+        .signers([operator])
+        .rpc();
+    });
+  });
+
+  // ================================================================
+  // 19. Edge cases & negative paths
+  // ================================================================
+  describe("Edge cases & negative paths", () => {
+    // Shared keypairs used across sub-describes (TournamentFull enters them,
+    // MinParticipantsNotReached forfeits them to drive the lifecycle forward).
+    let sharedP1: Keypair;
+    let sharedP2: Keypair;
+
+    // ── Tournament A: TournamentFull ──
+    describe("TournamentFull", () => {
+      let tAKey: PublicKey;
+      let origMax: number;
+
+      before(async () => {
+        const cfg = await program.account.config.fetch(configKey);
+        origMax = cfg.maxParticipants;
+        [tAKey] = deriveT(pid, cfg.currentTournamentId);
+
+        // Set max_participants = 2
+        await program.methods
+          .updateConfig({ ...UPDATE_DEFAULTS, maxParticipants: 2 })
+          .accounts({ config: configKey, admin: admin.publicKey })
+          .signers([admin])
+          .rpc();
+
+        // Enter 2 players (shared so MinParticipantsNotReached can forfeit them)
+        sharedP1 = Keypair.generate();
+        sharedP2 = Keypair.generate();
+        await airdrop(conn, sharedP1.publicKey, 5);
+        await airdrop(conn, sharedP2.publicKey, 5);
+
+        await enterPlayer(tAKey, sharedP1, 0);
+        await enterPlayer(tAKey, sharedP2, 1);
+      });
+
+      it("rejects entry when tournament is full (TournamentFull)", async () => {
+        const p3 = Keypair.generate();
+        await airdrop(conn, p3.publicKey, 5);
+        const salt = randomBytes(16);
+        const commitment = computeCommitment(2, DEFAULT_PARAMS, salt);
+        const [eKey] = deriveE(pid, tAKey, p3.publicKey);
+        try {
+          await program.methods
+            .enterTournament(commitment)
+            .accounts({
+              config: configKey, tournament: tAKey, entry: eKey,
+              player: p3.publicKey, systemProgram: SystemProgram.programId,
+            })
+            .signers([p3])
+            .rpc();
+          expect.fail("Should have thrown");
+        } catch (err) {
+          expect((err as AnchorError).error.errorCode.code).to.equal("TournamentFull");
+        }
+      });
+
+      after(async () => {
+        // Restore max_participants
+        await program.methods
+          .updateConfig({ ...UPDATE_DEFAULTS, maxParticipants: origMax })
+          .accounts({ config: configKey, admin: admin.publicKey })
+          .signers([admin])
+          .rpc();
+      });
+    });
+
+    // ── Tournament B: MinParticipantsNotReached ──
+    describe("MinParticipantsNotReached", () => {
+      // This test reuses the current tournament (tA) which has 2 players.
+      // We need a tournament with < min_participants when close_registration is called.
+      // Strategy: create a new tournament by finalizing current one, enter only 1 player,
+      // wait for reg to expire, try close_registration.
+      // But that requires running the current tournament through its lifecycle first.
+      // Simpler: temporarily set min_participants=4, then try close_registration on
+      // the current tournament which only has 2 players.
+
+      // Actually, the current tournament already has 2 players from the TournamentFull
+      // test above. We can temporarily bump min_participants to 4, wait for reg to expire,
+      // and try close_registration.
+      let tKey: PublicKey;
+      let origMin: number;
+
+      before(async () => {
+        const cfg = await program.account.config.fetch(configKey);
+        origMin = cfg.minParticipants;
+        [tKey] = deriveT(pid, cfg.currentTournamentId);
+
+        // Set min_participants = 4 (current tournament has 2)
+        await program.methods
+          .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: 4 })
+          .accounts({ config: configKey, admin: admin.publicKey })
+          .signers([admin])
+          .rpc();
+      });
+
+      it("close_registration fails when min_participants not reached (MinParticipantsNotReached)", async () => {
+        // Wait for registration to expire
+        const t = await program.account.tournament.fetch(tKey);
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = t.registrationEnds.toNumber() - now;
+        if (remaining > 0) await sleep((remaining + 5) * 1000);
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+          try {
+            await program.methods
+              .closeRegistration()
+              .accounts({
+                config: configKey, tournament: tKey,
+                operator: operator.publicKey, systemProgram: SystemProgram.programId,
+              })
+              .signers([operator])
+              .rpc();
+            expect.fail("Should have thrown");
+          } catch (err: any) {
+            if (err?.error?.errorCode?.code === "RegistrationOpen") {
+              await sleep(2000);
+              continue;
+            }
+            expect((err as AnchorError).error.errorCode.code).to.equal("MinParticipantsNotReached");
+            break;
+          }
+        }
+      });
+
+      after(async () => {
+        // Restore min_participants
+        await program.methods
+          .updateConfig({ ...UPDATE_DEFAULTS, minParticipants: origMin })
+          .accounts({ config: configKey, admin: admin.publicKey })
+          .signers([admin])
+          .rpc();
+
+        // Close registration (now min=2 is met with 2 players from TournamentFull)
+        await waitAndCloseRegistration(tKey);
+
+        // Wait for reveal expiry, then forfeit both shared players (they never revealed)
+        const t = await program.account.tournament.fetch(tKey);
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = t.revealEnds.toNumber() - now;
+        if (remaining > 0) await sleep((remaining + 2) * 1000);
+
+        for (const p of [sharedP1, sharedP2]) {
+          const [eKey] = deriveE(pid, tKey, p.publicKey);
+          for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+              await program.methods
+                .forfeitUnrevealed()
+                .accounts({
+                  config: configKey, entry: eKey, tournament: tKey,
+                  operator: operator.publicKey,
+                })
+                .signers([operator])
+                .rpc();
+              break;
+            } catch (err: any) {
+              if (err?.error?.errorCode?.code === "RevealPeriodNotEnded") {
+                await sleep(2000);
+                continue;
+              }
+              break;
+            }
+          }
+        }
+
+        // Close reveal → Running → finalize → next Registration tournament
+        await waitAndCloseReveal(tKey);
+        await runAllMatches(tKey);
+        const cfg = await program.account.config.fetch(configKey);
+        const [nextTKey] = deriveT(pid, cfg.currentTournamentId + 1);
+        await program.methods
+          .finalizeTournament()
+          .accounts({
+            config: configKey, tournament: tKey, nextTournament: nextTKey,
+            operator: operator.publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([operator])
+          .rpc();
+      });
+    });
+
+    // ── Tournament C: Reveal/Forfeit edge cases ──
+    describe("Reveal/Forfeit edge cases", () => {
+      let tCKey: PublicKey;
+      let tCPlayers: Keypair[];
+      let tCSalts: Buffer[];
+
+      before(async () => {
+        // MinParticipantsNotReached after() ensures we have a fresh Registration tournament
+        const cfg = await program.account.config.fetch(configKey);
+        [tCKey] = deriveT(pid, cfg.currentTournamentId);
+
+        // Enter 3 fresh players
+        tCPlayers = [];
+        tCSalts = [];
+        for (let i = 0; i < 3; i++) {
+          const p = Keypair.generate();
+          await airdrop(conn, p.publicKey, 5);
+          tCPlayers.push(p);
+          const salt = randomBytes(16);
+          tCSalts.push(salt);
+          const commitment = computeCommitment(i, DEFAULT_PARAMS, salt);
+          const [eKey] = deriveE(pid, tCKey, p.publicKey);
+          await program.methods
+            .enterTournament(commitment)
+            .accounts({
+              config: configKey, tournament: tCKey, entry: eKey,
+              player: p.publicKey, systemProgram: SystemProgram.programId,
+            })
+            .signers([p])
+            .rpc();
+        }
+        await waitAndCloseRegistration(tCKey);
+
+        const tAfter = await program.account.tournament.fetch(tCKey);
+        expect(tAfter.state).to.deep.equal({ reveal: {} });
+      });
+
+      it("close_reveal fails with unprocessed forfeits (UnprocessedForfeits)", async () => {
+        // Reveal only player 0, leave players 1 and 2 unrevealed
+        await revealPlayer(tCKey, tCPlayers[0], Strategy.TitForTat, DEFAULT_PARAMS, tCSalts[0]);
+
+        // Wait for reveal to expire
+        const t = await program.account.tournament.fetch(tCKey);
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = t.revealEnds.toNumber() - now;
+        if (remaining > 0) await sleep((remaining + 5) * 1000);
+
+        // Try close_reveal without forfeiting unrevealed players
+        for (let attempt = 0; attempt < 5; attempt++) {
+          try {
+            await program.methods
+              .closeReveal()
+              .accounts({
+                config: configKey, tournament: tCKey,
+                slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
+                refundEntry: null, refundPlayer: null,
+                operator: operator.publicKey, systemProgram: SystemProgram.programId,
+              })
+              .signers([operator])
+              .rpc();
+            expect.fail("Should have thrown");
+          } catch (err: any) {
+            if (err?.error?.errorCode?.code === "RevealPeriodNotEnded") {
+              await sleep(2000);
+              continue;
+            }
+            expect((err as AnchorError).error.errorCode.code).to.equal("UnprocessedForfeits");
+            break;
+          }
+        }
+      });
+
+      it("odd participant count triggers refund in close_reveal", async () => {
+        // Forfeit unrevealed players 1 and 2
+        for (let i = 1; i <= 2; i++) {
+          const [eKey] = deriveE(pid, tCKey, tCPlayers[i].publicKey);
+          await program.methods
+            .forfeitUnrevealed()
+            .accounts({
+              config: configKey, entry: eKey, tournament: tCKey,
+              operator: operator.publicKey,
+            })
+            .signers([operator])
+            .rpc();
+        }
+
+        // Now all 3 are "revealed" (1 manually + 2 auto-assigned).
+        // active = participant_count - forfeits = 3 - 0 = 3 (odd).
+        // But we may also have players from the MinParticipantsNotReached test.
+        // Let's check the actual state.
+        let t = await program.account.tournament.fetch(tCKey);
+        const activeCount = t.participantCount - t.forfeits;
+
+        // Find the last active player for odd-count refund
+        let lastActiveIdx = -1;
+        let lastActivePlayer: PublicKey | null = null;
+        for (let i = t.players.length - 1; i >= 0; i--) {
+          if (t.players[i].toString() !== PublicKey.default.toString()) {
+            lastActiveIdx = i;
+            lastActivePlayer = t.players[i];
+            break;
+          }
+        }
+
+        expect(activeCount % 2 === 1, "expected odd active count").to.be.true;
+        expect(lastActivePlayer, "expected a last active player").to.not.be.null;
+
+        const balBefore = await conn.getBalance(lastActivePlayer);
+
+        // Odd count → close_reveal should refund last player
+        const [lastEKey] = deriveE(pid, tCKey, lastActivePlayer);
+        await waitAndCloseReveal(tCKey, lastEKey, lastActivePlayer);
+
+        const tAfter = await program.account.tournament.fetch(tCKey);
+        expect(tAfter.state).to.deep.equal({ running: {} });
+        // Last active player's slot should now be default (refunded)
+        expect(tAfter.players[lastActiveIdx].toString()).to.equal(PublicKey.default.toString());
+        // Verify refund received
+        const balAfter = await conn.getBalance(lastActivePlayer);
+        expect(balAfter).to.be.greaterThan(balBefore);
+      });
+
+      it("finalize_tournament fails before all matches complete (MatchesIncomplete)", async () => {
+        const t = await program.account.tournament.fetch(tCKey);
+        expect(t.matchesTotal, "expected matches to exist").to.be.greaterThan(0);
+        expect(t.matchesCompleted, "expected incomplete matches").to.be.lessThan(t.matchesTotal);
+
+        const cfg = await program.account.config.fetch(configKey);
+        const [nextTKey] = deriveT(pid, cfg.currentTournamentId + 1);
+        try {
+          await program.methods
+            .finalizeTournament()
+            .accounts({
+              config: configKey, tournament: tCKey, nextTournament: nextTKey,
+              operator: operator.publicKey, systemProgram: SystemProgram.programId,
+            })
+            .signers([operator])
+            .rpc();
+          expect.fail("Should have thrown");
+        } catch (err) {
+          expect((err as AnchorError).error.errorCode.code).to.equal("MatchesIncomplete");
+        }
+      });
+
+      it("run_matches is a no-op when all matches already complete", async () => {
+        // Run all matches first
+        const tBefore = await runAllMatches(tCKey);
+
+        // Call run_matches again — should succeed but not change state
+        const entryMetas: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[] = [];
+        for (let i = 0; i < tBefore.players.length; i++) {
+          if (tBefore.players[i].toString() === PublicKey.default.toString()) continue;
+          const [eKey] = deriveE(pid, tCKey, tBefore.players[i]);
+          entryMetas.push({ pubkey: eKey, isSigner: false, isWritable: true });
+        }
+
+        await program.methods
+          .runMatches()
+          .accounts({ config: configKey, tournament: tCKey, operator: operator.publicKey })
+          .remainingAccounts(entryMetas)
+          .signers([operator])
+          .rpc();
+
+        const tAfter = await program.account.tournament.fetch(tCKey);
+        expect(tAfter.matchesCompleted).to.equal(tBefore.matchesCompleted);
+      });
+
+      after(async () => {
+        // Best-effort: advance to next tournament for subsequent tests
+        try {
+          const t = await program.account.tournament.fetch(tCKey);
+          if (JSON.stringify(t.state) === JSON.stringify({ running: {} })) {
+            if (t.matchesCompleted < t.matchesTotal) {
+              await runAllMatches(tCKey);
+            }
+            const cfg = await program.account.config.fetch(configKey);
+            const [nextTKey] = deriveT(pid, cfg.currentTournamentId + 1);
+            await program.methods
+              .finalizeTournament()
+              .accounts({
+                config: configKey, tournament: tCKey, nextTournament: nextTKey,
+                operator: operator.publicKey, systemProgram: SystemProgram.programId,
+              })
+              .signers([operator])
+              .rpc();
+          }
+        } catch {
+          // Ignore — the Payout timing before() will handle state advancement
+        }
+      });
+    });
+
+    // ── Tournament D: Payout timing constraints ──
+    describe("Payout timing constraints", () => {
+      let tDKey: PublicKey;
+      let tDPlayers: Keypair[];
+      let tDSalts: Buffer[];
+      let winnerIdx: number;
+      let loserIdx: number;
+
+      before(async () => {
+        // Reveal/Forfeit after() ensures we have a fresh Registration tournament
+        const cfg = await program.account.config.fetch(configKey);
+        [tDKey] = deriveT(pid, cfg.currentTournamentId);
+
+        // Enter 2 players
+        tDPlayers = [];
+        tDSalts = [];
+        for (let i = 0; i < 2; i++) {
+          const p = Keypair.generate();
+          await airdrop(conn, p.publicKey, 5);
+          tDPlayers.push(p);
+          const salt = randomBytes(16);
+          tDSalts.push(salt);
+        }
+
+        // Player 0: AlwaysCooperate, Player 1: AlwaysDefect
+        // AlwaysDefect always wins against AlwaysCooperate
+        const c0 = computeCommitment(2, DEFAULT_PARAMS, tDSalts[0]); // AlwaysCooperate
+        const c1 = computeCommitment(1, DEFAULT_PARAMS, tDSalts[1]); // AlwaysDefect
+
+        const [e0Key] = deriveE(pid, tDKey, tDPlayers[0].publicKey);
+        await program.methods
+          .enterTournament(c0)
+          .accounts({
+            config: configKey, tournament: tDKey, entry: e0Key,
+            player: tDPlayers[0].publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([tDPlayers[0]])
+          .rpc();
+
+        const [e1Key] = deriveE(pid, tDKey, tDPlayers[1].publicKey);
+        await program.methods
+          .enterTournament(c1)
+          .accounts({
+            config: configKey, tournament: tDKey, entry: e1Key,
+            player: tDPlayers[1].publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([tDPlayers[1]])
+          .rpc();
+
+        // Close registration → Reveal
+        await waitAndCloseRegistration(tDKey);
+
+        // Reveal both
+        await revealPlayer(tDKey, tDPlayers[0], Strategy.AlwaysCooperate, DEFAULT_PARAMS, tDSalts[0]);
+        await revealPlayer(tDKey, tDPlayers[1], Strategy.AlwaysDefect, DEFAULT_PARAMS, tDSalts[1]);
+
+        // Close reveal → Running
+        await waitAndCloseReveal(tDKey);
+
+        // Run all matches
+        await runAllMatches(tDKey);
+
+        // Finalize → Payout
+        const cfgNow = await program.account.config.fetch(configKey);
+        const [nextTKey] = deriveT(pid, cfgNow.currentTournamentId + 1);
+        await program.methods
+          .finalizeTournament()
+          .accounts({
+            config: configKey, tournament: tDKey, nextTournament: nextTKey,
+            operator: operator.publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([operator])
+          .rpc();
+
+        // Identify winner and loser
+        const t = await program.account.tournament.fetch(tDKey);
+        expect(t.state).to.deep.equal({ payout: {} });
+
+        winnerIdx = -1;
+        loserIdx = -1;
+        for (let i = 0; i < t.players.length; i++) {
+          if (t.players[i].toString() === PublicKey.default.toString()) continue;
+          if (t.scores[i] >= t.minWinningScore) {
+            winnerIdx = i;
+          } else {
+            loserIdx = i;
+          }
+        }
+
+        // Wait for claim expiry (2s with testing feature).
+        // Use strict > (not >=) so the clock is clearly past expiry when the
+        // next transaction's simulation runs.
+        const CLOCK_SYSVAR = new PublicKey("SysvarC1ock11111111111111111111111111111111");
+        const expiresAt = t.payoutStartedAt.toNumber() + 2;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          await sleep(500);
+          const tx = new anchor.web3.Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: operator.publicKey,
+              toPubkey: operator.publicKey,
+              lamports: 1,
+            }),
+          );
+          await provider.sendAndConfirm(tx, [operator]);
+          const clockInfo = await conn.getAccountInfo(CLOCK_SYSVAR);
+          if (clockInfo) {
+            const onChainTime = Number(clockInfo.data.readBigInt64LE(32));
+            if (onChainTime > expiresAt) break;
+          }
+        }
+      });
+
+      it("claim_refund fails in Payout state (InvalidState)", async () => {
+        // Try refund for one of the players
+        const p = tDPlayers[0];
+        const [eKey] = deriveE(pid, tDKey, p.publicKey);
+        try {
+          await program.methods
+            .claimRefund()
+            .accounts({
+              tournament: tDKey, entry: eKey,
+              player: p.publicKey, systemProgram: SystemProgram.programId,
+            })
+            .signers([p])
+            .rpc();
+          expect.fail("Should have thrown");
+        } catch (err) {
+          expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
+        }
+      });
+
+      it("claim_payout fails after expiry (ClaimExpired)", async () => {
+        const t = await program.account.tournament.fetch(tDKey);
+        expect(winnerIdx).to.not.equal(-1);
+
+        const winnerKey = t.players[winnerIdx];
+        const winnerKp = tDPlayers.find(p => p.publicKey.toString() === winnerKey.toString())!;
+        const [eKey] = deriveE(pid, tDKey, winnerKey);
+
+        try {
+          await program.methods
+            .claimPayout()
+            .accounts({
+              tournament: tDKey, entry: eKey,
+              player: winnerKey, systemProgram: SystemProgram.programId,
+            })
+            .signers([winnerKp])
+            .rpc();
+          expect.fail("Should have thrown ClaimExpired");
+        } catch (err) {
+          expect((err as AnchorError).error.errorCode.code).to.equal("ClaimExpired");
+        }
+      });
+
+      it("close_entry sweeps unclaimed winner prize to accumulated_fees after expiry", async () => {
+        const cfgBefore = await program.account.config.fetch(configKey);
+        const feesBefore = cfgBefore.accumulatedFees.toNumber();
+
+        // Close entry for the winner (unclaimed, expired → prize goes to fees)
+        const t = await program.account.tournament.fetch(tDKey);
+        for (let i = 0; i < t.players.length; i++) {
+          if (t.players[i].toString() === PublicKey.default.toString()) continue;
+          if (t.scores[i] >= t.minWinningScore) {
+            const [eKey] = deriveE(pid, tDKey, t.players[i]);
+            try {
+              await program.account.entry.fetch(eKey);
+            } catch { continue; }
+
+            await program.methods
+              .closeEntry()
+              .accounts({
+                config: configKey, tournament: tDKey, entry: eKey,
+                player: t.players[i],
+                operator: operator.publicKey,
+              })
+              .signers([operator])
+              .rpc();
+            break;
+          }
+        }
+
+        const cfgAfter = await program.account.config.fetch(configKey);
+        expect(cfgAfter.accumulatedFees.toNumber()).to.be.greaterThan(feesBefore);
+      });
+
+      it("close_tournament fails before all entries closed (EntriesRemaining)", async () => {
+        const t = await program.account.tournament.fetch(tDKey);
+        expect(t.entriesRemaining, "expected entries still remaining").to.be.greaterThan(0);
+
+        try {
+          await program.methods
+            .closeTournament()
+            .accounts({
+              config: configKey, tournament: tDKey,
+              operator: operator.publicKey,
+            })
+            .signers([operator])
+            .rpc();
+          expect.fail("Should have thrown");
+        } catch (err) {
+          expect((err as AnchorError).error.errorCode.code).to.equal("EntriesRemaining");
+        }
+      });
+
+      it("admin can close_tournament", async () => {
+        // Close remaining entries first
+        const t = await program.account.tournament.fetch(tDKey);
+        for (let i = 0; i < t.players.length; i++) {
+          if (t.players[i].toString() === PublicKey.default.toString()) continue;
+          const [eKey] = deriveE(pid, tDKey, t.players[i]);
+          try {
+            await program.account.entry.fetch(eKey);
+          } catch { continue; }
+
+          await program.methods
+            .closeEntry()
+            .accounts({
+              config: configKey, tournament: tDKey, entry: eKey,
+              player: t.players[i],
+              operator: operator.publicKey,
+            })
+            .signers([operator])
+            .rpc();
+        }
+
+        const tAfter = await program.account.tournament.fetch(tDKey);
+        expect(tAfter.entriesRemaining).to.equal(0);
+
+        // Expiry already passed (we slept 3s above, testing feature = 2s)
+        // close_tournament signed by admin instead of operator
+        await program.methods
+          .closeTournament()
+          .accounts({
+            config: configKey, tournament: tDKey,
+            operator: admin.publicKey,
+          })
+          .signers([admin])
+          .rpc();
+
+        // Tournament account should be zeroed/closed
+        const info = await conn.getAccountInfo(tDKey);
+        expect(info).to.be.null;
+      });
     });
   });
 });

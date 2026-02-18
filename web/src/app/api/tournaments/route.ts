@@ -24,23 +24,17 @@ export async function GET(req: NextRequest) {
       if (t) {
         try { upsertTournament(programId, t); } catch {}
       } else {
-        try { t = getTournament(programId, i); } catch {}
-        if (t && i < config.currentTournamentId) {
-          // Account is gone → operator closed it → mark fully completed
-          t = {
-            ...t,
-            state: 'Payout',
-            claimsProcessed: t.winnerCount,
-            entriesRemaining: 0,
-          };
-          try { upsertTournament(programId, t); } catch {}
+        const cached = (() => { try { return getTournament(programId, i); } catch { return null; } })();
+        if (cached) {
+          if (!cached.accountClosed && i < config.currentTournamentId) {
+            try { upsertTournament(programId, cached, true); } catch {}
+            cached.accountClosed = true;
+          }
+          t = cached;
         }
       }
       if (t) tournaments.push(t);
     }
-
-    // Include any archived tournaments with IDs below the range we just checked
-    // (they'd be too old for the current page, so skip unless offset pushes us there)
 
     return apiSuccess({ tournaments, limit, offset });
   } catch (e) {

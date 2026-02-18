@@ -1,5 +1,6 @@
 import { fetchTournament, fetchConfig, getAllEntries, getProgramId } from '@/lib/solana';
-import { upsertTournament, getTournament } from '@/lib/db';
+import { upsertTournament, getTournament, getCachedEntryData } from '@/lib/db';
+import type { CachedEntryData } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 import { NextRequest } from 'next/server';
 
@@ -11,36 +12,50 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const idNum = parseInt(id, 10);
     if (isNaN(idNum)) return apiError('Invalid tournament ID', 'INVALID_ID', 400);
 
-    let tournament = await fetchTournament(idNum);
+    const programId = getProgramId().toBase58();
+    const tournament = await fetchTournament(idNum);
 
     if (tournament) {
-      // Archive to SQLite
-      try { upsertTournament(getProgramId().toBase58(), tournament); } catch {}
-    } else {
-      // Chain miss — account closed by operator, try SQLite fallback
-      const programId = getProgramId().toBase58();
-      try { tournament = getTournament(programId, idNum); } catch {}
-      if (tournament) {
-        const config = await fetchConfig();
-        if (config && idNum < config.currentTournamentId) {
-          // Account is gone → operator closed it → mark fully completed
-          tournament = {
-            ...tournament,
-            state: 'Payout',
-            claimsProcessed: tournament.winnerCount,
-            entriesRemaining: 0,
-          };
-          try { upsertTournament(programId, tournament); } catch {}
+      // Chain hit — build entry data map from live entries and cache everything
+      const entries = await getAllEntries(tournament.address);
+      if (entries.length > 0) {
+        const entryDataMap = new Map<string, CachedEntryData>();
+        for (const e of entries) {
+          entryDataMap.set(e.player, {
+            playerIndex: e.index,
+            matchesPlayed: e.matchesPlayed,
+            paidOut: e.paidOut,
+            revealed: e.revealed,
+          });
         }
+        try { upsertTournament(programId, tournament, false, entryDataMap); } catch {}
+      } else {
+        try { upsertTournament(programId, tournament); } catch {}
+      }
+
+      const scoreboard = buildScoreboard(tournament, entries);
+      const cacheSeconds = tournament.state === 'Payout' ? 3600 : 10;
+      return apiSuccess({ tournament, entries, scoreboard }, cacheSeconds);
+    }
+
+    // Chain miss — account closed by operator, try SQLite fallback
+    const cached = (() => { try { return getTournament(programId, idNum); } catch { return null; } })();
+    if (!cached) return apiError('Tournament not found', 'NOT_FOUND', 404);
+
+    // Mark as accountClosed if this is a past tournament
+    if (!cached.accountClosed) {
+      const config = await fetchConfig();
+      if (config && idNum < config.currentTournamentId) {
+        try { upsertTournament(programId, cached, true); } catch {}
+        cached.accountClosed = true;
       }
     }
 
-    if (!tournament) return apiError('Tournament not found', 'NOT_FOUND', 404);
-
-    const entries = await getAllEntries(tournament.address);
-    const scoreboard = buildScoreboard(tournament, entries);
-    const cacheSeconds = tournament.state === 'Payout' ? 3600 : 10;
-    return apiSuccess({ tournament, entries, scoreboard }, cacheSeconds);
+    // Use cached entry data for scoreboard fallback
+    let cachedEntryData: Map<string, CachedEntryData> | undefined;
+    try { cachedEntryData = getCachedEntryData(programId, idNum); } catch {}
+    const scoreboard = buildScoreboard(cached, [], cachedEntryData);
+    return apiSuccess({ tournament: cached, entries: [], scoreboard }, 3600);
   } catch (e) {
     return apiError((e as Error).message, 'FETCH_ERROR', 500);
   }

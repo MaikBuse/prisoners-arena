@@ -7,6 +7,7 @@ import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { Nav } from '@/components/Nav';
+import { displayState } from '@/lib/tournament-utils';
 
 function effectiveK(configK: number, n: number): number {
   if (n <= 1) return 0;
@@ -18,13 +19,6 @@ const BAR_COLORS: Record<string, string> = {
   blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
   amber: 'bar-amber', orange: 'bar-orange', gray: 'bar-gray', cyan: 'bar-cyan', pink: 'bar-pink',
 };
-
-function displayState(t: TournamentAccount): string {
-  if (t.state === 'Payout' && t.winnerCount > 0 && t.claimsProcessed >= t.winnerCount) {
-    return 'Completed';
-  }
-  return t.state;
-}
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

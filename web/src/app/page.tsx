@@ -9,6 +9,7 @@ import { CountdownTimer } from '@/components/CountdownTimer';
 import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { STRATEGY_CONFIGS, PARAM_META } from '@/lib/strategyConfig';
+import { displayState } from '@/lib/tournament-utils';
 
 /** Compute effective K (adaptive matchmaking from v1.5) */
 function effectiveK(configK: number, n: number): number {
@@ -21,13 +22,6 @@ const BAR_COLORS: Record<string, string> = {
   blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
   amber: 'bar-amber', orange: 'bar-orange', gray: 'bar-gray', cyan: 'bar-cyan', pink: 'bar-pink',
 };
-
-function displayState(t: TournamentAccount): string {
-  if (t.state === 'Payout' && t.winnerCount > 0 && t.claimsProcessed >= t.winnerCount) {
-    return 'Completed';
-  }
-  return t.state;
-}
 
 interface TournamentData {
   tournament: TournamentAccount;

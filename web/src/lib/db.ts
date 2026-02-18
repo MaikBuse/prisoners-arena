@@ -8,6 +8,87 @@ const DB_PATH = path.join(DB_DIR, 'prisoners-arena.db');
 
 let db: Database.Database | null = null;
 
+export const SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS tournaments (
+    program_id TEXT NOT NULL,
+    tournament_id INTEGER NOT NULL,
+    state TEXT NOT NULL,
+    stake TEXT NOT NULL,
+    house_fee_bps INTEGER NOT NULL,
+    matches_per_player INTEGER NOT NULL,
+    registration_duration TEXT NOT NULL,
+    pool TEXT NOT NULL,
+    participant_count INTEGER NOT NULL,
+    registration_ends TEXT NOT NULL,
+    matches_completed INTEGER NOT NULL,
+    matches_total INTEGER NOT NULL,
+    randomness_seed TEXT NOT NULL,
+    min_winning_score INTEGER NOT NULL,
+    winner_count INTEGER NOT NULL,
+    winner_pool TEXT NOT NULL,
+    claims_processed INTEGER NOT NULL,
+    payout_started_at TEXT NOT NULL,
+    entries_remaining INTEGER NOT NULL,
+    round_tier INTEGER NOT NULL,
+    reveal_ends TEXT NOT NULL,
+    reveal_duration TEXT NOT NULL,
+    reveals_completed INTEGER NOT NULL,
+    forfeits INTEGER NOT NULL,
+    address TEXT NOT NULL,
+    bump INTEGER NOT NULL,
+    operator_costs TEXT NOT NULL DEFAULT '0',
+    account_closed INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (program_id, tournament_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS tournament_players (
+    program_id TEXT NOT NULL,
+    tournament_id INTEGER NOT NULL,
+    player_index INTEGER NOT NULL,
+    player TEXT NOT NULL,
+    score INTEGER NOT NULL DEFAULT 0,
+    strategy INTEGER NOT NULL DEFAULT 0,
+    strategy_params TEXT NOT NULL DEFAULT '[]',
+    matches_played INTEGER NOT NULL DEFAULT 0,
+    paid_out INTEGER NOT NULL DEFAULT 0,
+    revealed INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (program_id, tournament_id, player_index)
+  );
+`;
+
+/** Cached entry fields stored in tournament_players. */
+export interface CachedEntryData {
+  playerIndex: number;
+  matchesPlayed: number;
+  paidOut: boolean;
+  revealed: boolean;
+}
+
+/** Tournament data with an additional `accountClosed` flag from the cache. */
+export interface CachedTournament extends TournamentAccount {
+  accountClosed: boolean;
+}
+
+/** @internal — test-only: override the cached DB instance. */
+export function _resetDb(newDb?: Database.Database): void {
+  db = newDb ?? null;
+}
+
+/** Add columns that didn't exist in earlier schema versions. */
+function migrateDb(db: Database.Database): void {
+  const migrations = [
+    'ALTER TABLE tournaments ADD COLUMN operator_costs TEXT NOT NULL DEFAULT \'0\'',
+    'ALTER TABLE tournaments ADD COLUMN account_closed INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE tournament_players ADD COLUMN matches_played INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE tournament_players ADD COLUMN paid_out INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE tournament_players ADD COLUMN revealed INTEGER NOT NULL DEFAULT 1',
+  ];
+  for (const sql of migrations) {
+    try { db.exec(sql); } catch { /* column already exists */ }
+  }
+}
+
 export function getDb(): Database.Database {
   if (db) return db;
 
@@ -16,54 +97,18 @@ export function getDb(): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS tournaments (
-      program_id TEXT NOT NULL,
-      tournament_id INTEGER NOT NULL,
-      state TEXT NOT NULL,
-      stake TEXT NOT NULL,
-      house_fee_bps INTEGER NOT NULL,
-      matches_per_player INTEGER NOT NULL,
-      registration_duration TEXT NOT NULL,
-      pool TEXT NOT NULL,
-      participant_count INTEGER NOT NULL,
-      registration_ends TEXT NOT NULL,
-      matches_completed INTEGER NOT NULL,
-      matches_total INTEGER NOT NULL,
-      randomness_seed TEXT NOT NULL,
-      min_winning_score INTEGER NOT NULL,
-      winner_count INTEGER NOT NULL,
-      winner_pool TEXT NOT NULL,
-      claims_processed INTEGER NOT NULL,
-      payout_started_at TEXT NOT NULL,
-      entries_remaining INTEGER NOT NULL,
-      round_tier INTEGER NOT NULL,
-      reveal_ends TEXT NOT NULL,
-      reveal_duration TEXT NOT NULL,
-      reveals_completed INTEGER NOT NULL,
-      forfeits INTEGER NOT NULL,
-      address TEXT NOT NULL,
-      bump INTEGER NOT NULL,
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (program_id, tournament_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS tournament_players (
-      program_id TEXT NOT NULL,
-      tournament_id INTEGER NOT NULL,
-      player_index INTEGER NOT NULL,
-      player TEXT NOT NULL,
-      score INTEGER NOT NULL DEFAULT 0,
-      strategy INTEGER NOT NULL DEFAULT 0,
-      strategy_params TEXT NOT NULL DEFAULT '[]',
-      PRIMARY KEY (program_id, tournament_id, player_index)
-    );
-  `);
+  db.exec(SCHEMA_SQL);
+  migrateDb(db);
 
   return db;
 }
 
-export function upsertTournament(programId: string, t: TournamentAccount): void {
+export function upsertTournament(
+  programId: string,
+  t: TournamentAccount,
+  accountClosed = false,
+  entryData?: Map<string, CachedEntryData>,
+): void {
   const db = getDb();
 
   const txn = db.transaction(() => {
@@ -74,9 +119,10 @@ export function upsertTournament(programId: string, t: TournamentAccount): void 
         matches_completed, matches_total, randomness_seed, min_winning_score,
         winner_count, winner_pool, claims_processed, payout_started_at,
         entries_remaining, round_tier, reveal_ends, reveal_duration,
-        reveals_completed, forfeits, address, bump, updated_at
+        reveals_completed, forfeits, address, bump, operator_costs, account_closed,
+        updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')
       )
     `).run(
       programId, t.id, t.state, t.stake, t.houseFeeBps, t.matchesPerPlayer,
@@ -84,7 +130,8 @@ export function upsertTournament(programId: string, t: TournamentAccount): void 
       t.matchesCompleted, t.matchesTotal, t.randomnessSeed, t.minWinningScore,
       t.winnerCount, t.winnerPool, t.claimsProcessed, t.payoutStartedAt,
       t.entriesRemaining, t.roundTier, t.revealEnds, t.revealDuration,
-      t.revealsCompleted, t.forfeits, t.address, t.bump
+      t.revealsCompleted, t.forfeits, t.address, t.bump,
+      t.operatorCosts ?? '0', accountClosed ? 1 : 0
     );
 
     // Delete old player rows for this tournament, then insert fresh
@@ -93,19 +140,26 @@ export function upsertTournament(programId: string, t: TournamentAccount): void 
     ).run(programId, t.id);
 
     const insertPlayer = db.prepare(`
-      INSERT INTO tournament_players (program_id, tournament_id, player_index, player, score, strategy, strategy_params)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tournament_players (
+        program_id, tournament_id, player_index, player, score, strategy,
+        strategy_params, matches_played, paid_out, revealed
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (let i = 0; i < t.players.length; i++) {
+      const player = t.players[i];
+      const cached = entryData?.get(player);
       insertPlayer.run(
         programId,
         t.id,
         i,
-        t.players[i],
+        player,
         t.scores[i] ?? 0,
         t.strategies[i] ?? 0,
-        JSON.stringify(t.strategyParams[i] ?? [0, 0, 0, 0, 0])
+        JSON.stringify(t.strategyParams[i] ?? [0, 0, 0, 0, 0]),
+        cached?.matchesPlayed ?? 0,
+        cached?.paidOut ? 1 : 0,
+        cached?.revealed !== undefined ? (cached.revealed ? 1 : 0) : 1,
       );
     }
   });
@@ -113,7 +167,7 @@ export function upsertTournament(programId: string, t: TournamentAccount): void 
   txn();
 }
 
-export function getTournament(programId: string, id: number): TournamentAccount | null {
+export function getTournament(programId: string, id: number): CachedTournament | null {
   const db = getDb();
 
   const row = db.prepare(
@@ -157,7 +211,26 @@ export function getTournament(programId: string, id: number): TournamentAccount 
     bump: row.bump as number,
     operatorCosts: (row.operator_costs as string) || '0',
     address: row.address as string,
+    accountClosed: (row.account_closed as number) === 1,
   };
+}
+
+export function getCachedEntryData(programId: string, tournamentId: number): Map<string, CachedEntryData> {
+  const db = getDb();
+  const rows = db.prepare(
+    'SELECT player, player_index, matches_played, paid_out, revealed FROM tournament_players WHERE program_id = ? AND tournament_id = ? ORDER BY player_index ASC'
+  ).all(programId, tournamentId) as Array<Record<string, unknown>>;
+
+  const map = new Map<string, CachedEntryData>();
+  for (const r of rows) {
+    map.set(r.player as string, {
+      playerIndex: r.player_index as number,
+      matchesPlayed: r.matches_played as number,
+      paidOut: (r.paid_out as number) === 1,
+      revealed: (r.revealed as number) === 1,
+    });
+  }
+  return map;
 }
 
 export function listTournamentIds(programId: string): number[] {

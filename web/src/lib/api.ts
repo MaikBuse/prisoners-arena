@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getNetwork, STRATEGIES } from './solana';
 import type { TournamentAccount, EntryAccount } from './solana';
+import type { CachedEntryData } from './db';
 import { checkRateLimit } from './rate-limit';
 
 /**
@@ -85,9 +86,16 @@ export interface ScoreboardEntry {
 
 /**
  * Build a complete scoreboard by merging tournament vecs (players/scores)
- * with entry account data. This ensures claimed/closed entries still appear.
+ * with entry account data and cached entry data. Three-tier fallback:
+ *   1. Live entry account (on-chain)
+ *   2. Cached entry data (SQLite)
+ *   3. Inferred values (heuristic)
  */
-export function buildScoreboard(tournament: TournamentAccount, entries: EntryAccount[]): ScoreboardEntry[] {
+export function buildScoreboard(
+  tournament: TournamentAccount,
+  entries: EntryAccount[],
+  cachedEntryData?: Map<string, CachedEntryData>,
+): ScoreboardEntry[] {
   // Index entries by player pubkey for fast lookup
   const entryMap = new Map<string, EntryAccount>();
   for (const e of entries) {
@@ -102,6 +110,7 @@ export function buildScoreboard(tournament: TournamentAccount, entries: EntryAcc
 
     const score = tournament.scores[i] ?? 0;
     const entry = entryMap.get(player);
+    const cached = cachedEntryData?.get(player);
 
     // If entry is closed and tournament is in Payout, all matches were completed
     const inferredMatchesPlayed = tournament.state === 'Payout' ? tournament.matchesPerPlayer : 0;
@@ -118,15 +127,20 @@ export function buildScoreboard(tournament: TournamentAccount, entries: EntryAcc
       ? { forgiveness: rawParams[0], retaliationDelay: rawParams[1], noiseTolerance: rawParams[2], initialMoves: rawParams[3], cooperateBias: rawParams[4] }
       : entry?.strategyParams ?? null;
 
+    // Three-tier fallback: entry → cached → inferred
+    const matchesPlayed = entry?.matchesPlayed ?? cached?.matchesPlayed ?? inferredMatchesPlayed;
+    const paidOut = entry?.paidOut ?? cached?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore);
+    const revealed = entry?.revealed ?? cached?.revealed ?? true;
+
     scoreboard.push({
       player,
       score,
       strategy,
       strategyName,
       strategyParams,
-      matchesPlayed: entry?.matchesPlayed ?? inferredMatchesPlayed,
-      paidOut: entry?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore),
-      revealed: entry?.revealed ?? true,
+      matchesPlayed,
+      paidOut,
+      revealed,
       entryExists: !!entry,
     });
   }

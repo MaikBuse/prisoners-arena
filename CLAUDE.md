@@ -85,6 +85,24 @@ Autonomous loop that drives tournament lifecycle: closes registration, closes re
 
 Program ID (devnet): `89Pm5Qy61r1K8dLY1Z1fsJLu3PBN5tTLfZFoEAhejDYa`
 
+## Contract Test Setup (Important)
+
+Integration tests require the BPF binary at `target/deploy/prisoners_arena.so` compiled with the `testing` feature flag. This flag lowers `CLAIM_EXPIRY_SECONDS` and `TOURNAMENT_CLOSURE_SECONDS` from 30 days to 2 seconds.
+
+**Stale binary pitfall:** `anchor test` caches the binary. If `target/deploy/prisoners_arena.so` was built without `--features testing`, tests will silently use 30-day timeouts and timing-dependent tests will fail (e.g. `ClaimExpired` never fires, wrong error codes). Symptoms: tests pass for non-timing checks but fail on expiry-related assertions.
+
+**Clean rebuild when timing tests fail:**
+```bash
+cargo clean --manifest-path contract/Cargo.toml
+anchor build -- --features testing
+cp contract/target/deploy/prisoners_arena.so target/deploy/
+just test-contract
+```
+
+The copy step is needed because the contract is a git submodule — Cargo outputs to `contract/target/deploy/` but the test validator reads from `target/deploy/`.
+
+**Test suite is stateful:** Tests in `tests/prisoners-arena.ts` are sequential — each describe block depends on state from the previous one. You cannot run individual tests in isolation.
+
 ## Key Dependencies
 
 - Anchor 0.32, Solana SDK 2.0
