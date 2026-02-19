@@ -53,6 +53,7 @@ export const SCHEMA_SQL = `
     matches_played INTEGER NOT NULL DEFAULT 0,
     paid_out INTEGER NOT NULL DEFAULT 0,
     revealed INTEGER NOT NULL DEFAULT 1,
+    bytecode TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (program_id, tournament_id, player_index)
   );
 `;
@@ -63,6 +64,7 @@ export interface CachedEntryData {
   matchesPlayed: number;
   paidOut: boolean;
   revealed: boolean;
+  bytecode?: number[];
 }
 
 /** Tournament data with an additional `accountClosed` flag from the cache. */
@@ -83,6 +85,7 @@ function migrateDb(db: Database.Database): void {
     'ALTER TABLE tournament_players ADD COLUMN matches_played INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE tournament_players ADD COLUMN paid_out INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE tournament_players ADD COLUMN revealed INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE tournament_players ADD COLUMN bytecode TEXT NOT NULL DEFAULT \'[]\'',
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch { /* column already exists */ }
@@ -148,13 +151,14 @@ export function upsertTournament(
     const insertPlayer = db.prepare(`
       INSERT INTO tournament_players (
         program_id, tournament_id, player_index, player, score, strategy,
-        matches_played, paid_out, revealed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        matches_played, paid_out, revealed, bytecode
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (let i = 0; i < t.players.length; i++) {
       const player = t.players[i];
       const cached = entryData?.get(player);
+      const bc = cached?.bytecode ?? t.bytecodes?.[i] ?? null;
       insertPlayer.run(
         programId,
         t.id,
@@ -165,6 +169,7 @@ export function upsertTournament(
         cached?.matchesPlayed ?? 0,
         cached?.paidOut ? 1 : 0,
         cached?.revealed !== undefined ? (cached.revealed ? 1 : 0) : 1,
+        bc && bc.length > 0 ? JSON.stringify(bc) : '[]',
       );
     }
   });
@@ -184,6 +189,14 @@ export function getTournament(programId: string, id: number): CachedTournament |
   const playerRows = db.prepare(
     'SELECT * FROM tournament_players WHERE program_id = ? AND tournament_id = ? ORDER BY player_index ASC'
   ).all(programId, id) as Array<Record<string, unknown>>;
+
+  // Reconstruct bytecodes array; only include if any player has non-empty bytecode
+  const bytecodes: (number[] | null)[] = playerRows.map(r => {
+    const raw = r.bytecode as string | undefined;
+    if (!raw || raw === '[]') return null;
+    try { const arr = JSON.parse(raw); return Array.isArray(arr) && arr.length > 0 ? arr : null; } catch { return null; }
+  });
+  const hasBytecodes = bytecodes.some(b => b !== null);
 
   return {
     id: row.tournament_id as number,
@@ -216,6 +229,7 @@ export function getTournament(programId: string, id: number): CachedTournament |
     operatorCosts: (row.operator_costs as string) || '0',
     address: row.address as string,
     accountClosed: (row.account_closed as number) === 1,
+    ...(hasBytecodes ? { bytecodes } : {}),
   };
 }
 

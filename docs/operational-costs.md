@@ -15,7 +15,7 @@ One-time costs only. Net positive after launch via `accumulated_fees`.
 | Cost | Amount | Notes |
 |---|---|---|
 | Program deployment (mainnet) | ~3.5 SOL | 493 KB binary, program data account |
-| `initialize_config` (Config + Tournament #0 PDAs) | ~0.005 SOL | 177 + 207 bytes rent |
+| `initialize_config` (Config + Tournament #0 PDAs) | ~0.005 SOL | 177 + 249 bytes rent |
 | Buffer for config updates, fee withdrawals | 0.5 SOL | |
 | **Total** | **~4 SOL** | |
 
@@ -31,7 +31,7 @@ The operator's main ongoing cost is **tournament rent that is not returned to it
 
 | Cost | Per Tournament | Monthly (360 tournaments) | Reimbursed? |
 |---|---|---|---|
-| Tournament PDA rent (~207 bytes base) | ~0.00233 SOL | ~0.84 SOL | No — goes to admin at close |
+| Tournament PDA rent (~249 bytes base) | ~0.00262 SOL | ~0.94 SOL | No — goes to admin at close |
 | Transaction fees (~61 txs at 20 players) | ~0.000305 SOL | ~0.11 SOL | Yes — from prize pool at `finalize_tournament` |
 | Failed/retried transactions | varies | ~0.1 SOL estimate | No |
 | **Net monthly burn** | | **~1 SOL** | |
@@ -49,7 +49,7 @@ The operator fronts transaction fees and gets reimbursed in bulk at finalization
 
 ### Self-Sustaining Loop
 
-The operator's rent payments (~0.84 SOL/month) flow to `accumulated_fees`. The admin can `withdraw_fees` and top up the operator — SOL circulates between wallets rather than being lost.
+The operator's rent payments (~0.94 SOL/month) flow to `accumulated_fees`. The admin can `withdraw_fees` and top up the operator — SOL circulates between wallets rather than being lost.
 
 ---
 
@@ -60,13 +60,13 @@ The operator's rent payments (~0.84 SOL/month) flow to `accumulated_fees`. The a
 | Account | Size | Rent-Exempt Minimum |
 |---|---|---|
 | Config PDA | 177 bytes | ~0.00212 SOL |
-| Tournament PDA (empty) | 207 bytes (BASE_SPACE) | ~0.00233 SOL |
-| Tournament PDA (20 players) | 207 + (20 × 42) = 1,047 bytes | ~0.00818 SOL |
-| Tournament PDA (50 players) | 207 + (50 × 42) = 2,307 bytes | ~0.01695 SOL |
-| Tournament PDA (5000 players) | 207 + (5000 × 42) = 210,207 bytes | ~1.46 SOL |
-| Entry PDA (per player) | 193 bytes | ~0.00223 SOL |
+| Tournament PDA (empty) | 249 bytes (BASE_SPACE) | ~0.00262 SOL |
+| Tournament PDA (20 players) | 249 + (20 × 37) = 989 bytes | ~0.00777 SOL |
+| Tournament PDA (50 players) | 249 + (50 × 37) = 2,099 bytes | ~0.01550 SOL |
+| Tournament PDA (5000 players) | 249 + (5000 × 37) = 185,249 bytes | ~1.29 SOL |
+| Entry PDA (per player) | 207 bytes | ~0.00233 SOL |
 
-`BYTES_PER_PLAYER = 42` (32-byte pubkey + 4-byte score + 1-byte strategy + 5-byte params).
+`BYTES_PER_PLAYER = 37` (32-byte pubkey + 4-byte score + 1-byte strategy).
 
 Tournament accounts grow via `realloc` as players join; each player pays their own incremental rent. Entry account rent is paid by the player and returned to them at `close_entry` (`close = player`).
 
@@ -76,10 +76,10 @@ Cost of keeping the N most recent tournament accounts on-chain (not calling `clo
 
 | Retained | 4 players each | 20 players each | 50 players each | 5000 players each |
 |---|---|---|---|---|
-| 10 tournaments | 0.035 SOL | 0.082 SOL | 0.170 SOL | 14.6 SOL |
-| 50 tournaments | 0.175 SOL | 0.41 SOL | 0.85 SOL | 73 SOL |
+| 10 tournaments | 0.037 SOL | 0.078 SOL | 0.155 SOL | 12.9 SOL |
+| 50 tournaments | 0.183 SOL | 0.389 SOL | 0.775 SOL | 64.5 SOL |
 
-At typical early adoption (20 players), 10 retained tournaments cost ~0.08 SOL — negligible. At max capacity (5000 players), the same costs ~14.6 SOL.
+At typical early adoption (20 players), 10 retained tournaments cost ~0.08 SOL — negligible. At max capacity (5000 players), the same costs ~12.9 SOL.
 
 ---
 
@@ -90,8 +90,8 @@ At typical early adoption (20 players), 10 retained tournaments cost ~0.08 SOL �
 | Constraint | At 5000 Players | Limit | Status |
 |---|---|---|---|
 | `max_participants` field (`u16`) | 5,000 | 65,535 | OK |
-| Account size | 205 KB | 10 MB | OK |
-| Realloc per entry | 42 bytes | 10,240 bytes/tx | OK |
+| Account size | 181 KB | 10 MB | OK |
+| Realloc per entry | 37 bytes | 10,240 bytes/tx | OK |
 | Max score (99 × 30 × 5 = 14,850) | `u32` | 4,294,967,295 | OK |
 | Compute per `run_matches` tx | ~170K CU | 200K CU default | OK |
 

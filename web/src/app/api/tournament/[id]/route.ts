@@ -20,14 +20,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const entries = await getAllEntries(tournament.address);
       if (entries.length > 0) {
         const entryDataMap = new Map<string, CachedEntryData>();
+        // Build bytecodes array indexed by player position in tournament
+        const bytecodes: (number[] | null)[] = new Array(tournament.players.length).fill(null);
         for (const e of entries) {
+          const bc = e.bytecode.length > 0 ? e.bytecode : undefined;
           entryDataMap.set(e.player, {
             playerIndex: e.index,
             matchesPlayed: e.matchesPlayed,
             paidOut: e.paidOut,
             revealed: e.revealed,
+            bytecode: bc,
           });
+          if (bc) {
+            const idx = tournament.players.indexOf(e.player);
+            if (idx >= 0) bytecodes[idx] = bc;
+          }
         }
+        if (bytecodes.some(b => b !== null)) tournament.bytecodes = bytecodes;
         try { upsertTournament(programId, tournament, false, entryDataMap); } catch {}
       } else {
         try { upsertTournament(programId, tournament); } catch {}

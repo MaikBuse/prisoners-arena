@@ -1,5 +1,5 @@
 {
-  "address": "89Pm5Qy61r1K8dLY1Z1fsJLu3PBN5tTLfZFoEAhejDYa",
+  "address": "7gJU56iACgPLsinhLCc2cSZs7ZuwSs1fHgFeDNdnZxSX",
   "metadata": {
     "name": "prisoners_arena",
     "version": "0.1.0",
@@ -184,19 +184,19 @@
       "args": []
     },
     {
-      "name": "close_expired_entry",
+      "name": "close_entry",
       "docs": [
-        "Close expired entry after 30-day claim window"
+        "Close entry: distribute payout to winners, return rent to player"
       ],
       "discriminator": [
-        241,
-        64,
-        198,
-        246,
-        182,
+        132,
+        26,
+        202,
+        145,
+        190,
+        37,
         114,
-        87,
-        149
+        67
       ],
       "accounts": [
         {
@@ -275,6 +275,10 @@
               }
             ]
           }
+        },
+        {
+          "name": "player",
+          "writable": true
         },
         {
           "name": "operator",
@@ -862,32 +866,12 @@
       ],
       "args": [
         {
-          "name": "operator",
-          "type": "pubkey"
-        },
-        {
-          "name": "stake",
-          "type": "u64"
-        },
-        {
-          "name": "min_participants",
-          "type": "u16"
-        },
-        {
-          "name": "max_participants",
-          "type": "u16"
-        },
-        {
-          "name": "registration_duration",
-          "type": "i64"
-        },
-        {
-          "name": "matches_per_player",
-          "type": "u16"
-        },
-        {
-          "name": "reveal_duration",
-          "type": "i64"
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitializeConfigParams"
+            }
+          }
         }
       ]
     },
@@ -937,20 +921,18 @@
           }
         },
         {
-          "name": "params",
-          "type": {
-            "defined": {
-              "name": "StrategyParams"
-            }
-          }
-        },
-        {
           "name": "salt",
           "type": {
             "array": [
               "u8",
               16
             ]
+          }
+        },
+        {
+          "name": "bytecode",
+          "type": {
+            "option": "bytes"
           }
         }
       ]
@@ -1072,51 +1054,11 @@
       ],
       "args": [
         {
-          "name": "operator",
+          "name": "params",
           "type": {
-            "option": "pubkey"
-          }
-        },
-        {
-          "name": "house_fee_bps",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "stake",
-          "type": {
-            "option": "u64"
-          }
-        },
-        {
-          "name": "min_participants",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "max_participants",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "registration_duration",
-          "type": {
-            "option": "i64"
-          }
-        },
-        {
-          "name": "matches_per_player",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "reveal_duration",
-          "type": {
-            "option": "i64"
+            "defined": {
+              "name": "UpdateConfigParams"
+            }
           }
         }
       ]
@@ -1320,11 +1262,6 @@
       "msg": "Tournament closure period not yet reached (30 days after payout)"
     },
     {
-      "code": 12021,
-      "name": "InvalidParams",
-      "msg": "Invalid strategy parameters"
-    },
-    {
       "code": 12022,
       "name": "CommitmentMismatch",
       "msg": "Commitment does not match revealed strategy"
@@ -1358,6 +1295,11 @@
       "code": 12028,
       "name": "MinParticipantsNotReached",
       "msg": "Minimum participants not reached"
+    },
+    {
+      "code": 12029,
+      "name": "InvalidBytecode",
+      "msg": "Invalid custom strategy bytecode"
     }
   ],
   "types": [
@@ -1452,6 +1394,13 @@
               "PDA bump seed"
             ],
             "type": "u8"
+          },
+          {
+            "name": "operator_tx_fee",
+            "docs": [
+              "Per-tx reimbursement amount for operator (lamports, 0 = off)"
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -1509,17 +1458,6 @@
             }
           },
           {
-            "name": "strategy_params",
-            "docs": [
-              "Strategy parameters (zeroed until reveal)"
-            ],
-            "type": {
-              "defined": {
-                "name": "StrategyParams"
-              }
-            }
-          },
-          {
             "name": "revealed",
             "docs": [
               "Has player revealed? (NEW v1.7)"
@@ -1560,6 +1498,61 @@
               "PDA bump seed"
             ],
             "type": "u8"
+          },
+          {
+            "name": "bytecode_len",
+            "docs": [
+              "Custom bytecode length (0 for builtin strategies)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bytecode",
+            "docs": [
+              "Custom bytecode program (only first bytecode_len bytes are used)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitializeConfigParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "pubkey"
+          },
+          {
+            "name": "stake",
+            "type": "u64"
+          },
+          {
+            "name": "min_participants",
+            "type": "u16"
+          },
+          {
+            "name": "max_participants",
+            "type": "u16"
+          },
+          {
+            "name": "registration_duration",
+            "type": "i64"
+          },
+          {
+            "name": "matches_per_player",
+            "type": "u16"
+          },
+          {
+            "name": "reveal_duration",
+            "type": "i64"
           }
         ]
       }
@@ -1598,37 +1591,9 @@
           },
           {
             "name": "Gradual"
-          }
-        ]
-      }
-    },
-    {
-      "name": "StrategyParams",
-      "docs": [
-        "Strategy parameters for fine-tuning behavior"
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "forgiveness",
-            "type": "u8"
           },
           {
-            "name": "retaliation_delay",
-            "type": "u8"
-          },
-          {
-            "name": "noise_tolerance",
-            "type": "u8"
-          },
-          {
-            "name": "initial_moves",
-            "type": "u8"
-          },
-          {
-            "name": "cooperate_bias",
-            "type": "u8"
+            "name": "Custom"
           }
         ]
       }
@@ -1839,24 +1804,18 @@
             "type": "bytes"
           },
           {
-            "name": "strategy_params",
-            "docs": [
-              "Strategy parameters indexed by entry.index"
-            ],
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "StrategyParams"
-                }
-              }
-            }
-          },
-          {
             "name": "bump",
             "docs": [
               "PDA bump seed"
             ],
             "type": "u8"
+          },
+          {
+            "name": "operator_costs",
+            "docs": [
+              "Accumulated operator costs for reimbursement at finalization"
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -1880,6 +1839,68 @@
           },
           {
             "name": "Payout"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateConfigParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "house_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "stake",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "min_participants",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "max_participants",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "registration_duration",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "matches_per_player",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "reveal_duration",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "operator_tx_fee",
+            "type": {
+              "option": "u64"
+            }
           }
         ]
       }

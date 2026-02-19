@@ -119,6 +119,12 @@ export function makeStrategyJson(strategyIndex: number, bytecode?: number[] | nu
     // Custom strategy: pass as PlayerStrategy::Custom
     return JSON.stringify({ Custom: bytecode });
   }
+  if (strategyIndex === 9) {
+    // Custom strategy without bytecode (e.g. restored from old cache) —
+    // fall back to AlwaysCooperate so WASM doesn't crash
+    console.warn('makeStrategyJson: Custom strategy (9) missing bytecode, falling back to AlwaysCooperate');
+    return JSON.stringify({ base: 'AlwaysCooperate' });
+  }
   const base = STRATEGIES[strategyIndex]?.key;
   if (!base) throw new Error(`Unknown strategy index: ${strategyIndex}`);
   return JSON.stringify({ base });

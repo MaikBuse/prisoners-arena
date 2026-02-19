@@ -97,7 +97,7 @@ deploy-mainnet: build-contract-verifiable
 verify-contract:
     solana-verify verify-from-repo \
         https://github.com/makoto-kusanagi/prisoners-arena-program \
-        --program-id 89Pm5Qy61r1K8dLY1Z1fsJLu3PBN5tTLfZFoEAhejDYa \
+        --program-id 7gJU56iACgPLsinhLCc2cSZs7ZuwSs1fHgFeDNdnZxSX \
         --library-name prisoners_arena
 
 # Format all code
