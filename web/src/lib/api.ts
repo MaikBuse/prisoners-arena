@@ -63,20 +63,11 @@ export function apiError(error: string, code: string, status = 400) {
 /** Default pubkey (all zeros) — indicates refunded slot */
 const DEFAULT_PUBKEY = '11111111111111111111111111111111';
 
-export interface StrategyParams {
-  forgiveness: number;
-  retaliationDelay: number;
-  noiseTolerance: number;
-  initialMoves: number;
-  cooperateBias: number;
-}
-
 export interface ScoreboardEntry {
   player: string;
   score: number;
   strategy: number;
   strategyName: string;
-  strategyParams: StrategyParams | null;
   matchesPlayed: number;
   paidOut: boolean;
   revealed: boolean;
@@ -123,12 +114,6 @@ export function buildScoreboard(
     const strategy = validStrat ? stratIdx : (entry?.strategy ?? -1);
     const strategyName = validStrat ? (STRATEGIES[stratIdx]?.name ?? 'Unknown') : (entry ? (STRATEGIES[entry.strategy]?.name ?? 'Unknown') : 'Unknown');
 
-    // Strategy params from tournament vecs (persists after entry closure) or entry account
-    const rawParams = tournament.strategyParams?.[i];
-    const strategyParams: StrategyParams | null = rawParams
-      ? { forgiveness: rawParams[0], retaliationDelay: rawParams[1], noiseTolerance: rawParams[2], initialMoves: rawParams[3], cooperateBias: rawParams[4] }
-      : entry?.strategyParams ?? null;
-
     // Three-tier fallback: entry → cached → inferred
     const matchesPlayed = entry?.matchesPlayed ?? cached?.matchesPlayed ?? inferredMatchesPlayed;
     const paidOut = entry?.paidOut ?? cached?.paidOut ?? (tournament.state === 'Payout' && score >= tournament.minWinningScore);
@@ -139,7 +124,6 @@ export function buildScoreboard(
       score,
       strategy,
       strategyName,
-      strategyParams,
       matchesPlayed,
       paidOut,
       revealed,

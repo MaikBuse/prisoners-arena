@@ -5,24 +5,14 @@ use solana_sdk::pubkey::Pubkey;
 use crate::config::ArenaConfig;
 use crate::state;
 
-const STRATEGY_NAMES: [&str; 9] = [
+const STRATEGY_NAMES: [&str; 10] = [
     "TitForTat", "AlwaysDefect", "AlwaysCooperate", "GrimTrigger",
     "Pavlov", "SuspiciousTitForTat", "Random", "TitForTwoTats", "Gradual",
+    "Custom",
 ];
 
 fn strategy_name(id: u8) -> &'static str {
     STRATEGY_NAMES.get(id as usize).unwrap_or(&"Unknown")
-}
-
-fn format_params(params: [u8; 5]) -> String {
-    let [forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias] = params;
-    let mut parts = Vec::new();
-    if forgiveness > 0 { parts.push(format!("forgiveness: {}%", forgiveness)); }
-    if retaliation_delay > 0 { parts.push(format!("retaliation_delay: {}", retaliation_delay)); }
-    if noise_tolerance > 0 { parts.push(format!("noise_tolerance: {}", noise_tolerance)); }
-    if initial_moves > 0 { parts.push(format!("initial_moves: 0b{:08b}", initial_moves)); }
-    if cooperate_bias != 50 { parts.push(format!("cooperate_bias: {}%", cooperate_bias)); }
-    if parts.is_empty() { String::new() } else { format!(" ({})", parts.join(", ")) }
 }
 
 pub fn status(cfg: &ArenaConfig) -> Result<()> {
@@ -128,8 +118,7 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
             } else if strat == 255 {
                 " 🔒 Hidden".to_string()
             } else {
-                let params = t.strategy_params.get(i).copied().unwrap_or([0; 5]);
-                format!(" — {}{}, score: {}", strategy_name(strat), format_params(params), score)
+                format!(" — {}, score: {}", strategy_name(strat), score)
             };
             println!("    [{}] {}{}", i, player, status);
         }
@@ -184,7 +173,7 @@ pub fn entries(cfg: &ArenaConfig, tournament_id: Option<u32>) -> Result<()> {
             Err(_) => {
                 let score = t.scores.get(i).copied().unwrap_or(0);
                 let strat = t.strategies.get(i).copied().unwrap_or(255);
-                let strat_str = if strat <= 8 { strategy_name(strat) } else { "Unknown" };
+                let strat_str = if strat <= 9 { strategy_name(strat) } else { "Unknown" };
                 println!("  [{}] {} — {}, score: {} (entry closed)", i, player, strat_str, score);
             }
         }

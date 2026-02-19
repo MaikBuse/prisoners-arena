@@ -53,7 +53,6 @@ pub struct Tournament {
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
-    pub strategy_params: Vec<[u8; 5]>,
     pub bump: u8,
     pub operator_costs: u64,        // NEW v1.8
 }
@@ -84,13 +83,14 @@ pub struct Entry {
     pub index: u32,
     pub commitment: [u8; 32],      // NEW v1.7
     pub strategy: u8,
-    pub strategy_params: [u8; 5],
     pub revealed: bool,            // NEW v1.7
     pub score: u32,
     pub matches_played: u16,
     pub paid_out: bool,
     pub created_at: i64,
     pub bump: u8,
+    pub bytecode_len: u8,          // NEW v1.9
+    pub bytecode: [u8; 64],        // NEW v1.9
 }
 
 impl Config {
@@ -163,9 +163,6 @@ impl Tournament {
         let strategies_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
         let mut strategies = Vec::with_capacity(strategies_len);
         for _ in 0..strategies_len { strategies.push(data[o]); o += 1; }
-        let params_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
-        let mut strategy_params = Vec::with_capacity(params_len);
-        for _ in 0..params_len { let mut p = [0u8; 5]; p.copy_from_slice(&data[o..o + 5]); o += 5; strategy_params.push(p); }
         let bump = data[o]; o += 1;
         // NEW v1.8: operator_costs (reads from padding on old accounts → 0)
         let operator_costs = if o + 8 <= data.len() {
@@ -173,7 +170,7 @@ impl Tournament {
         } else {
             0
         };
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, forfeits, players, scores, strategies, strategy_params, bump, operator_costs })
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, forfeits, players, scores, strategies, bump, operator_costs })
     }
 }
 
@@ -187,15 +184,21 @@ impl Entry {
         // NEW v1.7: commitment
         let mut commitment = [0u8; 32]; commitment.copy_from_slice(&data[o..o + 32]); o += 32;
         let strategy = data[o]; o += 1;
-        let mut strategy_params = [0u8; 5]; strategy_params.copy_from_slice(&data[o..o + 5]); o += 5;
         // NEW v1.7: revealed
         let revealed = data[o] != 0; o += 1;
         let score = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         let matches_played = u16::from_le_bytes(data[o..o + 2].try_into()?); o += 2;
         let paid_out = data[o] != 0; o += 1;
         let created_at = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
-        let bump = data[o];
-        Ok(Entry { tournament, player, index, commitment, strategy, strategy_params, revealed, score, matches_played, paid_out, created_at, bump })
+        let bump = data[o]; o += 1;
+        // NEW v1.9: bytecode_len + bytecode (reads from padding on old accounts → 0)
+        let bytecode_len = if o < data.len() { data[o] } else { 0 };
+        o += 1;
+        let mut bytecode = [0u8; 64];
+        if o + 64 <= data.len() {
+            bytecode.copy_from_slice(&data[o..o + 64]);
+        }
+        Ok(Entry { tournament, player, index, commitment, strategy, revealed, score, matches_played, paid_out, created_at, bump, bytecode_len, bytecode })
     }
 }
 

@@ -48,7 +48,6 @@ pub struct Tournament {
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
-    pub strategy_params: Vec<[u8; 5]>,
     pub bump: u8,
     pub operator_costs: u64,        // NEW v1.8
 }
@@ -81,13 +80,14 @@ pub struct Entry {
     pub index: u32,
     pub commitment: [u8; 32],      // NEW v1.7
     pub strategy: u8,
-    pub strategy_params: [u8; 5],
     pub revealed: bool,            // NEW v1.7
     pub score: u32,
     pub matches_played: u16,
     pub paid_out: bool,
     pub created_at: i64,
     pub bump: u8,
+    pub bytecode_len: u8,          // NEW v1.9
+    pub bytecode: [u8; 64],        // NEW v1.9
 }
 
 impl Config {
@@ -265,17 +265,6 @@ impl Tournament {
             offset += 1;
         }
         
-        // Vec<StrategyParams> (5 bytes each)
-        let params_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
-        offset += 4;
-        let mut strategy_params = Vec::with_capacity(params_len);
-        for _ in 0..params_len {
-            let mut p = [0u8; 5];
-            p.copy_from_slice(&data[offset..offset + 5]);
-            offset += 5;
-            strategy_params.push(p);
-        }
-        
         let bump = data[offset];
         offset += 1;
 
@@ -313,7 +302,6 @@ impl Tournament {
             players,
             scores,
             strategies,
-            strategy_params,
             bump,
             operator_costs,
         })
@@ -341,11 +329,7 @@ impl Entry {
         
         let strategy = data[offset];
         offset += 1;
-        
-        let mut strategy_params = [0u8; 5];
-        strategy_params.copy_from_slice(&data[offset..offset + 5]);
-        offset += 5;
-        
+
         // NEW v1.7: revealed
         let revealed = data[offset] != 0;
         offset += 1;
@@ -363,20 +347,30 @@ impl Entry {
         offset += 8;
         
         let bump = data[offset];
-        
+        offset += 1;
+
+        // NEW v1.9: bytecode_len + bytecode (reads from padding on old accounts → 0)
+        let bytecode_len = if offset < data.len() { data[offset] } else { 0 };
+        offset += 1;
+        let mut bytecode = [0u8; 64];
+        if offset + 64 <= data.len() {
+            bytecode.copy_from_slice(&data[offset..offset + 64]);
+        }
+
         Ok(Entry {
             tournament,
             player,
             index,
             commitment,
             strategy,
-            strategy_params,
             revealed,
             score,
             matches_played,
             paid_out,
             created_at,
             bump,
+            bytecode_len,
+            bytecode,
         })
     }
 }

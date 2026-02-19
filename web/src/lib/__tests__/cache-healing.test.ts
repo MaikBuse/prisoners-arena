@@ -62,12 +62,6 @@ function makeTournament(overrides: Partial<TournamentAccount> = {}): TournamentA
     players: ['Alice111', 'Bob22222', 'Carol333', 'Dave4444'],
     scores: [80, 60, 40, 20],
     strategies: [0, 1, 2, 3],
-    strategyParams: [
-      [10, 0, 0, 0, 128],
-      [0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0],
-    ],
     bump: 255,
     operatorCosts: '0',
     address: 'TournAddr1111111111111111111111111111111111',
@@ -96,7 +90,6 @@ describe('SQLite roundtrip', () => {
     expect(got!.players).toEqual(t.players);
     expect(got!.scores).toEqual(t.scores);
     expect(got!.strategies).toEqual(t.strategies);
-    expect(got!.strategyParams).toEqual(t.strategyParams);
     expect(got!.accountClosed).toBe(false);
   });
 
@@ -291,7 +284,6 @@ describe('entry data persistence', () => {
       commitment: '',
       strategy: 0,
       strategyName: 'TitForTat',
-      strategyParams: { forgiveness: 10, retaliationDelay: 0, noiseTolerance: 0, initialMoves: 0, cooperateBias: 128 },
       revealed: true,
       score: 80,
       matchesPlayed: 10,
@@ -299,6 +291,8 @@ describe('entry data persistence', () => {
       createdAt: '1700000000',
       bump: 255,
       address: 'EntryAddr1111111111111111111111111111111111',
+      bytecodeLen: 0,
+      bytecode: [],
     }];
 
     const scoreboard = buildScoreboard(t, entries, cachedData);
@@ -436,7 +430,6 @@ describe('healClosedTournament()', () => {
       scores: Array.from({ length: 20 }, (_, i) => 100 - i),
       players: Array.from({ length: 20 }, (_, i) => `Player${String(i).padStart(3, '0')}`),
       strategies: Array(20).fill(0),
-      strategyParams: Array(20).fill([0, 0, 0, 0, 0]),
     });
     upsertTournament(PROGRAM_ID, t);
 
@@ -538,7 +531,6 @@ describe('healClosedTournament()', () => {
       players,
       scores,
       strategies: Array(8).fill(0),
-      strategyParams: Array(8).fill([0, 0, 0, 0, 0]),
     });
     upsertTournament(PROGRAM_ID, t);
 

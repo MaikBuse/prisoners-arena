@@ -47,9 +47,10 @@ export const STRATEGIES = [
   { index: 6, name: 'Random', key: 'Random', color: 'gray' },
   { index: 7, name: 'Tit for Two Tats', key: 'TitForTwoTats', color: 'cyan' },
   { index: 8, name: 'Gradual', key: 'Gradual', color: 'pink' },
+  { index: 9, name: 'Custom', key: 'Custom', color: 'indigo' },
 ] as const;
 
-export type StrategyIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type StrategyIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export const STRATEGY_COLORS: Record<string, string> = {
   blue: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -61,6 +62,7 @@ export const STRATEGY_COLORS: Record<string, string> = {
   gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
   pink: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  indigo: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
 };
 
 export const STRATEGY_BAR_COLORS: Record<string, string> = {
@@ -73,6 +75,7 @@ export const STRATEGY_BAR_COLORS: Record<string, string> = {
   gray: 'bg-gray-500',
   cyan: 'bg-cyan-500',
   pink: 'bg-pink-500',
+  indigo: 'bg-indigo-500',
 };
 
 // Explorer link — omit cluster param for mainnet-beta
@@ -216,10 +219,10 @@ export interface TournamentAccount {
   players: string[];
   scores: number[];
   strategies: number[];
-  strategyParams: number[][];
   bump: number;
   operatorCosts: string;   // v1.8
   address: string;
+  bytecodes?: (number[] | null)[];  // v1.9: custom strategy bytecodes (from Entry accounts, null = builtin)
 }
 
 const STATE_MAP: TournamentState[] = ['Registration', 'Reveal', 'Running', 'Payout'];
@@ -270,24 +273,11 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
     strategies.push(readU8(data, offset)); offset += 1;
   }
 
-  const strategyParamsLen = readU32LE(data, offset); offset += 4;
-  const strategyParams: number[][] = [];
-  for (let i = 0; i < strategyParamsLen; i++) {
-    strategyParams.push([
-      readU8(data, offset),     // forgiveness
-      readU8(data, offset + 1), // retaliationDelay
-      readU8(data, offset + 2), // noiseTolerance
-      readU8(data, offset + 3), // initialMoves
-      readU8(data, offset + 4), // cooperateBias
-    ]);
-    offset += 5;
-  }
-
   const bump = readU8(data, offset); offset += 1;
   // v1.8: operator_costs (reads from padding on old accounts → 0)
   const operatorCosts = (offset + 8 <= data.length) ? readU64LE(data, offset).toString() : '0';
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, forfeits, players, scores, strategies, strategyParams, bump, operatorCosts, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, forfeits, players, scores, strategies, bump, operatorCosts, address };
 }
 
 export interface EntryAccount {
@@ -297,13 +287,6 @@ export interface EntryAccount {
   commitment: string;    // v1.7 — hex-encoded SHA256
   strategy: number;
   strategyName: string;
-  strategyParams: {
-    forgiveness: number;
-    retaliationDelay: number;
-    noiseTolerance: number;
-    initialMoves: number;
-    cooperateBias: number;
-  };
   revealed: boolean;     // v1.7
   score: number;
   matchesPlayed: number;
@@ -311,6 +294,8 @@ export interface EntryAccount {
   createdAt: string;
   bump: number;
   address: string;
+  bytecodeLen: number;   // v1.9
+  bytecode: number[];    // v1.9
 }
 
 export function deserializeEntry(data: Buffer, address: string): EntryAccount {
@@ -322,20 +307,20 @@ export function deserializeEntry(data: Buffer, address: string): EntryAccount {
   const commitment = Buffer.from(data.subarray(offset, offset + 32)).toString('hex'); offset += 32;
   const strategy = readU8(data, offset); offset += 1;
   const strategyName = STRATEGIES[strategy]?.name || 'Unknown';
-  const forgiveness = readU8(data, offset); offset += 1;
-  const retaliationDelay = readU8(data, offset); offset += 1;
-  const noiseTolerance = readU8(data, offset); offset += 1;
-  const initialMoves = readU8(data, offset); offset += 1;
-  const cooperateBias = readU8(data, offset); offset += 1;
-  const strategyParams = { forgiveness, retaliationDelay, noiseTolerance, initialMoves, cooperateBias };
   // v1.7: revealed flag
   const revealed = readBool(data, offset); offset += 1;
   const score = readU32LE(data, offset); offset += 4;
   const matchesPlayed = readU16LE(data, offset); offset += 2;
   const paidOut = readBool(data, offset); offset += 1;
   const createdAt = readI64LE(data, offset).toString(); offset += 8;
-  const bump = readU8(data, offset);
-  return { tournament, player, index, commitment, strategy, strategyName, strategyParams, revealed, score, matchesPlayed, paidOut, createdAt, bump, address };
+  const bump = readU8(data, offset); offset += 1;
+  // v1.9: bytecode fields (reads 0 from padding on old accounts)
+  const bytecodeLen = offset < data.length ? readU8(data, offset) : 0; offset += 1;
+  const bytecode: number[] = [];
+  for (let i = 0; i < 64; i++) {
+    bytecode.push(offset + i < data.length ? readU8(data, offset + i) : 0);
+  }
+  return { tournament, player, index, commitment, strategy, strategyName, revealed, score, matchesPlayed, paidOut, createdAt, bump, address, bytecodeLen, bytecode: bytecode.slice(0, bytecodeLen) };
 }
 
 // Fetch functions

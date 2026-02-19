@@ -8,8 +8,8 @@
  *
  * IMPORTANT: This uses the real Rust match engine compiled to WASM,
  * producing cryptographically identical results to on-chain execution.
- * Do NOT confuse with simulate.ts which uses a different RNG and is
- * for pre-entry preview only.
+ * Used by both tournament replay (PlayerDetailModal) and the Strategy
+ * Lab preview (StrategyPreview).
  */
 
 import type { TournamentAccount } from './solana';
@@ -90,7 +90,7 @@ type WasmModule = typeof import('../wasm/match_logic');
 let wasmModule: WasmModule | null = null;
 let wasmInitPromise: Promise<WasmModule> | null = null;
 
-async function getWasm(): Promise<WasmModule> {
+export async function getWasm(): Promise<WasmModule> {
   if (wasmModule) return wasmModule;
   if (wasmInitPromise) return wasmInitPromise;
 
@@ -114,25 +114,14 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-function makeStrategyJson(strategyIndex: number, params: number[]): string {
+export function makeStrategyJson(strategyIndex: number, bytecode?: number[] | null): string {
+  if (strategyIndex === 9 && bytecode && bytecode.length > 0) {
+    // Custom strategy: pass as PlayerStrategy::Custom
+    return JSON.stringify({ Custom: bytecode });
+  }
   const base = STRATEGIES[strategyIndex]?.key;
   if (!base) throw new Error(`Unknown strategy index: ${strategyIndex}`);
-  return JSON.stringify({
-    base,
-    params: {
-      forgiveness: params[0] ?? 0,
-      retaliation_delay: params[1] ?? 0,
-      noise_tolerance: params[2] ?? 0,
-      initial_moves: params[3] ?? 0,
-      cooperate_bias: params[4] ?? 50,
-    },
-  });
-}
-
-function effectiveK(configK: number, n: number): number {
-  if (n <= 1) return 0;
-  if (n <= 200) return n - 1;
-  return Math.min(Math.max(49, Math.min(99, configK)), n - 1);
+  return JSON.stringify({ base });
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -147,7 +136,7 @@ export async function getPlayerMatches(
 ): Promise<PlayerMatchInfo[]> {
   const wasm = await getWasm();
   const seed = hexToBytes(tournament.randomnessSeed);
-  const k = effectiveK(tournament.matchesPerPlayer, tournament.participantCount);
+  const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
   // Get all pairings
@@ -163,8 +152,10 @@ export async function getPlayerMatches(
     const opponentIndex = isPlayerA ? b : a;
 
     // Build strategy JSON for both sides
-    const stratA = makeStrategyJson(tournament.strategies[a], tournament.strategyParams[a]);
-    const stratB = makeStrategyJson(tournament.strategies[b], tournament.strategyParams[b]);
+    const bytecodeA = tournament.bytecodes?.[a] ?? null;
+    const bytecodeB = tournament.bytecodes?.[b] ?? null;
+    const stratA = makeStrategyJson(tournament.strategies[a], bytecodeA);
+    const stratB = makeStrategyJson(tournament.strategies[b], bytecodeB);
 
     // Replay to get scores (this is fast, <1ms per match)
     const result: WasmMatchResult = wasm.replay_match(stratA, stratB, seed, matchIndex, n);
@@ -200,7 +191,7 @@ export async function replayMatch(
 ): Promise<MatchReplayResult> {
   const wasm = await getWasm();
   const seed = hexToBytes(tournament.randomnessSeed);
-  const k = effectiveK(tournament.matchesPerPlayer, tournament.participantCount);
+  const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
   // Get the pairing for this match
@@ -212,8 +203,10 @@ export async function replayMatch(
   const opponentIndex = isPlayerA ? b : a;
 
   // Build strategy JSON
-  const stratA = makeStrategyJson(tournament.strategies[a], tournament.strategyParams[a]);
-  const stratB = makeStrategyJson(tournament.strategies[b], tournament.strategyParams[b]);
+  const bytecodeA = tournament.bytecodes?.[a] ?? null;
+  const bytecodeB = tournament.bytecodes?.[b] ?? null;
+  const stratA = makeStrategyJson(tournament.strategies[a], bytecodeA);
+  const stratB = makeStrategyJson(tournament.strategies[b], bytecodeB);
 
   const result: WasmMatchResult = wasm.replay_match(stratA, stratB, seed, matchIndex, n);
 
@@ -247,7 +240,7 @@ export async function getPlayerStats(
 ): Promise<PlayerStats> {
   const wasm = await getWasm();
   const seed = hexToBytes(tournament.randomnessSeed);
-  const k = effectiveK(tournament.matchesPerPlayer, tournament.participantCount);
+  const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
   const pairings: [number, number][] = wasm.get_tournament_pairings(n, k, seed);
@@ -265,8 +258,10 @@ export async function getPlayerStats(
     if (a !== playerIndex && b !== playerIndex) continue;
 
     const isPlayerA = a === playerIndex;
-    const stratA = makeStrategyJson(tournament.strategies[a], tournament.strategyParams[a]);
-    const stratB = makeStrategyJson(tournament.strategies[b], tournament.strategyParams[b]);
+    const bytecodeA = tournament.bytecodes?.[a] ?? null;
+    const bytecodeB = tournament.bytecodes?.[b] ?? null;
+    const stratA = makeStrategyJson(tournament.strategies[a], bytecodeA);
+    const stratB = makeStrategyJson(tournament.strategies[b], bytecodeB);
     const result: WasmMatchResult = wasm.replay_match(stratA, stratB, seed, matchIndex, n);
 
     const pScore = isPlayerA ? result.total_score_a : result.total_score_b;

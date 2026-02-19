@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
-import { STRATEGY_CONFIGS, PARAM_META } from '@/lib/strategyConfig';
+import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
 
 export const metadata: Metadata = {
   title: 'How It Works — Prisoner\'s Arena',
@@ -15,7 +15,6 @@ const SECTIONS = [
   { id: 'commit-reveal', label: 'Commit-Reveal' },
   { id: 'payoff-matrix', label: 'Payoff Matrix' },
   { id: 'strategies', label: 'Strategies' },
-  { id: 'parameters', label: 'Parameters' },
   { id: 'matching', label: 'Matching Algorithm' },
   { id: 'rounds', label: 'Rounds & Scoring' },
   { id: 'payouts', label: 'Fees & Payouts' },
@@ -66,7 +65,7 @@ export default function HowItWorksPage() {
           {/* Overview */}
           <Section id="overview" title="Overview">
             <p className="text-[var(--muted)] mb-4">
-              Prisoner&apos;s Arena is a competitive AI tournament platform on Solana that implements the Iterated Prisoner&apos;s Dilemma. Players stake SOL, select strategies with configurable parameters, compete in automated matches, and the top 25% split the prize pool.
+              Prisoner&apos;s Arena is a competitive AI tournament platform on Solana that implements the Iterated Prisoner&apos;s Dilemma. Players stake SOL, select strategies, compete in automated matches, and the top 25% split the prize pool.
             </p>
             <p className="text-[var(--muted)] mb-6">
               The entire tournament lifecycle is governed by an on-chain Solana program. Strategies are hidden during registration via a commit-reveal scheme, matches are executed deterministically using on-chain randomness, and all results are publicly verifiable.
@@ -91,7 +90,7 @@ export default function HowItWorksPage() {
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
               {[
                 { phase: 'Registration', badge: 'badge-registration', actor: 'Player', what: 'Stake SOL and submit a strategy commitment hash' },
-                { phase: 'Reveal', badge: 'badge-reveal', actor: 'Player', what: 'Submit the preimage (strategy + params + salt) to prove commitment' },
+                { phase: 'Reveal', badge: 'badge-reveal', actor: 'Player', what: 'Submit the preimage (strategy + salt) to prove commitment' },
                 { phase: 'Running', badge: 'badge-running', actor: 'Operator', what: 'Execute matches in batches, record scores on-chain' },
                 { phase: 'Payout', badge: 'badge-payout', actor: 'Player', what: 'Winners claim their share of the prize pool' },
               ].map((p, i) => (
@@ -126,17 +125,17 @@ export default function HowItWorksPage() {
             <div className="mb-4">
               <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Commitment Formula</div>
               <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-sm">
-                SHA256(strategy_byte || params[5] || salt[16])
+                SHA256(strategy_byte || salt[16])
               </div>
               <p className="text-xs text-[var(--muted)] mt-2">
-                22 bytes total: 1 byte strategy index, 5 bytes for parameters, 16 bytes random salt.
+                17 bytes total: 1 byte strategy index, 16 bytes random salt.
               </p>
             </div>
 
             <div className="mb-4">
               <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Reveal Verification</div>
               <p className="text-sm text-[var(--muted)]">
-                During the reveal phase, the player submits the preimage (strategy, params, salt). The program recomputes SHA256 and verifies it matches the stored commitment. If it doesn&apos;t match, the reveal is rejected.
+                During the reveal phase, the player submits the preimage (strategy, salt). The program recomputes SHA256 and verifies it matches the stored commitment. If it doesn&apos;t match, the reveal is rejected.
               </p>
             </div>
 
@@ -146,6 +145,7 @@ export default function HowItWorksPage() {
                 If a player fails to reveal before the deadline, they are assigned a deterministic fallback strategy based on <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code>. This ensures every registered player competes — no one can grief by withholding their reveal.
               </p>
             </div>
+
           </Section>
 
           {/* Payoff Matrix */}
@@ -215,51 +215,22 @@ export default function HowItWorksPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-[var(--muted)]">
-              Explore strategy behavior interactively in the <a href="/configure" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Strategy Lab</a>.
-            </p>
-          </Section>
-
-          {/* Parameters */}
-          <Section id="parameters" title="Strategy Parameters">
-            <p className="text-sm text-[var(--muted)] mb-4">
-              Every strategy can be fine-tuned with 5 parameters (5 bytes total). Non-default values create unique behavioral variants.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              {PARAM_META.map(p => (
-                <div key={p.key} className="neon-card rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span>{p.icon}</span>
-                    <code className="font-mono text-sm font-bold">{p.key}</code>
-                    <span className="text-[10px] text-[var(--muted)] font-mono ml-auto">{p.key === 'initial_moves' ? '0–255 8-bit mask' : `${p.min}–${p.max} ${p.unit}`}</span>
-                  </div>
-                  <div className="text-xs text-[var(--muted)]">{p.description}</div>
+            <a href="/configure" className="block group mt-4">
+              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-2xl p-5 flex items-center gap-5 hover:border-[var(--accent)] transition-all">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" /><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838.838-2.872a2 2 0 0 1 .506-.855z" />
+                  </svg>
                 </div>
-              ))}
-            </div>
-
-            <DetailBlock summary="Which parameters affect which strategies?">
-              <div className="text-sm text-[var(--muted)] space-y-2">
-                <p><strong>forgiveness</strong> — TitForTat, SuspiciousTitForTat. Probabilistically overrides retaliation.</p>
-                <p><strong>retaliation_delay</strong> — TitForTat, SuspiciousTitForTat. Delays copying defections.</p>
-                <p><strong>noise_tolerance</strong> — GrimTrigger. Tolerates up to N total opponent defections before triggering permanent retaliation.</p>
-                <p><strong>cooperate_bias</strong> — Random. Sets cooperation probability per round.</p>
-                <p><strong>initial_moves</strong> — All strategies. Overrides the first N rounds with a fixed sequence.</p>
-              </div>
-            </DetailBlock>
-
-            <DetailBlock summary="How does the initial_moves bitmask work?">
-              <div className="text-sm text-[var(--muted)] space-y-2">
-                <p>The <code className="bg-[var(--surface)] px-1 rounded text-xs font-mono">initial_moves</code> byte is treated as an 8-bit mask. Each bit controls one round:</p>
-                <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-xs">
-                  Bit 0 (LSB) = Round 0, Bit 1 = Round 1, ..., Bit 7 = Round 7<br />
-                  1 = Defect, 0 = Use strategy<br /><br />
-                  Example: 0b00000011 (3) = Defect rounds 0-1, then strategy takes over<br />
-                  Example: 0b11111111 (255) = Defect all 8 rounds
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold mb-0.5">Strategy Lab</div>
+                  <p className="text-sm text-[var(--muted)]">Simulate every strategy matchup interactively. Write custom bytecode programs with live WASM validation and preview.</p>
                 </div>
-                <p>If a bit position exceeds the number of rounds played, it has no effect. After the initial moves are exhausted, the strategy&apos;s normal algorithm takes over.</p>
+                <svg className="w-5 h-5 text-[var(--muted)] shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
               </div>
-            </DetailBlock>
+            </a>
           </Section>
 
           {/* Matching Algorithm */}
@@ -302,6 +273,23 @@ export default function HowItWorksPage() {
                 <strong>Deterministic seed:</strong> The randomness seed is derived from <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">SlotHashes[16..48]</code> with the first 4 bytes XOR&apos;d with <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">tournament_id</code>, captured at the moment the reveal phase closes. This seed drives round counts and per-round RNG. The operator cannot manipulate it.
               </p>
             </div>
+
+            <a href="/matchmaking" className="block group mt-4">
+              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-2xl p-5 flex items-center gap-5 hover:border-[var(--accent)] transition-all">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold mb-0.5">Matchmaking Visualizer</div>
+                  <p className="text-sm text-[var(--muted)]">See how pairings are generated, explore the round-robin and circular offset algorithms, and verify match fairness interactively.</p>
+                </div>
+                <svg className="w-5 h-5 text-[var(--muted)] shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+            </a>
           </Section>
 
           {/* Rounds & Scoring */}
@@ -402,7 +390,7 @@ export default function HowItWorksPage() {
             <div className="space-y-3 mb-4">
               <PDARow name="Config" seeds={['"config"']} desc="Global parameters: admin, operator, fees, stake amount, timing durations, accumulated fees, current tournament ID." />
               <PDARow name="Tournament" seeds={['"tournament"', 'u32_le_bytes(id)']} desc="Per-tournament state: phase, participants, scores, strategies, match progress, randomness seed, winner pool." />
-              <PDARow name="Entry" seeds={['"entry"', 'tournament_pubkey', 'player_pubkey']} desc="Per-player per-tournament: commitment hash, revealed strategy + params, score, matches played, payout status." />
+              <PDARow name="Entry" seeds={['"entry"', 'tournament_pubkey', 'player_pubkey']} desc="Per-player per-tournament: commitment hash, revealed strategy, score, matches played, payout status." />
             </div>
 
             <DetailBlock summary="Account discriminators">

@@ -4,15 +4,10 @@ import { useEffect } from 'react';
 import type { TournamentAccount } from '@/lib/solana';
 import type { ScoreboardEntry } from '@/lib/api';
 import { truncateAddress, explorerLink } from '@/lib/solana';
-import { StrategyBadge, ParamsDetail } from '@/components/StrategyBadge';
+import { StrategyBadge } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { MatchHistory } from '@/components/MatchHistory';
-
-function effectiveK(configK: number, n: number): number {
-  if (n <= 1) return 0;
-  if (n <= 200) return n - 1;
-  return Math.min(Math.max(49, Math.min(99, configK)), n - 1);
-}
+import { effectiveK } from '@/lib/matchmaking';
 
 interface PlayerDetailModalProps {
   tournament: TournamentAccount;
@@ -88,14 +83,6 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
 
         {/* Body */}
         <div className="px-5 py-4 space-y-5">
-          {/* Strategy Parameters */}
-          {entry.strategyParams && (
-            <div>
-              <div className="text-xs font-bold text-[var(--muted)] mb-2">Strategy Parameters</div>
-              <ParamsDetail params={entry.strategyParams} />
-            </div>
-          )}
-
           {/* Match History */}
           {hasMatches && (
             <div>

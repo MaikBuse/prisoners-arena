@@ -1,20 +1,15 @@
 'use client';
 import { useEffect, useState, useCallback, use } from 'react';
 import type { TournamentAccount, EntryAccount } from '@/lib/solana';
-import type { ScoreboardEntry, StrategyParams } from '@/lib/api';
+import type { ScoreboardEntry } from '@/lib/api';
 import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, getProgramId } from '@/lib/solana';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { StrategyBadge, ParamPills } from '@/components/StrategyBadge';
+import { StrategyBadge } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
 import { Nav } from '@/components/Nav';
 import { PlayerDetailModal } from '@/components/PlayerDetailModal';
 import { displayState } from '@/lib/tournament-utils';
-
-function effectiveK(configK: number, n: number): number {
-  if (n <= 1) return 0;
-  if (n <= 200) return n - 1;
-  return Math.min(Math.max(49, Math.min(99, configK)), n - 1);
-}
+import { effectiveK } from '@/lib/matchmaking';
 
 const BAR_COLORS: Record<string, string> = {
   blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
@@ -71,7 +66,6 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     score: e.score,
     strategy: e.strategy,
     strategyName: e.strategyName,
-    strategyParams: e.strategyParams as StrategyParams | null,
     matchesPlayed: e.matchesPlayed,
     paidOut: e.paidOut,
     revealed: e.revealed ?? true,
@@ -337,8 +331,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                                 {e.revealed === false ? (
                                   <span className="text-[var(--muted)]">🔒 Hidden</span>
                                 ) : (
-                                  <>{e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>}
-                                  <span className="hidden sm:inline-flex"><ParamPills params={e.strategyParams} /></span></>
+                                  e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>
                                 )}
                               </span>
                             </td>
@@ -404,4 +397,3 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ParamsPopup removed — replaced by inline ParamPills + expandable ParamsDetail */

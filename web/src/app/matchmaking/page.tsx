@@ -1,60 +1,47 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
+import { getWasm } from '@/lib/matchReplay';
 
-// Mirror the on-chain adaptive K logic from v1.5
-function effectiveK(configK: number, n: number): number {
-  if (n <= 1) return 0;
-  if (n <= 200) return n - 1; // full round-robin
-  // n > 200: clamp configK to [49, 99]
-  const clamped = Math.max(49, Math.min(99, configK));
-  return Math.min(clamped, n - 1);
-}
+type WasmModule = Awaited<ReturnType<typeof getWasm>>;
 
-// Round tier parameters from v1.5
-function roundTierParams(n: number): { tier: string; minRounds: number; maxRounds: number; endProb: number } {
-  if (n <= 1000) {
-    return { tier: 'Standard', minRounds: 20, maxRounds: 50, endProb: 0.05 };
-  }
-  return { tier: 'Compressed', minRounds: 10, maxRounds: 30, endProb: 0.07 };
-}
-
-// Expected rounds per match given min, max, endProb
-function expectedRounds(minR: number, maxR: number, endProb: number): number {
-  // After minR, each round has endProb chance of ending, hard cap at maxR
-  // E[rounds] = minR + sum_{i=0}^{maxR-minR-1} (1-endProb)^i * 1
-  // = minR + (1 - (1-endProb)^(maxR-minR)) / endProb
-  const extra = maxR - minR;
-  if (extra <= 0) return minR;
-  let expected = 0;
-  let survivalProb = 1;
-  for (let i = 0; i < extra; i++) {
-    expected += survivalProb;
-    survivalProb *= (1 - endProb);
-  }
-  return minR + expected;
-}
-
-// Total matches in tournament
-function totalMatches(n: number, k: number): number {
-  return Math.floor(n * k / 2);
+interface MatchmakingStats {
+  effective_k: number;
+  tier: string;
+  min_rounds: number;
+  max_rounds: number;
+  end_probability: number;
+  avg_rounds: number;
+  total_matches: number;
 }
 
 export default function MatchmakingPage() {
   const [playerCount, setPlayerCount] = useState(20);
   const [configK, setConfigK] = useState(6);
+  const [wasm, setWasm] = useState<WasmModule | null>(null);
+
+  useEffect(() => { getWasm().then(setWasm); }, []);
 
   const calc = useMemo(() => {
-    const n = playerCount;
-    const k = effectiveK(configK, n);
-    const rt = roundTierParams(n);
-    const avgRounds = expectedRounds(rt.minRounds, rt.maxRounds, rt.endProb);
-    const matches = totalMatches(n, k);
-    const maxPossibleScore = rt.maxRounds * 5; // 5 = temptation payoff per round
-    const avgCoopScore = Math.round(avgRounds * 3); // mutual cooperation
-    return { n, k, ...rt, avgRounds, matches, maxPossibleScore, avgCoopScore };
-  }, [playerCount, configK]);
+    if (!wasm) return null;
+    const stats: MatchmakingStats = wasm.get_matchmaking_stats(playerCount, configK);
+    const endProb = stats.end_probability / 100;
+    const maxPossibleScore = stats.max_rounds * 5; // 5 = temptation payoff per round
+    const avgCoopScore = Math.round(stats.avg_rounds * 3); // mutual cooperation
+    return {
+      n: playerCount,
+      k: stats.effective_k,
+      tier: stats.tier,
+      minRounds: stats.min_rounds,
+      maxRounds: stats.max_rounds,
+      endProb,
+      avgRounds: stats.avg_rounds,
+      matches: stats.total_matches,
+      maxPossibleScore,
+      avgCoopScore,
+    };
+  }, [wasm, playerCount, configK]);
 
   return (
     <div className="min-h-screen">
@@ -73,7 +60,7 @@ export default function MatchmakingPage() {
             <label className="block text-sm font-bold mb-3">Players in Tournament</label>
             <input
               type="range"
-              min={2} max={2000} step={1}
+              min={2} max={5000} step={1}
               value={playerCount}
               onChange={e => setPlayerCount(Number(e.target.value))}
               className="w-full accent-[var(--accent)] mb-2"
@@ -81,9 +68,9 @@ export default function MatchmakingPage() {
             <div className="flex items-center gap-2">
               <input
                 type="number"
-                min={2} max={10000}
+                min={2} max={5000}
                 value={playerCount}
-                onChange={e => setPlayerCount(Math.max(2, Number(e.target.value) || 2))}
+                onChange={e => setPlayerCount(Math.min(5000, Math.max(2, Number(e.target.value) || 2)))}
                 className="w-24 px-3 py-1.5 rounded-lg border border-[var(--card-border)] text-sm font-mono text-center"
               />
               <span className="text-sm text-[var(--muted)]">players</span>
@@ -114,7 +101,7 @@ export default function MatchmakingPage() {
                 ⚠️ With n≤200, adaptive K overrides to full round-robin (K={playerCount - 1})
               </p>
             )}
-            {playerCount > 200 && configK !== calc.k && (
+            {calc && playerCount > 200 && configK !== calc.k && (
               <p className="text-xs text-amber-600 mt-2">
                 ⚠️ K clamped to [{Math.max(49, Math.min(99, configK) === configK ? configK : 49)}, 99] → effective K={calc.k}
               </p>
@@ -122,6 +109,9 @@ export default function MatchmakingPage() {
           </div>
         </div>
 
+        {!calc ? (
+          <div className="text-center py-16 text-[var(--muted)]">Loading match engine…</div>
+        ) : (<>
         {/* Results */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           <ResultCard label="Effective K" value={String(calc.k)} subtitle="matches per player" />
@@ -151,6 +141,7 @@ export default function MatchmakingPage() {
             <Row label="Est. total score range" value={`${calc.k * calc.minRounds}–${calc.k * calc.maxPossibleScore} pts`} />
           </div>
         </div>
+        </>)}
 
         {/* Adaptive K explanation */}
         <div className="neon-card rounded-2xl p-6">

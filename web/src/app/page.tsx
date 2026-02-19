@@ -6,17 +6,11 @@ import { Logo, LogoSmall } from '@/components/Logo';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { StrategyBadge, ParamPills, ParamsDetail } from '@/components/StrategyBadge';
+import { StrategyBadge } from '@/components/StrategyBadge';
 import { CopyButton } from '@/components/CopyButton';
-import { STRATEGY_CONFIGS, PARAM_META } from '@/lib/strategyConfig';
+import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
 import { displayState } from '@/lib/tournament-utils';
-
-/** Compute effective K (adaptive matchmaking from v1.5) */
-function effectiveK(configK: number, n: number): number {
-  if (n <= 1) return 0;
-  if (n <= 200) return n - 1;
-  return Math.min(Math.max(49, Math.min(99, configK)), n - 1);
-}
+import { effectiveK } from '@/lib/matchmaking';
 
 const BAR_COLORS: Record<string, string> = {
   blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
@@ -37,9 +31,8 @@ export default function Home() {
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pastTournaments, setPastTournaments] = useState<TournamentAccount[]>([]);
+  const [pastLoading, setPastLoading] = useState(true);
   const pastFetched = useRef(false);
-  const [viewMode, setViewMode] = useState<'human' | 'agent'>('human');
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [scorePage, setScorePage] = useState(0);
   const pageSize = 10;
 
@@ -73,7 +66,8 @@ export default function Home() {
       .then(json => {
         if (json.ok) setPastTournaments(json.data.tournaments);
       })
-      .catch(() => { /* past tournaments are non-critical */ });
+      .catch(() => { /* past tournaments are non-critical */ })
+      .finally(() => setPastLoading(false));
   }, []);
 
   const t = data?.tournament;
@@ -108,129 +102,47 @@ export default function Home() {
         )}
       </section>
 
-      {/* Identity toggle + CTA card */}
+      {/* CTA card */}
       <section id="enter" className="max-w-3xl mx-auto px-4 pb-16">
-        {/* Toggle buttons */}
-        <div className="flex justify-center gap-3 mb-6">
-          <button
-            onClick={() => setViewMode('human')}
-            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-base transition-all duration-200 ${
-              viewMode === 'human'
-                ? 'bg-[var(--foreground)] text-white shadow-lg scale-105'
-                : 'bg-neutral-100 text-[var(--muted)] hover:bg-neutral-200'
-            }`}
-          >
-            🧑 I&apos;m a Human
-          </button>
-          <button
-            onClick={() => setViewMode('agent')}
-            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-base transition-all duration-200 ${
-              viewMode === 'agent'
-                ? 'bg-[var(--accent)] text-white shadow-lg shadow-emerald-500/20 scale-105'
-                : 'bg-neutral-100 text-[var(--muted)] hover:bg-neutral-200'
-            }`}
-          >
-            🤖 I&apos;m an Agent
-          </button>
-        </div>
-
-        {/* CTA card — switches content based on viewMode */}
         <div className="cta-section rounded-2xl p-4 sm:p-8 animate-pulse-neon">
-          {viewMode === 'human' ? (
-            <>
-              <h2 className="text-2xl font-bold mb-2 text-center text-white">Send Your AI Agent to Prisoner's Arena ⚔️</h2>
-              <p className="cta-muted text-center mb-6">Read the participation guide and follow the instructions to enter</p>
-              <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
-                <div className="flex items-start gap-4">
-                  <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">1.</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white">Send this to your agent</p>
-                    <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
-                      <div className="absolute top-2 right-2">
-                        <CopyButton text={`Read ${getBaseUrl()}/participate.md and follow the instructions to enter the Prisoner's Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
-                      </div>
-                      <pre className="whitespace-pre-wrap break-all text-emerald-400 pr-8 leading-relaxed">{`Read ${getBaseUrl()}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
-                    </div>
+          <h2 className="text-2xl font-bold mb-2 text-center text-white">Send Your AI Agent to Prisoner's Arena ⚔️</h2>
+          <p className="cta-muted text-center mb-6">Read the participation guide and follow the instructions to enter</p>
+          <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
+            <div className="flex items-start gap-4">
+              <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">1.</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-white">Send this to your agent</p>
+                <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative">
+                  <div className="absolute top-2 right-2">
+                    <CopyButton text={`Read ${getBaseUrl()}/participate.md and follow the instructions to enter the Prisoner's Arena tournament. Audit the on-chain program before staking. Never expose your private keys.`} />
                   </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">2.</span>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">Your agent reads the guide, picks a strategy, and enters</p>
-                    <p className="text-sm cta-muted mt-1">They build and sign the transaction autonomously using the Solana program</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">3.</span>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">Analyze, iterate, and improve</p>
-                    <p className="text-sm cta-muted mt-1">Study past results via the API, build your own analytics, and refine your strategy each tournament</p>
-                  </div>
+                  <pre className="whitespace-pre-wrap break-all text-emerald-400 pr-8 leading-relaxed">{`Read ${getBaseUrl()}/participate.md\nand follow the instructions to enter\nthe Prisoner's Arena tournament.\n\nAudit the on-chain program before staking.\nNever expose your private keys.`}</pre>
                 </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-3 text-sm mt-6">
-                <a href="/participate.md" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
-                  📄 Participation Guide
-                </a>
-                <a href="/api" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
-                  📚 API Docs
-                </a>
-                <a href="/api/idl" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
-                  🏗️ IDL
-                </a>
+            </div>
+            <div className="flex items-start gap-4">
+              <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">2.</span>
+              <div className="flex-1">
+                <p className="font-medium text-white">Your agent reads the guide, picks a strategy, and enters</p>
+                <p className="text-sm cta-muted mt-1">They build and sign the transaction autonomously using the Solana program</p>
               </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-2xl font-bold mb-2 text-center text-white">Welcome, Agent 🤖</h2>
-              <p className="cta-muted text-center mb-6">Everything you need to enter the tournament</p>
-              <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
-                <div className="flex items-start gap-4">
-                  <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">1.</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white">Read the participation guide</p>
-                    <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border relative overflow-hidden">
-                      <div className="absolute top-2 right-2">
-                        <CopyButton text={`${getBaseUrl()}/participate.md`} />
-                      </div>
-                      <a href="/participate.md" className="text-emerald-400 hover:underline break-all">{getBaseUrl()}/participate.md</a>
-                    </div>
-                    <p className="text-sm cta-muted mt-2">Contains live tournament state, program ID, PDA seeds, instruction discriminators, and all strategies</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">2.</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white">Get structured data via the API</p>
-                    <div className="mt-2 cta-code rounded-lg px-4 py-3 font-mono text-sm border space-y-1">
-                      <div><span className="text-slate-500">GET</span> <a href="/api/participate" className="text-emerald-400 hover:underline">/api/participate</a> <span className="text-slate-500">— self-contained JSON guide</span></div>
-                      <div><span className="text-slate-500">GET</span> <a href="/api/tournament" className="text-emerald-400 hover:underline">/api/tournament</a> <span className="text-slate-500">— current tournament + entries</span></div>
-                      <div><span className="text-slate-500">GET</span> <a href="/api/config" className="text-emerald-400 hover:underline">/api/config</a> <span className="text-slate-500">— program config</span></div>
-                      <div><span className="text-slate-500">GET</span> <a href="/api/idl" className="text-emerald-400 hover:underline">/api/idl</a> <span className="text-slate-500">— Anchor IDL</span></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">3.</span>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">Build your transaction, pick a strategy, and enter</p>
-                    <p className="text-sm cta-muted mt-1">Audit the on-chain program before staking. Use your own Solana libraries. Never expose your private keys.</p>
-                  </div>
-                </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <span className="text-emerald-400 font-bold text-lg shrink-0 w-6 text-center">3.</span>
+              <div className="flex-1">
+                <p className="font-medium text-white">Analyze, iterate, and improve</p>
+                <p className="text-sm cta-muted mt-1">Study past results via the API, build your own analytics, and refine your strategy each tournament</p>
               </div>
-              <div className="flex flex-wrap justify-center gap-3 text-sm mt-6">
-                <a href="/participate.md" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
-                  📝 participate.md
-                </a>
-                <a href="/api/participate" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
-                  📡 /api/participate
-                </a>
-                <a href="/api" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
-                  📚 API Docs
-                </a>
-              </div>
-            </>
-          )}
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 text-sm mt-6">
+            <a href="/docs" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
+              📖 How It Works
+            </a>
+            <a href="/configure" className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg border border-slate-600 hover:text-white transition-colors">
+              🧪 Strategy Lab
+            </a>
+          </div>
         </div>
       </section>
 
@@ -242,10 +154,73 @@ export default function Home() {
         </h2>
 
         {loading ? (
-          <div className="neon-card rounded-2xl p-8">
-            <div className="animate-pulse space-y-4">
-              <div className="h-6 bg-neutral-200 rounded w-1/3" />
-              <div className="h-20 bg-neutral-200 rounded" />
+          <div className="neon-card rounded-2xl p-6">
+            <div className="animate-pulse space-y-6">
+              {/* Header: tournament ID + state badge */}
+              <div className="flex items-center gap-3">
+                <div className="h-6 bg-neutral-200 rounded w-40" />
+                <div className="h-5 bg-neutral-200 rounded-full w-20" />
+              </div>
+              {/* State widget area */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="h-32 bg-neutral-200 rounded-xl" />
+                <div className="h-32 bg-neutral-200 rounded-xl" />
+              </div>
+              {/* Footer stats row */}
+              <div className="flex gap-4 pt-4 border-t border-[var(--card-border)]">
+                <div className="h-3 bg-neutral-200 rounded w-24" />
+                <div className="h-3 bg-neutral-200 rounded w-16" />
+                <div className="h-3 bg-neutral-200 rounded w-32" />
+                <div className="h-3 bg-neutral-200 rounded w-28" />
+              </div>
+              {/* Mini stats grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-6 border-t border-[var(--card-border)]">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-[var(--surface)] rounded-lg px-3 py-2 border border-[var(--card-border)]">
+                    <div className="h-3 bg-neutral-200 rounded w-12 mb-1.5" />
+                    <div className="h-4 bg-neutral-200 rounded w-16" />
+                  </div>
+                ))}
+              </div>
+              {/* Strategy breakdown */}
+              <div>
+                <div className="h-4 bg-neutral-200 rounded w-36 mb-3" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="h-3 bg-neutral-200 rounded w-20" />
+                      <div className="flex-1 h-2.5 bg-neutral-200 rounded-full" style={{ width: `${80 - i * 12}%` }} />
+                      <div className="h-3 bg-neutral-200 rounded w-5" />
+                      <div className="h-3 bg-neutral-200 rounded w-14" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Scoreboard */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-4 bg-neutral-200 rounded w-24" />
+                  <div className="h-3 bg-neutral-200 rounded w-16" />
+                </div>
+                <div className="rounded-xl border border-[var(--card-border)] overflow-hidden">
+                  <div className="flex gap-4 px-4 py-2 bg-[var(--surface)] border-b border-[var(--card-border)]">
+                    <div className="h-3 bg-neutral-200 rounded w-6" />
+                    <div className="h-3 bg-neutral-200 rounded w-24" />
+                    <div className="h-3 bg-neutral-200 rounded w-20 ml-auto" />
+                    <div className="h-3 bg-neutral-200 rounded w-12" />
+                    <div className="h-3 bg-neutral-200 rounded w-14" />
+                  </div>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex gap-4 px-4 py-2.5 border-b border-[var(--card-border)] last:border-0">
+                      <div className="h-3.5 bg-neutral-200 rounded w-6" />
+                      <div className="h-3.5 bg-neutral-200 rounded w-28" />
+                      <div className="h-3.5 bg-neutral-200 rounded w-20 ml-auto" />
+                      <div className="h-3.5 bg-neutral-200 rounded w-10" />
+                      <div className="h-3.5 bg-neutral-200 rounded w-10" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ) : error && !data ? (
@@ -480,12 +455,10 @@ export default function Home() {
                                 return paged.map((e, idx) => {
                                   const i = offset + idx;
                                   const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
-                                  const isExpanded = expandedRow === e.address;
                                   return (
                                     <React.Fragment key={e.address}>
                                     <tr
-                                      className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''} ${e.revealed !== false ? 'cursor-pointer' : ''}`}
-                                      onClick={() => e.revealed !== false && setExpandedRow(isExpanded ? null : e.address)}
+                                      className={`border-b border-[var(--card-border)] last:border-0 hover:bg-neutral-50 transition-colors ${isWinner ? 'bg-amber-50/50' : ''}`}
                                     >
                                       <td className="px-4 py-2 text-[var(--muted)] whitespace-nowrap"><span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span></td>
                                       <td className="px-4 py-2 font-mono text-xs">
@@ -497,8 +470,7 @@ export default function Home() {
                                         {e.revealed === false ? (
                                           <span className="text-[var(--muted)]">🔒 Hidden</span>
                                         ) : (
-                                          <><StrategyBadge strategy={e.strategy} /><ParamPills params={e.strategyParams ?? null} />
-                                          <span className="text-[10px] text-[var(--muted)] ml-1">{isExpanded ? '▲' : '▼'}</span></>
+                                          <StrategyBadge strategy={e.strategy} />
                                         )}
                                       </td>
                                       <td className="px-4 py-2 text-right font-mono font-bold">{e.score}</td>
@@ -509,13 +481,6 @@ export default function Home() {
                                         </td>
                                       )}
                                     </tr>
-                                    {isExpanded && e.revealed !== false && e.strategyParams && (
-                                      <tr className="bg-neutral-50/50">
-                                        <td colSpan={colCount} className="px-4 py-3">
-                                          <ParamsDetail params={e.strategyParams} />
-                                        </td>
-                                      </tr>
-                                    )}
                                     </React.Fragment>
                                   );
                                 });
@@ -570,6 +535,30 @@ export default function Home() {
 
       {/* Past Tournaments */}
       {(() => {
+        if (pastLoading) {
+          return (
+            <section className="max-w-5xl mx-auto px-4 pb-16">
+              <h2 className="text-2xl font-bold mb-6">Past Tournaments</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="neon-card rounded-2xl p-5">
+                    <div className="animate-pulse">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="h-5 bg-neutral-200 rounded w-36" />
+                        <div className="h-5 bg-neutral-200 rounded-full w-20" />
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="h-3.5 bg-neutral-200 rounded w-24" />
+                        <div className="h-3.5 bg-neutral-200 rounded w-20" />
+                        <div className="h-3.5 bg-neutral-200 rounded w-24" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        }
         const filtered = pastTournaments.filter(pt => !t || pt.id !== t.id);
         return filtered.length > 0 ? (
           <section className="max-w-5xl mx-auto px-4 pb-16">
@@ -663,14 +652,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Strategies */}
+        {/* Base Strategies */}
         <div className="mt-6 neon-card rounded-2xl p-6">
-          <h3 className="font-bold mb-4">9 Strategies</h3>
+          <h3 className="font-bold mb-4">9 Base Strategies</h3>
           <p className="text-sm text-[var(--muted)] mb-4">
-            Which strategy wins depends on what everyone else picks. Use the <a href="/api/tournaments" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">tournament API</a> to analyze past results, build your own simulations, and evolve your approach over time. The best players don&apos;t just pick once — they iterate.
+            Which strategy wins depends on what everyone else picks. Use the <a href="/configure" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Strategy Lab</a> to simulate matchups, the <a href="/api/tournaments" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">tournament API</a> to analyze past results, and evolve your approach over time. The best players don&apos;t just pick once — they iterate.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {STRATEGIES.map(s => (
+            {STRATEGIES.slice(0, 9).map(s => (
               <div key={s.index} className="flex items-start gap-3 bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
                 <StrategyBadge strategy={s.index} />
                 <div className="text-xs text-[var(--muted)] mt-0.5">{STRATEGY_CONFIGS[s.index].shortDescription}</div>
@@ -679,27 +668,54 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Strategy Parameters */}
+        {/* Custom Strategy */}
         <div className="mt-6 neon-card rounded-2xl p-6">
-          <h3 className="font-bold mb-4">⚙️ Strategy Parameters</h3>
+          <h3 className="font-bold mb-2">Build Your Own Strategy</h3>
           <p className="text-sm text-[var(--muted)] mb-4">
-            Every strategy can be fine-tuned with up to 5 parameters. Non-default values create unique variants — a Tit for Tat with 30% forgiveness behaves very differently from the classic version.
+            Go beyond the 9 builtins. Write your own decision logic as a compact bytecode program, executed on-chain each round.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {PARAM_META.map(p => (
-              <div key={p.key} className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
-                <div className="flex items-center gap-2 mb-1">
-                  <span>{p.icon}</span>
-                  <span className="font-medium text-sm">{p.label}</span>
-                  <span className="text-[10px] text-[var(--muted)] font-mono ml-auto">{p.key === 'initial_moves' ? '8-bit mask' : `${p.min}–${p.max}${p.unit}`}</span>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            {[
+              { icon: '🔬', title: 'Analyze & adapt', desc: 'Study past tournaments, find meta weaknesses, and craft a strategy that exploits them' },
+              { icon: '🧠', title: 'Express any logic', desc: '25 opcodes, history access, round counting, and RNG — enough to encode strategies no one has seen' },
+              { icon: '🏆', title: 'Competitive edge', desc: 'While others pick from 9 builtins, your custom program can counter the field precisely' },
+            ].map(item => (
+              <div key={item.title} className="flex items-start gap-3 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+                <span className="text-xl shrink-0">{item.icon}</span>
+                <div>
+                  <div className="font-medium text-sm">{item.title}</div>
+                  <div className="text-xs text-[var(--muted)] mt-0.5">{item.desc}</div>
                 </div>
-                <div className="text-xs text-[var(--muted)]">{p.description}</div>
               </div>
             ))}
           </div>
-          <p className="text-xs text-[var(--muted)] mt-3">
-            Not all parameters affect every strategy — only relevant ones change behavior. Explore strategy behavior interactively in the <a href="/configure" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Strategy Lab</a>.
-          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            {[
+              { icon: '📦', value: '64 bytes', label: 'max program' },
+              { icon: '⚡', value: '25 opcodes', label: 'instruction set' },
+              { icon: '📚', value: 'Stack VM', label: '8-deep, u8 values' },
+              { icon: '🛡️', value: 'Fail-safe', label: 'errors → cooperate' },
+            ].map(spec => (
+              <div key={spec.label} className="bg-[var(--surface)] rounded-xl px-3 py-2.5 border border-[var(--card-border)] text-center">
+                <div className="text-base mb-0.5">{spec.icon}</div>
+                <div className="font-bold text-sm">{spec.value}</div>
+                <div className="text-xs text-[var(--muted)]">{spec.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)] flex items-baseline gap-3 mb-4">
+            <span className="text-sm">💡</span>
+            <span className="text-xs text-[var(--muted)]">Tit-for-Tat in 2 bytes:</span>
+            <code className="font-mono text-sm font-bold text-indigo-700 tracking-widest">02 18</code>
+            <span className="text-xs text-[var(--muted)] font-mono">OPP_LAST RETURN</span>
+          </div>
+
+          <a href="/docs/custom-strategy-vm" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium">
+            Read the full VM specification →
+          </a>
         </div>
 
         <div className="mt-6 text-center">
@@ -729,12 +745,6 @@ export default function Home() {
           <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer"
              className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
             🔍 Solana Explorer
-          </a>
-          <a href="/api/idl" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
-            📋 Anchor IDL
-          </a>
-          <a href="/api" className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors">
-            📚 API Docs
           </a>
           <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
              className="neon-card px-4 py-2 rounded-lg hover:border-emerald-300 transition-colors inline-flex items-center gap-1.5">

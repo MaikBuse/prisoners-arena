@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
 import { getConfig } from '@/lib/config';
 import { apiSuccess, rateLimited } from '@/lib/api';
-import { PARAM_META, STRATEGY_CONFIGS } from '@/lib/strategyConfig';
+import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
 
 export async function GET(request: NextRequest) {
   const limited = rateLimited(request);
@@ -36,29 +36,26 @@ export async function GET(request: NextRequest) {
       description: s.name,
       short_description: STRATEGY_CONFIGS[s.index]?.shortDescription ?? '',
       long_description: STRATEGY_CONFIGS[s.index]?.description ?? '',
-      relevantParams: STRATEGY_CONFIGS[s.index]?.relevantParams ?? [],
-    })),
-    parameter_definitions: PARAM_META.map(p => ({
-      name: p.key,
-      type: 'u8',
-      min: p.min,
-      max: p.max,
-      default: p.defaultValue,
-      description: p.description,
     })),
     commitment: {
       algorithm: 'SHA256',
-      byte_layout: [
-        { field: 'strategy', type: 'u8', offset: 0, description: 'Strategy enum index (0-8)' },
-        { field: 'forgiveness', type: 'u8', offset: 1 },
-        { field: 'retaliation_delay', type: 'u8', offset: 2 },
-        { field: 'noise_tolerance', type: 'u8', offset: 3 },
-        { field: 'initial_moves', type: 'u8', offset: 4 },
-        { field: 'cooperate_bias', type: 'u8', offset: 5 },
-        { field: 'salt', type: '[u8; 16]', offset: 6, description: 'Random salt (16 bytes)' },
-      ],
-      total_bytes: 22,
-      notes: 'commitment = SHA256(strategy_u8 || params_5_bytes || salt_16_bytes). Param order must match exactly.',
+      builtin_strategies: {
+        byte_layout: [
+          { field: 'strategy', type: 'u8', offset: 0, description: 'Strategy enum index (0-8)' },
+          { field: 'salt', type: '[u8; 16]', offset: 1, description: 'Random salt (16 bytes)' },
+        ],
+        total_bytes: 17,
+        notes: 'commitment = SHA256(strategy_u8 || salt_16_bytes). Used for strategies 0-8.',
+      },
+      custom_strategy: {
+        byte_layout: [
+          { field: 'strategy', type: 'u8', offset: 0, description: 'Always 9 (Custom)' },
+          { field: 'bytecode_hash', type: '[u8; 32]', offset: 1, description: 'SHA256(bytecode)' },
+          { field: 'salt', type: '[u8; 16]', offset: 33, description: 'Random salt (16 bytes)' },
+        ],
+        total_bytes: 49,
+        notes: 'commitment = SHA256(9_u8 || SHA256(bytecode) || salt_16_bytes). Two-level scheme hides both strategy type and bytecode.',
+      },
     },
     payoff_matrix: {
       cooperate_cooperate: [3, 3],
@@ -86,7 +83,7 @@ export async function GET(request: NextRequest) {
           'player (signer, mut)',
           'system_program',
         ],
-        data: { commitment: '[u8; 32] — SHA256(strategy_u8 || params_5_bytes || salt_16_bytes)' },
+        data: { commitment: '[u8; 32] — SHA256(strategy_u8 || salt_16_bytes) for builtin, or SHA256(9_u8 || SHA256(bytecode) || salt_16_bytes) for Custom' },
         notes: 'Player pays stake + rent for entry account + realloc rent delta. Strategy is hidden until reveal.',
       },
       reveal_strategy: {
@@ -97,11 +94,11 @@ export async function GET(request: NextRequest) {
           'player (signer, mut)',
         ],
         data: {
-          strategy: 'u8 (enum index)',
-          params: '{ forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8 }',
+          strategy: 'u8 (enum index, 0-9)',
           salt: '[u8; 16]',
+          bytecode: '[u8; N] (optional, required when strategy = 9/Custom, max 64 bytes)',
         },
-        notes: 'Only during Reveal state, before reveal_ends. Program verifies SHA256(strategy || params || salt) == commitment.',
+        notes: 'Only during Reveal state, before reveal_ends. For builtin strategies (0-8): verifies SHA256(strategy || salt) == commitment. For Custom (9): verifies SHA256(9 || SHA256(bytecode) || salt) == commitment.',
       },
       claim_refund: {
         discriminator: [15, 16, 30, 161, 255, 228, 97, 60],

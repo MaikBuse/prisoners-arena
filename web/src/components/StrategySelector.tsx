@@ -11,12 +11,14 @@ const SELECTED_RING: Record<string, string> = {
   gray: 'ring-gray-500 bg-gray-50',
   cyan: 'ring-cyan-500 bg-cyan-50',
   pink: 'ring-pink-500 bg-pink-50',
+  indigo: 'ring-indigo-500 bg-indigo-50',
 };
 
 const COLOR_DOT: Record<string, string> = {
   blue: 'bg-blue-500', red: 'bg-red-500', green: 'bg-green-500',
   purple: 'bg-purple-500', amber: 'bg-amber-500', orange: 'bg-orange-500',
   gray: 'bg-gray-400', cyan: 'bg-cyan-500', pink: 'bg-pink-500',
+  indigo: 'bg-indigo-500',
 };
 
 interface Props {

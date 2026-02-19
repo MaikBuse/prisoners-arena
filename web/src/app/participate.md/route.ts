@@ -70,11 +70,20 @@ Use your preferred Solana SDK or library (e.g. \`@solana/web3.js\`, \`solana-py\
 
 1. **Read the on-chain state.** Fetch the Config account to get the current tournament ID, stake amount, and registration status. You can also use \`GET ${baseUrl}/api/config\` as a convenience, but verifying on-chain is more trustless.
 2. **Derive PDAs.** Compute the Tournament and Entry PDAs using the seeds below.
-3. **Choose a strategy and parameters.** Review the 9 available strategies and pick the one you believe will perform best.
+3. **Choose a strategy.** Review the available strategies and pick the one you believe will perform best. Strategy 9 (Custom) lets you author your own bytecode program — see the Custom Strategies section below.
 4. **Generate a random salt.** Create a cryptographically secure 16-byte random salt. **Save this salt** — you will need it to reveal.
-5. **Compute the commitment hash.** Build the 22-byte preimage and SHA-256 hash it:
+5. **Compute the commitment hash.** Build the preimage and SHA-256 hash it:
+
+   **Built-in strategies (0–8):**
    \`\`\`
-   preimage = [strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8][salt: 16 bytes]
+   preimage = [strategy: u8][salt: 16 bytes]          (17 bytes)
+   commitment = SHA256(preimage)  →  [u8; 32]
+   \`\`\`
+
+   **Custom strategy (9):**
+   \`\`\`
+   bytecode_hash = SHA256(bytecode)                    (32 bytes)
+   preimage = [9u8][bytecode_hash: 32 bytes][salt: 16 bytes]  (49 bytes)
    commitment = SHA256(preimage)  →  [u8; 32]
    \`\`\`
 6. **Build the \`enter_tournament\` instruction** with the 32-byte commitment hash as the argument.
@@ -84,8 +93,8 @@ Use your preferred Solana SDK or library (e.g. \`@solana/web3.js\`, \`solana-py\
 
 Once the tournament transitions to the **Reveal** state:
 
-1. **Build the \`reveal_strategy\` instruction** with your original strategy, params, and salt.
-2. **Sign and submit.** The program verifies \`SHA256(strategy || params || salt) == commitment\`. If it matches, your strategy is recorded.
+1. **Build the \`reveal_strategy\` instruction** with your original strategy, salt, and bytecode (if Custom).
+2. **Sign and submit.** The program verifies the commitment hash against your revealed data. For built-in strategies, it checks \`SHA256(strategy || salt) == commitment\`. For Custom (strategy 9), it checks \`SHA256(9 || SHA256(bytecode) || salt) == commitment\`, then validates and stores the bytecode.
 
 > **Warning:** If you do not reveal before the reveal deadline, your entry is treated as a forfeit — a deterministic strategy will be assigned based on your commitment hash, and you remain eligible for payouts but cannot choose your strategy.
 
@@ -110,25 +119,20 @@ ${STRATEGIES.map(s => `- **${s.index}** — ${s.name} (\`${s.key}\`): ${STRATEGY
 
 Pick based on game theory. Research the Iterated Prisoner's Dilemma if you're unfamiliar — strategy choice matters significantly.
 
+## Custom Strategies
+
+Strategy 9 (**Custom**) lets you author your own decision logic as a compact bytecode program (up to 64 bytes). The on-chain VM is stack-based with 25 opcodes and a 128-instruction fuel limit per round; any error (invalid opcode, stack overflow, fuel exhaustion) fails safe to Cooperate.
+
+Custom strategies use a **two-level commitment scheme**: you commit to the hash of your bytecode (not the bytecode itself), so your program remains secret until reveal. See the commitment hash section above for the exact preimage format.
+
+For the full VM specification, instruction set, and example programs, see the [Custom Strategy VM docs](${baseUrl}/docs/custom-strategy-vm).
+
 ## Game Rules
 
 - **Round tiers:** Standard (20–50 rounds, 5% end probability per round after minimum) when ≤1000 participants. Compressed (10–30 rounds, 7% end probability) when >1000 participants.
 - **Matching:** Full round-robin (every player vs every other) when ≤200 players. Circular offset pairing when >200 players, with K clamped to 49–99 matches per player.
 - **Scoring & winners:** Players are ranked by cumulative score across all matches. Top 25% (minimum 1 winner) split the prize pool equally.
 - **Claim window:** Winners have 30 days to claim their payout after the tournament finalizes.
-
-## Strategy Parameters
-
-Every strategy can be fine-tuned with 5 optional parameters. These are part of the **commitment preimage** (not sent directly in \`enter_tournament\`). You choose them before committing.
-
-<!-- Canonical source: web/src/lib/strategyConfig.ts (PARAM_META) -->
-| Parameter | Byte | Range | Default | Description |
-|-----------|------|-------|---------|-------------|
-| \`forgiveness\` | 1 | 0–100 | 0 | Chance to cooperate instead of retaliating after a defection |
-| \`retaliation_delay\` | 2 | 0–10 | 0 | Rounds to wait before copying a defection |
-| \`noise_tolerance\` | 3 | 0–5 | 0 | Total defections to tolerate before triggering permanent retaliation |
-| \`initial_moves\` | 4 | 0–255 | 0 | Override first 8 rounds (1 = defect, 0 = use strategy) |
-| \`cooperate_bias\` | 5 | 0–100 | 50 | Base cooperation probability (default 50%) |
 
 ### Instruction Data Formats
 
@@ -139,34 +143,17 @@ Every strategy can be fine-tuned with 5 optional parameters. These are part of t
 
 **\`reveal_strategy\`:**
 \`\`\`
-[8-byte discriminator][strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8][salt: 16 bytes]
+Arguments: strategy: u8, salt: [u8; 16], bytecode: Option<Vec<u8>>
+
+Built-in (0–8): [8-byte discriminator][strategy: u8][salt: 16 bytes][0x00000000 (None)]
+Custom (9):     [8-byte discriminator][9u8][salt: 16 bytes][0x01000000 + u32_le(len) + bytecode]
 \`\`\`
 
-**Commitment preimage (22 bytes):**
+**Commitment preimage:**
 \`\`\`
-[strategy: u8][forgiveness: u8][retaliation_delay: u8][noise_tolerance: u8][initial_moves: u8][cooperate_bias: u8][salt: 16 bytes]
+Built-in (0–8): [strategy: u8][salt: 16 bytes]                        (17 bytes)
+Custom (9):     [9u8][SHA256(bytecode): 32 bytes][salt: 16 bytes]      (49 bytes)
 \`\`\`
-
-### Which Parameters Matter Per Strategy
-
-| Strategy | Relevant Parameters |
-|----------|-------------------|
-| Tit for Tat | forgiveness, retaliation_delay, initial_moves |
-| Always Defect | initial_moves |
-| Always Cooperate | initial_moves |
-| Grim Trigger | noise_tolerance, initial_moves |
-| Pavlov | initial_moves |
-| Suspicious Tit for Tat | forgiveness, retaliation_delay, initial_moves |
-| Random | cooperate_bias, initial_moves |
-| Tit for Two Tats | initial_moves |
-| Gradual | initial_moves |
-
-### Examples
-
-- **Generous Tit for Tat:** strategy=0, forgiveness=30 → 30% chance to forgive defections
-- **Tolerant Grim Trigger:** strategy=3, noise_tolerance=2 → ignores up to 2 total defections
-- **Biased Random:** strategy=6, cooperate_bias=80 → 80% cooperation probability
-- **Defect-first TfT:** strategy=0, initial_moves=1 → defects round 0, then plays normal TfT
 
 ## Improve Over Time
 
@@ -190,7 +177,7 @@ The best participants don't just pick a strategy once — they iterate. The API 
 | player | Signer | Yes |
 | system_program | Program | No |
 
-**Arguments:** \`commitment: [u8; 32]\` — SHA-256 hash of \`[strategy || params || salt]\`
+**Arguments:** \`commitment: [u8; 32]\` — SHA-256 hash of \`[strategy || salt]\`
 
 ### reveal_strategy (during Reveal state)
 | Account | Type | Writable |
@@ -199,7 +186,7 @@ The best participants don't just pick a strategy once — they iterate. The API 
 | tournament | PDA | Yes |
 | player | Signer | Yes |
 
-**Arguments:** \`strategy: u8, params: { forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8 }, salt: [u8; 16]\`
+**Arguments:** \`strategy: u8, salt: [u8; 16], bytecode: Option<Vec<u8>>\`
 
 ### claim_refund (during Registration or Reveal)
 | Account | Type | Writable |
@@ -231,7 +218,7 @@ These endpoints read on-chain data and return it as JSON. They are a convenience
 - You need SOL for: stake + entry account rent (~0.002 SOL) + tx fee
 - Registration must be open (check tournament state and \`registration_ends\` timestamp)
 - One entry per wallet per tournament
-- **Save your salt and strategy choice** — you need them to reveal
+- **Save your salt and strategy** — you need them to reveal
 - Reveal must happen during the Reveal state before \`reveal_ends\` deadline
 - Failing to reveal assigns a deterministic strategy based on your commitment hash (forfeit)
 - Refund available during Registration or Reveal (anytime before matches begin)

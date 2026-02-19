@@ -148,8 +148,8 @@ export function upsertTournament(
     const insertPlayer = db.prepare(`
       INSERT INTO tournament_players (
         program_id, tournament_id, player_index, player, score, strategy,
-        strategy_params, matches_played, paid_out, revealed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        matches_played, paid_out, revealed
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (let i = 0; i < t.players.length; i++) {
@@ -162,7 +162,6 @@ export function upsertTournament(
         player,
         t.scores[i] ?? 0,
         t.strategies[i] ?? 0,
-        JSON.stringify(t.strategyParams[i] ?? [0, 0, 0, 0, 0]),
         cached?.matchesPlayed ?? 0,
         cached?.paidOut ? 1 : 0,
         cached?.revealed !== undefined ? (cached.revealed ? 1 : 0) : 1,
@@ -213,7 +212,6 @@ export function getTournament(programId: string, id: number): CachedTournament |
     players: playerRows.map(r => r.player as string),
     scores: playerRows.map(r => r.score as number),
     strategies: playerRows.map(r => r.strategy as number),
-    strategyParams: playerRows.map(r => JSON.parse(r.strategy_params as string) as number[]),
     bump: row.bump as number,
     operatorCosts: (row.operator_costs as string) || '0',
     address: row.address as string,

@@ -169,19 +169,14 @@ export default function DocsPage() {
       {
         "value": 0, "name": "TitForTat", "description": "Tit for Tat",
         "short_description": "Copies opponent's last move. Starts by cooperating.",
-        "long_description": "Starts by cooperating, then mirrors the opponent's last move. The classic reciprocal strategy.",
-        "relevantParams": ["forgiveness", "retaliation_delay", "initial_moves"]
+        "long_description": "Starts by cooperating, then mirrors the opponent's last move. The classic reciprocal strategy."
       },
-      ...
-    ],
-    "parameter_definitions": [
-      { "name": "forgiveness", "type": "u8", "min": 0, "max": 100, "default": 0, "description": "..." },
       ...
     ],
     "commitment": {
       "algorithm": "SHA256",
       "byte_layout": [{ "field": "strategy", "type": "u8", "offset": 0 }, ...],
-      "total_bytes": 22
+      "total_bytes": 17
     },
     "payoff_matrix": {
       "cooperate_cooperate": [3, 3],

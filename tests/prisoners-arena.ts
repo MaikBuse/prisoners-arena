@@ -40,14 +40,6 @@ const STRATEGY_LIST = [
   Strategy.Gradual,
 ];
 
-const DEFAULT_PARAMS = {
-  forgiveness: 0,
-  retaliationDelay: 0,
-  noiseTolerance: 0,
-  initialMoves: 0,
-  cooperateBias: 50,
-};
-
 const UPDATE_DEFAULTS = {
   operator: null,
   houseFeeBps: null,
@@ -64,17 +56,11 @@ const UPDATE_DEFAULTS = {
 
 function computeCommitment(
   strategyIndex: number,
-  params: { forgiveness: number; retaliationDelay: number; noiseTolerance: number; initialMoves: number; cooperateBias: number },
   salt: Buffer,
 ): number[] {
-  const preimage = Buffer.alloc(22);
+  const preimage = Buffer.alloc(17);
   preimage[0] = strategyIndex;
-  preimage[1] = params.forgiveness;
-  preimage[2] = params.retaliationDelay;
-  preimage[3] = params.noiseTolerance;
-  preimage[4] = params.initialMoves;
-  preimage[5] = params.cooperateBias;
-  salt.copy(preimage, 6);
+  salt.copy(preimage, 1);
   const hash = createHash("sha256").update(preimage).digest();
   return Array.from(hash);
 }
@@ -136,10 +122,9 @@ describe("prisoners-arena", () => {
     tournamentKey: PublicKey,
     player: Keypair,
     strategyIndex: number,
-    params = DEFAULT_PARAMS,
   ): Promise<{ salt: Buffer; commitment: number[] }> {
     const salt = randomBytes(16);
-    const commitment = computeCommitment(strategyIndex, params, salt);
+    const commitment = computeCommitment(strategyIndex, salt);
     salts.set(`${tournamentKey.toString()}-${player.publicKey.toString()}`, salt);
 
     const [eKey] = deriveE(pid, tournamentKey, player.publicKey);
@@ -160,13 +145,12 @@ describe("prisoners-arena", () => {
     tournamentKey: PublicKey,
     player: Keypair,
     strategy: any,
-    params = DEFAULT_PARAMS,
     salt?: Buffer,
   ) {
     const s = salt || salts.get(`${tournamentKey.toString()}-${player.publicKey.toString()}`)!;
     const [eKey] = deriveE(pid, tournamentKey, player.publicKey);
     await program.methods
-      .revealStrategy(strategy, params, Array.from(s))
+      .revealStrategy(strategy, Array.from(s), null)
       .accounts({
         entry: eKey, tournament: tournamentKey, player: player.publicKey,
       })
@@ -668,7 +652,7 @@ describe("prisoners-arena", () => {
       const p = players[0];
       const [eKey] = deriveE(pid, t0Key, p.publicKey);
       const salt = randomBytes(16);
-      const commitment = computeCommitment(6, DEFAULT_PARAMS, salt);
+      const commitment = computeCommitment(6, salt);
       try {
         await program.methods
           .enterTournament(commitment)
@@ -1095,7 +1079,7 @@ describe("prisoners-arena", () => {
     it("entry fails in Reveal state", async () => {
       const p = players[9];
       const salt = randomBytes(16);
-      const commitment = computeCommitment(4, DEFAULT_PARAMS, salt);
+      const commitment = computeCommitment(4, salt);
       const [eKey] = deriveE(pid, t0Key, p.publicKey);
       try {
         await program.methods
@@ -1114,14 +1098,14 @@ describe("prisoners-arena", () => {
 
     it("both players reveal their strategies", async () => {
       // Player 0: TitForTat (index 0)
-      await revealPlayer(t0Key, players[0], Strategy.TitForTat, DEFAULT_PARAMS);
+      await revealPlayer(t0Key, players[0], Strategy.TitForTat);
       const [e0Key] = deriveE(pid, t0Key, players[0].publicKey);
       const e0 = await program.account.entry.fetch(e0Key);
       expect(e0.revealed).to.equal(true);
       expect(e0.strategy).to.deep.equal({ titForTat: {} });
 
       // Player 1: AlwaysDefect (index 1)
-      await revealPlayer(t0Key, players[1], Strategy.AlwaysDefect, DEFAULT_PARAMS);
+      await revealPlayer(t0Key, players[1], Strategy.AlwaysDefect);
       const [e1Key] = deriveE(pid, t0Key, players[1].publicKey);
       const e1 = await program.account.entry.fetch(e1Key);
       expect(e1.revealed).to.equal(true);
@@ -1365,8 +1349,8 @@ describe("prisoners-arena", () => {
       expect(t1.state).to.deep.equal({ reveal: {} });
 
       // Both players reveal
-      await revealPlayer(t1Key, players[4], Strategy.AlwaysCooperate, DEFAULT_PARAMS);
-      await revealPlayer(t1Key, players[5], Strategy.AlwaysDefect, DEFAULT_PARAMS);
+      await revealPlayer(t1Key, players[4], Strategy.AlwaysCooperate);
+      await revealPlayer(t1Key, players[5], Strategy.AlwaysDefect);
 
       // Wait for reveal to expire, close reveal → Running
       await waitAndCloseReveal(t1Key);
@@ -1452,7 +1436,7 @@ describe("prisoners-arena", () => {
       for (let i = 0; i < 3; i++) {
         const salt = randomBytes(16);
         crSalts.push(salt);
-        const commitment = computeCommitment(i, DEFAULT_PARAMS, salt);
+        const commitment = computeCommitment(i, salt);
         const [eKey] = deriveE(pid, crTournamentKey, crPlayers[i].publicKey);
         await program.methods
           .enterTournament(commitment)
@@ -1469,7 +1453,7 @@ describe("prisoners-arena", () => {
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
       try {
         await program.methods
-          .revealStrategy(Strategy.TitForTat, DEFAULT_PARAMS, Array.from(crSalts[0]))
+          .revealStrategy(Strategy.TitForTat, Array.from(crSalts[0]), null)
           .accounts({
             entry: eKey, tournament: crTournamentKey, player: crPlayers[0].publicKey,
           })
@@ -1510,24 +1494,7 @@ describe("prisoners-arena", () => {
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
       try {
         await program.methods
-          .revealStrategy(Strategy.AlwaysDefect, DEFAULT_PARAMS, Array.from(crSalts[0]))
-          .accounts({
-            entry: eKey, tournament: crTournamentKey, player: crPlayers[0].publicKey,
-          })
-          .signers([crPlayers[0]])
-          .rpc();
-        expect.fail("Should have thrown");
-      } catch (err) {
-        expect((err as AnchorError).error.errorCode.code).to.equal("CommitmentMismatch");
-      }
-    });
-
-    it("reveal with wrong params fails (CommitmentMismatch)", async () => {
-      const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
-      const wrongParams = { ...DEFAULT_PARAMS, forgiveness: 99 };
-      try {
-        await program.methods
-          .revealStrategy(Strategy.TitForTat, wrongParams, Array.from(crSalts[0]))
+          .revealStrategy(Strategy.AlwaysDefect, Array.from(crSalts[0]), null)
           .accounts({
             entry: eKey, tournament: crTournamentKey, player: crPlayers[0].publicKey,
           })
@@ -1544,7 +1511,7 @@ describe("prisoners-arena", () => {
       const wrongSalt = randomBytes(16);
       try {
         await program.methods
-          .revealStrategy(Strategy.TitForTat, DEFAULT_PARAMS, Array.from(wrongSalt))
+          .revealStrategy(Strategy.TitForTat, Array.from(wrongSalt), null)
           .accounts({
             entry: eKey, tournament: crTournamentKey, player: crPlayers[0].publicKey,
           })
@@ -1560,7 +1527,7 @@ describe("prisoners-arena", () => {
       // Player 0: TitForTat (index 0)
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
       await program.methods
-        .revealStrategy(Strategy.TitForTat, DEFAULT_PARAMS, Array.from(crSalts[0]))
+        .revealStrategy(Strategy.TitForTat, Array.from(crSalts[0]), null)
         .accounts({
           entry: eKey, tournament: crTournamentKey, player: crPlayers[0].publicKey,
         })
@@ -1576,7 +1543,7 @@ describe("prisoners-arena", () => {
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
       try {
         await program.methods
-          .revealStrategy(Strategy.TitForTat, DEFAULT_PARAMS, Array.from(crSalts[0]))
+          .revealStrategy(Strategy.TitForTat, Array.from(crSalts[0]), null)
           .accounts({
             entry: eKey, tournament: crTournamentKey, player: crPlayers[0].publicKey,
           })
@@ -1660,7 +1627,7 @@ describe("prisoners-arena", () => {
       const [eKey] = deriveE(pid, crTournamentKey, crPlayers[1].publicKey);
       try {
         await program.methods
-          .revealStrategy(Strategy.AlwaysDefect, DEFAULT_PARAMS, Array.from(crSalts[1]))
+          .revealStrategy(Strategy.AlwaysDefect, Array.from(crSalts[1]), null)
           .accounts({
             entry: eKey, tournament: crTournamentKey, player: crPlayers[1].publicKey,
           })
@@ -1756,7 +1723,7 @@ describe("prisoners-arena", () => {
 
       const p = players[10];
       const salt = randomBytes(16);
-      const commitment = computeCommitment(4, DEFAULT_PARAMS, salt);
+      const commitment = computeCommitment(4, salt);
       const [eKey] = deriveE(pid, tKey, p.publicKey);
       try {
         await program.methods
@@ -2145,212 +2112,6 @@ describe("prisoners-arena", () => {
   });
 
   // ================================================================
-  // 18. Reveal — parameter validation
-  // ================================================================
-  describe("Reveal — parameter validation", () => {
-    // Drives a mini tournament to Reveal state with players who committed
-    // using invalid param values. Commitment has no validation, so these
-    // entries are accepted. The reveal then fails with InvalidParams.
-    let rvTournamentKey: PublicKey;
-    let rvPlayers: Keypair[];
-    let rvSalts: Buffer[] = [];
-
-    const INVALID_PARAMS_CASES = [
-      { name: "forgiveness > 100", params: { ...DEFAULT_PARAMS, forgiveness: 101 } },
-      { name: "retaliation_delay > 10", params: { ...DEFAULT_PARAMS, retaliationDelay: 11 } },
-      { name: "noise_tolerance > 5", params: { ...DEFAULT_PARAMS, noiseTolerance: 6 } },
-      { name: "cooperate_bias > 100", params: { ...DEFAULT_PARAMS, cooperateBias: 101 } },
-    ];
-
-    before(async () => {
-      // Find the current tournament in Registration
-      const cfg = await program.account.config.fetch(configKey);
-      [rvTournamentKey] = deriveT(pid, cfg.currentTournamentId);
-
-      // We need at least 4 players for the invalid param tests + 1 valid revealer
-      // to keep participant_count >= min_participants
-      // Use fresh keypairs to avoid collisions
-      rvPlayers = [];
-      for (let i = 0; i < 5; i++) {
-        const p = Keypair.generate();
-        await airdrop(conn, p.publicKey, 5);
-        rvPlayers.push(p);
-      }
-
-      // Enter players with commitments computed using invalid params
-      // Player 0: valid params (will reveal successfully to satisfy min participants)
-      const salt0 = randomBytes(16);
-      rvSalts.push(salt0);
-      const [e0Key] = deriveE(pid, rvTournamentKey, rvPlayers[0].publicKey);
-      await program.methods
-        .enterTournament(computeCommitment(0, DEFAULT_PARAMS, salt0))
-        .accounts({
-          config: configKey, tournament: rvTournamentKey, entry: e0Key,
-          player: rvPlayers[0].publicKey, systemProgram: SystemProgram.programId,
-        })
-        .signers([rvPlayers[0]])
-        .rpc();
-
-      // Players 1-4: each committed with one type of invalid params
-      for (let i = 0; i < INVALID_PARAMS_CASES.length; i++) {
-        const salt = randomBytes(16);
-        rvSalts.push(salt);
-        const commitment = computeCommitment(0, INVALID_PARAMS_CASES[i].params, salt);
-        const [eKey] = deriveE(pid, rvTournamentKey, rvPlayers[i + 1].publicKey);
-        await program.methods
-          .enterTournament(commitment)
-          .accounts({
-            config: configKey, tournament: rvTournamentKey, entry: eKey,
-            player: rvPlayers[i + 1].publicKey, systemProgram: SystemProgram.programId,
-          })
-          .signers([rvPlayers[i + 1]])
-          .rpc();
-      }
-
-      // Close registration → Reveal
-      await waitAndCloseRegistration(rvTournamentKey);
-
-      const t = await program.account.tournament.fetch(rvTournamentKey);
-      expect(t.state).to.deep.equal({ reveal: {} });
-    });
-
-    it("rejects forgiveness > 100", async () => {
-      const p = rvPlayers[1];
-      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
-      try {
-        await program.methods
-          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[0].params, Array.from(rvSalts[1]))
-          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
-          .signers([p])
-          .rpc();
-        expect.fail("Should have thrown");
-      } catch (err) {
-        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
-      }
-    });
-
-    it("rejects retaliation_delay > 10", async () => {
-      const p = rvPlayers[2];
-      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
-      try {
-        await program.methods
-          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[1].params, Array.from(rvSalts[2]))
-          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
-          .signers([p])
-          .rpc();
-        expect.fail("Should have thrown");
-      } catch (err) {
-        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
-      }
-    });
-
-    it("rejects noise_tolerance > 5", async () => {
-      const p = rvPlayers[3];
-      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
-      try {
-        await program.methods
-          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[2].params, Array.from(rvSalts[3]))
-          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
-          .signers([p])
-          .rpc();
-        expect.fail("Should have thrown");
-      } catch (err) {
-        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
-      }
-    });
-
-    it("rejects cooperate_bias > 100", async () => {
-      const p = rvPlayers[4];
-      const [eKey] = deriveE(pid, rvTournamentKey, p.publicKey);
-      try {
-        await program.methods
-          .revealStrategy(Strategy.TitForTat, INVALID_PARAMS_CASES[3].params, Array.from(rvSalts[4]))
-          .accounts({ entry: eKey, tournament: rvTournamentKey, player: p.publicKey })
-          .signers([p])
-          .rpc();
-        expect.fail("Should have thrown");
-      } catch (err) {
-        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidParams");
-      }
-    });
-
-    after(async () => {
-      // Clean up: reveal valid player, forfeit invalid ones, close reveal, run through lifecycle
-      // so subsequent tests have a clean state.
-      // Reveal player 0 with valid params
-      await revealPlayer(rvTournamentKey, rvPlayers[0], Strategy.TitForTat, DEFAULT_PARAMS, rvSalts[0]);
-
-      // Wait for reveal to expire
-      const t = await program.account.tournament.fetch(rvTournamentKey);
-      const now = Math.floor(Date.now() / 1000);
-      const remaining = t.revealEnds.toNumber() - now;
-      if (remaining > 0) await sleep((remaining + 2) * 1000);
-
-      // Forfeit unrevealed players 1-4
-      for (let i = 1; i <= 4; i++) {
-        const [eKey] = deriveE(pid, rvTournamentKey, rvPlayers[i].publicKey);
-        for (let attempt = 0; attempt < 5; attempt++) {
-          try {
-            await program.methods
-              .forfeitUnrevealed()
-              .accounts({
-                config: configKey, entry: eKey, tournament: rvTournamentKey,
-                operator: operator.publicKey,
-              })
-              .signers([operator])
-              .rpc();
-            break;
-          } catch (err: any) {
-            if (err?.error?.errorCode?.code === "RevealPeriodNotEnded") {
-              await sleep(2000);
-              continue;
-            }
-            throw err;
-          }
-        }
-      }
-
-      // Close reveal (odd count → last player refunded)
-      // With 5 participants, all forfeited become "revealed" via forfeit.
-      // active = 5 (participant_count didn't change from forfeits — forfeits stay in).
-      // Actually participant_count stays at 5, forfeits = 0 (forfeit_unrevealed doesn't
-      // increment forfeits, it just assigns a strategy). So active = 5 - 0 = 5 (odd).
-      // close_reveal will refund the last active player.
-      // Find the last active player for the refund accounts
-      const tNow = await program.account.tournament.fetch(rvTournamentKey);
-      const lastIdx = tNow.players.length - 1;
-      // Find last non-default player
-      let lastActiveIdx = -1;
-      for (let i = tNow.players.length - 1; i >= 0; i--) {
-        if (tNow.players[i].toString() !== PublicKey.default.toString()) {
-          lastActiveIdx = i;
-          break;
-        }
-      }
-      if (lastActiveIdx >= 0) {
-        const lastPlayer = tNow.players[lastActiveIdx];
-        const [lastEKey] = deriveE(pid, rvTournamentKey, lastPlayer);
-        await waitAndCloseReveal(rvTournamentKey, lastEKey, lastPlayer);
-      } else {
-        await waitAndCloseReveal(rvTournamentKey);
-      }
-
-      // Run matches and finalize to advance to next tournament
-      await runAllMatches(rvTournamentKey);
-      const cfg = await program.account.config.fetch(configKey);
-      const [nextTKey] = deriveT(pid, cfg.currentTournamentId + 1);
-      await program.methods
-        .finalizeTournament()
-        .accounts({
-          config: configKey, tournament: rvTournamentKey, nextTournament: nextTKey,
-          operator: operator.publicKey, systemProgram: SystemProgram.programId,
-        })
-        .signers([operator])
-        .rpc();
-    });
-  });
-
-  // ================================================================
   // 19. Edge cases & negative paths
   // ================================================================
   describe("Edge cases & negative paths", () => {
@@ -2390,7 +2151,7 @@ describe("prisoners-arena", () => {
         const p3 = Keypair.generate();
         await airdrop(conn, p3.publicKey, 5);
         const salt = randomBytes(16);
-        const commitment = computeCommitment(2, DEFAULT_PARAMS, salt);
+        const commitment = computeCommitment(2, salt);
         const [eKey] = deriveE(pid, tAKey, p3.publicKey);
         try {
           await program.methods
@@ -2551,7 +2312,7 @@ describe("prisoners-arena", () => {
           tCPlayers.push(p);
           const salt = randomBytes(16);
           tCSalts.push(salt);
-          const commitment = computeCommitment(i, DEFAULT_PARAMS, salt);
+          const commitment = computeCommitment(i, salt);
           const [eKey] = deriveE(pid, tCKey, p.publicKey);
           await program.methods
             .enterTournament(commitment)
@@ -2570,7 +2331,7 @@ describe("prisoners-arena", () => {
 
       it("close_reveal fails with unprocessed forfeits (UnprocessedForfeits)", async () => {
         // Reveal only player 0, leave players 1 and 2 unrevealed
-        await revealPlayer(tCKey, tCPlayers[0], Strategy.TitForTat, DEFAULT_PARAMS, tCSalts[0]);
+        await revealPlayer(tCKey, tCPlayers[0], Strategy.TitForTat, tCSalts[0]);
 
         // Wait for reveal to expire
         const t = await program.account.tournament.fetch(tCKey);
@@ -2749,8 +2510,8 @@ describe("prisoners-arena", () => {
 
         // Player 0: AlwaysCooperate, Player 1: AlwaysDefect
         // AlwaysDefect always wins against AlwaysCooperate
-        const c0 = computeCommitment(2, DEFAULT_PARAMS, tDSalts[0]); // AlwaysCooperate
-        const c1 = computeCommitment(1, DEFAULT_PARAMS, tDSalts[1]); // AlwaysDefect
+        const c0 = computeCommitment(2, tDSalts[0]); // AlwaysCooperate
+        const c1 = computeCommitment(1, tDSalts[1]); // AlwaysDefect
 
         const [e0Key] = deriveE(pid, tDKey, tDPlayers[0].publicKey);
         await program.methods
@@ -2776,8 +2537,8 @@ describe("prisoners-arena", () => {
         await waitAndCloseRegistration(tDKey);
 
         // Reveal both
-        await revealPlayer(tDKey, tDPlayers[0], Strategy.AlwaysCooperate, DEFAULT_PARAMS, tDSalts[0]);
-        await revealPlayer(tDKey, tDPlayers[1], Strategy.AlwaysDefect, DEFAULT_PARAMS, tDSalts[1]);
+        await revealPlayer(tDKey, tDPlayers[0], Strategy.AlwaysCooperate, tDSalts[0]);
+        await revealPlayer(tDKey, tDPlayers[1], Strategy.AlwaysDefect, tDSalts[1]);
 
         // Close reveal → Running
         await waitAndCloseReveal(tDKey);
