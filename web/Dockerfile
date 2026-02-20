@@ -1,3 +1,14 @@
+# Build from repo root: docker build -f web/Dockerfile .
+# Requires git submodule to be initialized (contract/crates/match-logic)
+
+# --- wasm builder ---
+FROM rust:1.88-slim-bookworm AS wasm-builder
+RUN rustup target add wasm32-unknown-unknown \
+    && cargo install wasm-pack
+WORKDIR /build
+COPY contract/crates/match-logic/ contract/crates/match-logic/
+RUN cd contract/crates/match-logic && wasm-pack build --target web --features wasm
+
 # --- base ---
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat
@@ -9,7 +20,7 @@ WORKDIR /app
 # Native build tools for better-sqlite3
 RUN apk add --no-cache python3 make g++
 
-COPY package.json package-lock.json ./
+COPY web/package.json web/package-lock.json ./
 RUN npm ci
 
 # --- builder ---
@@ -20,7 +31,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY web/ .
+COPY --from=wasm-builder /build/contract/crates/match-logic/pkg/ ./src/wasm/
 
 RUN npm run build
 

@@ -8,12 +8,16 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Init submodules
+          command: git submodule update --init
+      - run:
           name: Docker login
           command: echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
       - run:
           name: Build and push Docker image
+          no_output_timeout: 20m
           command: |
-            docker build -t m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64 web/
+            docker build -f web/Dockerfile -t m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64 .
             docker push m9kusanagi/prisoners-arena-web:${CIRCLE_SHA1}-amd64
 
   build_operator:

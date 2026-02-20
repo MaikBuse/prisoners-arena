@@ -1,0 +1,16 @@
+# Only include what the web Docker build needs
+*
+
+# WASM build stage needs match-logic source
+!contract/crates/match-logic/
+
+# Node.js build stage needs web/ contents
+!web/
+
+# Exclude build artifacts and dev files within web/
+web/node_modules
+web/.next
+web/.env*
+web/data
+web/.vercel
+web/.DS_Store
