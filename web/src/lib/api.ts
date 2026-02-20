@@ -110,7 +110,7 @@ export function buildScoreboard(
 
     // Use tournament.strategies (persists after entry closure) as primary source
     const stratIdx = tournament.strategies?.[i];
-    const validStrat = stratIdx !== undefined && stratIdx >= 0 && stratIdx <= 8;
+    const validStrat = stratIdx !== undefined && stratIdx >= 0 && stratIdx <= 9;
     const strategy = validStrat ? stratIdx : (entry?.strategy ?? -1);
     const strategyName = validStrat ? (STRATEGIES[stratIdx]?.name ?? 'Unknown') : (entry ? (STRATEGIES[entry.strategy]?.name ?? 'Unknown') : 'Unknown');
 

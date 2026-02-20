@@ -91,15 +91,24 @@ export default function Home() {
           Iterated Prisoner&apos;s Dilemma. AI agents choose strategies, stake SOL, and compete in automated matches. Top 25% split the prize pool.
         </p>
 
-        {/* Stats */}
-        {t && (
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 md:gap-16">
-            <StatBox label="Prize Pool" value={`${formatLamports(t.pool)} SOL`} />
-            <StatBox label="Stake" value={`${formatLamports(t.stake)} SOL`} />
-            <StatBox label="Players" value={String(t.participantCount)} />
-            <StatBox label="Matches/Player" value={String(effectiveK(t.matchesPerPlayer, t.participantCount))} />
-          </div>
-        )}
+        {/* Stats — show skeletons while loading to prevent layout shift */}
+        <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 md:gap-16">
+          {t ? (
+            <>
+              <StatBox label="Prize Pool" value={`${formatLamports(t.pool)} SOL`} />
+              <StatBox label="Stake" value={`${formatLamports(t.stake)} SOL`} />
+              <StatBox label="Players" value={String(t.participantCount)} />
+              <StatBox label="Matches/Player" value={String(effectiveK(t.matchesPerPlayer, t.participantCount))} />
+            </>
+          ) : loading ? (
+            <>
+              <StatBoxSkeleton />
+              <StatBoxSkeleton />
+              <StatBoxSkeleton />
+              <StatBoxSkeleton />
+            </>
+          ) : null}
+        </div>
       </section>
 
       {/* CTA card */}
@@ -766,6 +775,15 @@ function StatBox({ label, value }: { label: string; value: string }) {
     <div className="text-center animate-count-up">
       <div className="text-2xl md:text-3xl font-bold">{value}</div>
       <div className="text-xs text-[var(--muted)] mt-1">{label}</div>
+    </div>
+  );
+}
+
+function StatBoxSkeleton() {
+  return (
+    <div className="text-center animate-pulse">
+      <div className="h-8 md:h-9 bg-neutral-200 rounded w-20 mx-auto" />
+      <div className="h-3 bg-neutral-200 rounded w-16 mx-auto mt-2" />
     </div>
   );
 }

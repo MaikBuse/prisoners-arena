@@ -252,9 +252,9 @@ export const EXAMPLE_PROGRAMS: { name: string; bytecode: number[] }[] = [
   {
     name: 'Tit for Two Tats',
     bytecode: [
-      OP.OPP_DEFECTS, OP.PUSH, 2, OP.LT,
-      OP.JMP_FWD_IF, 1, OP.DEFECT, OP.OPP_LAST,
-      OP.RETURN,
+      OP.OPP_LAST, OP.PUSH, 1, OP.OPP_N,
+      OP.AND, OP.JMP_FWD_IF, 1, OP.COOP,
+      OP.DEFECT,
     ],
   },
   {

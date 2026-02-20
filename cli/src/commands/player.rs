@@ -29,84 +29,98 @@ fn parse_strategy(name: &str) -> Result<u8> {
         "random" => Ok(6),
         "tit-for-two-tats" | "titfortwotats" => Ok(7),
         "gradual" => Ok(8),
-        _ => bail!("Unknown strategy: {}. Options: tit-for-tat, always-defect, always-cooperate, grim-trigger, pavlov, suspicious-tit-for-tat, random, tit-for-two-tats, gradual", name),
+        "custom" => Ok(9),
+        _ => bail!("Unknown strategy: {}. Options: tit-for-tat, always-defect, always-cooperate, grim-trigger, pavlov, suspicious-tit-for-tat, random, tit-for-two-tats, gradual, custom", name),
     }
 }
 
-/// Compute SHA256 commitment: hash(strategy_byte || params[5] || salt[16])
-fn compute_commitment(strategy_id: u8, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8, salt: &[u8; 16]) -> [u8; 32] {
-    let mut preimage = Vec::with_capacity(22);
-    preimage.push(strategy_id);
-    preimage.push(forgiveness);
-    preimage.push(retaliation_delay);
-    preimage.push(noise_tolerance);
-    preimage.push(initial_moves);
-    preimage.push(cooperate_bias);
-    preimage.extend_from_slice(salt);
-    
+/// Compute SHA256 commitment hash.
+/// Builtin (0–8): SHA256(strategy_u8 || salt) — 17 bytes
+/// Custom  (9):   SHA256(9u8 || SHA256(bytecode) || salt) — 49 bytes
+fn compute_commitment(strategy_id: u8, salt: &[u8; 16], bytecode: Option<&[u8]>) -> [u8; 32] {
     let mut hasher = Sha256::new();
-    hasher.update(&preimage);
+    if strategy_id == 9 {
+        let bytecode = bytecode.expect("bytecode required for custom strategy");
+        let bytecode_hash: [u8; 32] = Sha256::digest(bytecode).into();
+        hasher.update([9u8]);
+        hasher.update(bytecode_hash);
+    } else {
+        hasher.update([strategy_id]);
+    }
+    hasher.update(salt);
     hasher.finalize().into()
 }
 
 /// Save reveal data to local file for later use
-fn save_reveal_data(tournament_id: u32, player: &str, strategy_id: u8, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8, salt: &[u8; 16]) -> Result<()> {
+fn save_reveal_data(tournament_id: u32, player: &str, strategy_id: u8, salt: &[u8; 16], bytecode: Option<&[u8]>) -> Result<()> {
     let dir = dirs::home_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
         .join(".prisoners-arena")
         .join("reveals");
     std::fs::create_dir_all(&dir)?;
-    
+
     let filename = format!("{}_{}.json", tournament_id, player);
-    let data = serde_json::json!({
+    let mut data = serde_json::json!({
         "tournament_id": tournament_id,
         "player": player,
         "strategy_id": strategy_id,
-        "forgiveness": forgiveness,
-        "retaliation_delay": retaliation_delay,
-        "noise_tolerance": noise_tolerance,
-        "initial_moves": initial_moves,
-        "cooperate_bias": cooperate_bias,
         "salt": hex::encode(salt),
     });
-    
+    if let Some(bc) = bytecode {
+        data["bytecode"] = serde_json::Value::String(hex::encode(bc));
+    }
+
     std::fs::write(dir.join(filename), serde_json::to_string_pretty(&data)?)?;
     Ok(())
 }
 
 /// Load reveal data from local file
-fn load_reveal_data(tournament_id: u32, player: &str) -> Result<(u8, u8, u8, u8, u8, u8, [u8; 16])> {
+fn load_reveal_data(tournament_id: u32, player: &str) -> Result<(u8, [u8; 16], Option<Vec<u8>>)> {
     let path = dirs::home_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
         .join(".prisoners-arena")
         .join("reveals")
         .join(format!("{}_{}.json", tournament_id, player));
-    
+
     let content = std::fs::read_to_string(&path)
         .map_err(|_| anyhow::anyhow!("No saved reveal data at {}. Use --salt to provide manually.", path.display()))?;
     let data: serde_json::Value = serde_json::from_str(&content)?;
-    
-    let salt_hex = data["salt"].as_str().ok_or_else(|| anyhow::anyhow!("Invalid reveal data"))?;
+
+    let salt_hex = data["salt"].as_str().ok_or_else(|| anyhow::anyhow!("Invalid reveal data: missing salt"))?;
     let salt_bytes = hex::decode(salt_hex)?;
     let mut salt = [0u8; 16];
     salt.copy_from_slice(&salt_bytes);
-    
-    Ok((
-        data["strategy_id"].as_u64().unwrap() as u8,
-        data["forgiveness"].as_u64().unwrap() as u8,
-        data["retaliation_delay"].as_u64().unwrap() as u8,
-        data["noise_tolerance"].as_u64().unwrap() as u8,
-        data["initial_moves"].as_u64().unwrap() as u8,
-        data["cooperate_bias"].as_u64().unwrap() as u8,
-        salt,
-    ))
+
+    let strategy_id = data["strategy_id"].as_u64()
+        .ok_or_else(|| anyhow::anyhow!("Invalid reveal data: missing strategy_id"))? as u8;
+
+    let bytecode = if let Some(bc_hex) = data["bytecode"].as_str() {
+        Some(hex::decode(bc_hex)?)
+    } else {
+        None
+    };
+
+    Ok((strategy_id, salt, bytecode))
 }
 
-pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, forgiveness: u8, retaliation_delay: u8, noise_tolerance: u8, initial_moves: u8, cooperate_bias: u8, salt_hex: Option<&str>, dry_run: bool) -> Result<()> {
+pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, bytecode_hex: Option<&str>, salt_hex: Option<&str>, dry_run: bool) -> Result<()> {
     let client = RpcClient::new(&cfg.network.rpc_url);
     let program_id = cfg.program_id()?;
     let player = cfg.load_keypair(wallet)?;
     let strategy_id = parse_strategy(strategy)?;
+
+    // Parse bytecode if provided
+    let bytecode = if let Some(hex_str) = bytecode_hex {
+        if strategy_id != 9 {
+            bail!("--bytecode is only valid with --strategy custom");
+        }
+        Some(hex::decode(hex_str)?)
+    } else {
+        if strategy_id == 9 {
+            bail!("--bytecode is required when using --strategy custom");
+        }
+        None
+    };
 
     // Generate or parse salt
     let salt: [u8; 16] = if let Some(hex_str) = salt_hex {
@@ -124,14 +138,13 @@ pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, forgiveness: u8, r
     };
 
     // Compute commitment
-    let commitment = compute_commitment(strategy_id, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, &salt);
+    let commitment = compute_commitment(strategy_id, &salt, bytecode.as_deref());
 
     let config = state::fetch_config(&client, &program_id)?;
     let (config_pda, _) = state::get_config_pda(&program_id);
     let (tournament_pda, _) = state::get_tournament_pda(&program_id, config.current_tournament_id);
     let (entry_pda, _) = state::get_entry_pda(&program_id, &tournament_pda, &player.pubkey());
 
-    // v1.7: enter_tournament takes commitment [u8; 32]
     let mut data = disc::ENTER_TOURNAMENT.to_vec();
     data.extend_from_slice(&commitment);
 
@@ -145,20 +158,19 @@ pub fn enter(cfg: &ArenaConfig, wallet: &str, strategy: &str, forgiveness: u8, r
 
     let ix = Instruction { program_id, accounts, data };
     send_transaction(&client, &[ix], &player, dry_run)?;
-    
+
     if !dry_run {
-        // Save reveal data locally
         save_reveal_data(
             config.current_tournament_id,
             &player.pubkey().to_string(),
-            strategy_id, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias,
+            strategy_id,
             &salt,
+            bytecode.as_deref(),
         )?;
-        
+
         println!("Commitment submitted for tournament #{}", config.current_tournament_id);
         println!("Salt: {}", hex::encode(&salt));
         println!("Reveal data saved to ~/.prisoners-arena/reveals/");
-        println!("⚠️  Save your salt! You'll need it to reveal your strategy.");
     }
     Ok(())
 }
@@ -172,28 +184,33 @@ pub fn reveal(cfg: &ArenaConfig, wallet: &str, salt_hex: Option<&str>, dry_run: 
     let (tournament_pda, _) = state::get_tournament_pda(&program_id, config.current_tournament_id);
     let (entry_pda, _) = state::get_entry_pda(&program_id, &tournament_pda, &player.pubkey());
 
-    // Load reveal data from saved file or use provided salt
-    let (strategy_id, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, salt) = if let Some(hex_str) = salt_hex {
-        // If salt provided manually, we still need strategy+params from saved data
-        let (sid, f, rd, nt, im, cb, _) = load_reveal_data(config.current_tournament_id, &player.pubkey().to_string())?;
-        let bytes = hex::decode(hex_str)?;
-        if bytes.len() != 16 { bail!("Salt must be exactly 16 bytes"); }
-        let mut arr = [0u8; 16];
-        arr.copy_from_slice(&bytes);
-        (sid, f, rd, nt, im, cb, arr)
-    } else {
-        load_reveal_data(config.current_tournament_id, &player.pubkey().to_string())?
+    // Load reveal data from saved file, optionally overriding salt
+    let (strategy_id, salt, bytecode) = {
+        let (sid, saved_salt, bc) = load_reveal_data(config.current_tournament_id, &player.pubkey().to_string())?;
+        if let Some(hex_str) = salt_hex {
+            let bytes = hex::decode(hex_str)?;
+            if bytes.len() != 16 { bail!("Salt must be exactly 16 bytes"); }
+            let mut arr = [0u8; 16];
+            arr.copy_from_slice(&bytes);
+            (sid, arr, bc)
+        } else {
+            (sid, saved_salt, bc)
+        }
     };
 
-    // Build reveal_strategy instruction data
+    // Build reveal_strategy instruction data (Borsh-compatible)
+    // Layout: disc(8) || strategy_u8(1) || salt(16) || option_bytecode
     let mut data = disc::REVEAL_STRATEGY.to_vec();
     data.push(strategy_id);
-    data.push(forgiveness);
-    data.push(retaliation_delay);
-    data.push(noise_tolerance);
-    data.push(initial_moves);
-    data.push(cooperate_bias);
     data.extend_from_slice(&salt);
+    match &bytecode {
+        None => data.push(0x00),           // Option::None
+        Some(bc) => {
+            data.push(0x01);               // Option::Some
+            data.extend_from_slice(&(bc.len() as u32).to_le_bytes()); // Vec length
+            data.extend_from_slice(bc);    // Vec data
+        }
+    }
 
     let accounts = vec![
         AccountMeta::new(entry_pda, false),
@@ -203,9 +220,9 @@ pub fn reveal(cfg: &ArenaConfig, wallet: &str, salt_hex: Option<&str>, dry_run: 
 
     let ix = Instruction { program_id, accounts, data };
     send_transaction(&client, &[ix], &player, dry_run)?;
-    
+
     if !dry_run {
-        let strat_names = ["TitForTat", "AlwaysDefect", "AlwaysCooperate", "GrimTrigger", "Pavlov", "SuspiciousTitForTat", "Random", "TitForTwoTats", "Gradual"];
+        let strat_names = ["TitForTat", "AlwaysDefect", "AlwaysCooperate", "GrimTrigger", "Pavlov", "SuspiciousTitForTat", "Random", "TitForTwoTats", "Gradual", "Custom"];
         let name = strat_names.get(strategy_id as usize).unwrap_or(&"Unknown");
         println!("Strategy revealed: {}", name);
     }

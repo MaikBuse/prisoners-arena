@@ -295,7 +295,7 @@ export function healClosedTournament(
     tournament.winnerCount === 0
   ) {
     // Mirrors on-chain logic: MIN_WINNER_RATIO = 4 → top 25% win (at least 1)
-    tournament.winnerCount = Math.max(1, Math.floor(activePlayerCount / 4));
+    tournament.winnerCount = Math.max(1, Math.ceil(activePlayerCount / 4));
     healed = true;
   }
 

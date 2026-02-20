@@ -86,7 +86,7 @@ export function MatchHistory({ tournament, playerIndex }: MatchHistoryProps) {
     <div>
       {/* Stats summary */}
       {stats && (
-        <div className="flex items-center gap-3 text-xs text-[var(--muted)] mb-3">
+        <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-[var(--muted)] mb-3 sm:mb-4">
           <span>Coop: {Math.round(stats.cooperationRate * 100)}%</span>
           <span className="text-green-600 font-bold">W {stats.wins}</span>
           <span className="text-red-600 font-bold">L {stats.losses}</span>
@@ -95,7 +95,7 @@ export function MatchHistory({ tournament, playerIndex }: MatchHistoryProps) {
       )}
 
       {/* Match list */}
-      <div className="space-y-0.5">
+      <div className="space-y-1 sm:space-y-1.5">
         {matches.map(m => {
           const isExpanded = expandedMatch === m.matchIndex;
           const won = m.playerScore > m.opponentScore;
@@ -105,15 +105,15 @@ export function MatchHistory({ tournament, playerIndex }: MatchHistoryProps) {
             <div key={m.matchIndex}>
               <button
                 onClick={() => handleExpandMatch(m.matchIndex)}
-                className="w-full flex items-center gap-1.5 sm:gap-2 py-1.5 px-2 text-left hover:bg-neutral-100 rounded transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2 sm:gap-3 py-2 px-2.5 sm:py-2.5 sm:px-3 text-left hover:bg-neutral-100 rounded transition-colors cursor-pointer"
               >
-                <span className="text-[10px] text-[var(--muted)] font-mono w-6 sm:w-8 shrink-0 whitespace-nowrap">#{m.matchIndex}</span>
+                <span className="text-[11px] sm:text-xs text-[var(--muted)] font-mono w-6 sm:w-8 shrink-0 whitespace-nowrap">#{m.matchIndex}</span>
                 <span className="text-[10px] text-[var(--muted)] hidden sm:inline w-6 shrink-0">vs</span>
                 <a
                   href={explorerLink(m.opponentAddress)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-mono text-[var(--accent)] hover:text-[var(--accent-hover)] shrink-0 whitespace-nowrap"
+                  className="text-xs sm:text-sm font-mono text-[var(--accent)] hover:text-[var(--accent-hover)] shrink-0 whitespace-nowrap"
                   onClick={e => e.stopPropagation()}
                 >
                   {truncateAddress(m.opponentAddress, 4)}
@@ -122,13 +122,13 @@ export function MatchHistory({ tournament, playerIndex }: MatchHistoryProps) {
                   <StrategyBadge strategy={m.opponentStrategy} />
                 </span>
                 <span className="flex-1" />
-                <span className={`text-xs font-bold shrink-0 w-4 text-center ${won ? 'text-green-600' : lost ? 'text-red-600' : 'text-neutral-500'}`}>
+                <span className={`text-xs sm:text-sm font-bold shrink-0 w-4 text-center ${won ? 'text-green-600' : lost ? 'text-red-600' : 'text-neutral-500'}`}>
                   {won ? 'W' : lost ? 'L' : 'D'}
                 </span>
-                <span className="text-xs font-mono shrink-0 w-16 text-right whitespace-nowrap">
+                <span className="text-xs sm:text-sm font-mono shrink-0 w-16 text-right whitespace-nowrap">
                   {m.playerScore} - {m.opponentScore}
                 </span>
-                <span className="text-[10px] text-[var(--muted)] shrink-0 w-14 text-right hidden sm:inline whitespace-nowrap">
+                <span className="text-[11px] sm:text-xs text-[var(--muted)] shrink-0 w-14 text-right hidden sm:inline whitespace-nowrap">
                   {m.roundCount} rds
                 </span>
                 <span className="text-[10px] text-neutral-400 w-3 shrink-0 text-right">
@@ -171,19 +171,19 @@ function MatchDetail({
   const opponentLabel = truncateAddress(matchInfo.opponentAddress, 4);
 
   return (
-    <div className="ml-2 pl-3 border-l-2 border-neutral-200 py-2 space-y-2">
+    <div className="ml-2 pl-3 sm:pl-4 border-l-2 border-neutral-200 py-3 space-y-3 sm:py-4 sm:space-y-4">
       {/* Match header */}
-      <div className="text-[10px] text-[var(--muted)]">
+      <div className="text-xs sm:text-sm text-[var(--muted)]">
         {matchInfo.playerStrategyName} vs {matchInfo.opponentStrategyName} &middot; {replay.roundCount} rounds &middot; Score: {replay.totalPlayerScore} - {replay.totalOpponentScore}
       </div>
 
       {/* Move sequences */}
       <div>
-        <div className="text-[10px] text-[var(--muted)] mb-0.5">{playerLabel}:</div>
+        <div className="text-xs text-[var(--muted)] mb-0.5">{playerLabel}:</div>
         <MoveBoxes moves={replay.rounds.map(r => r.playerMove)} />
       </div>
       <div>
-        <div className="text-[10px] text-[var(--muted)] mb-0.5">{opponentLabel}:</div>
+        <div className="text-xs text-[var(--muted)] mb-0.5">{opponentLabel}:</div>
         <MoveBoxes moves={replay.rounds.map(r => r.opponentMove)} />
       </div>
 
@@ -197,11 +197,11 @@ function MatchDetail({
 
 function MoveBoxes({ moves }: { moves: ('C' | 'D')[] }) {
   return (
-    <div className="flex flex-wrap gap-0.5">
+    <div className="flex flex-wrap gap-0.5 sm:gap-1">
       {moves.map((move, i) => (
         <div
           key={i}
-          className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center
+          className={`w-5 h-5 sm:w-6 sm:h-6 rounded text-[9px] sm:text-[11px] font-bold flex items-center justify-center
             ${move === 'C' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
         >
           {move}
@@ -217,8 +217,8 @@ function ScoreChart({ replay, playerLabel, opponentLabel }: { replay: MatchRepla
   const { rounds } = replay;
   if (rounds.length === 0) return null;
 
-  const width = 400;
-  const height = 120;
+  const width = 600;
+  const height = 100;
   const pad = { top: 8, right: 40, bottom: 20, left: 8 };
   const chartW = width - pad.left - pad.right;
   const chartH = height - pad.top - pad.bottom;
@@ -251,7 +251,7 @@ function ScoreChart({ replay, playerLabel, opponentLabel }: { replay: MatchRepla
 
   return (
     <div>
-      <div className="text-[10px] text-[var(--muted)] mb-0.5">Cumulative Score</div>
+      <div className="text-xs text-[var(--muted)] mb-0.5">Cumulative Score</div>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" preserveAspectRatio="xMidYMid meet" className="block">
         {/* Grid line at midpoint */}
         <line
@@ -289,9 +289,9 @@ function ScoreChart({ replay, playerLabel, opponentLabel }: { replay: MatchRepla
           Rounds (1–{rounds.length})
         </text>
       </svg>
-      <div className="flex items-center gap-3 text-[9px] text-[var(--muted)] mt-0.5">
-        <span className="flex items-center gap-1"><span className="inline-block w-2 h-0.5 bg-blue-500 rounded" /> {playerLabel}</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-2 h-0.5 bg-red-400 rounded" /> {opponentLabel}</span>
+      <div className="flex items-center gap-3 text-[10px] sm:text-xs text-[var(--muted)] mt-0.5">
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 sm:w-4 sm:h-1 bg-blue-500 rounded" /> {playerLabel}</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 sm:w-4 sm:h-1 bg-red-400 rounded" /> {opponentLabel}</span>
       </div>
     </div>
   );

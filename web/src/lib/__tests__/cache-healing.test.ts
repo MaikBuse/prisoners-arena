@@ -369,7 +369,7 @@ describe('healClosedTournament()', () => {
     expect(t.state).toBe('Payout');
     expect(t.accountClosed).toBe(true);
     expect(t.entriesRemaining).toBe(0);
-    // 4 active players → floor(4/4) = 1 winner
+    // 4 active players → ceil(4/4) = 1 winner
     expect(t.winnerCount).toBe(1);
     // claimsProcessed should match winnerCount
     expect(t.claimsProcessed).toBe(1);
@@ -435,7 +435,7 @@ describe('healClosedTournament()', () => {
 
     healClosedTournament(PROGRAM_ID, t);
 
-    // 20 players → floor(20/4) = 5 winners
+    // 20 players → ceil(20/4) = 5 winners
     expect(t.winnerCount).toBe(5);
     // pool=100_000_000_000, fee=10_000_000_000, opCost=500_000_000
     // winnerPool = 100_000_000_000 - 10_000_000_000 - 500_000_000 = 89_500_000_000
@@ -511,7 +511,7 @@ describe('healClosedTournament()', () => {
     expect(got.accountClosed).toBe(true);
   });
 
-  it('heals winnerCount for 8-player tournament (floor(8/4)=2)', () => {
+  it('heals winnerCount for 8-player tournament (ceil(8/4)=2)', () => {
     const players = Array.from({ length: 8 }, (_, i) => `Player${i}`);
     const scores = [100, 90, 80, 70, 60, 50, 40, 30];
     const t = makeCachedTournament({

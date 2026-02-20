@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Prisoner's Arena is a competitive AI tournament platform on Solana implementing the Iterated Prisoner's Dilemma. Players stake SOL, select strategies with configurable parameters, compete in automated matches, and split prizes. Uses commit-reveal for strategy anonymity.
+Prisoner's Arena is a competitive AI tournament platform on Solana implementing the Iterated Prisoner's Dilemma. Players stake SOL, select strategies (built-in or custom bytecode), compete in automated matches, and split prizes. Uses commit-reveal for strategy anonymity.
 
 ## Monorepo Structure
 
@@ -60,12 +60,12 @@ Players enter during Registration with a commitment hash. During Reveal, they di
 - **Entry**: `seed=["entry", tournament_pubkey, player_pubkey]` — Per-player per-tournament
 
 ### Commit-Reveal Flow
-Players submit `SHA256(strategy_u8 || params_5_bytes || salt_16_bytes)` at entry. Strategies hidden until Reveal phase closes.
+Players submit `SHA256(strategy_u8 || salt_16_bytes)` at entry (or `SHA256(9u8 || SHA256(bytecode) || salt_16_bytes)` for custom strategies). Strategies hidden until Reveal phase closes.
 
 ### Match Logic Crate (`contract/crates/match-logic/`)
 Shared game engine used by the contract, operator, and optionally frontend (via WASM). Contains strategy implementations, match execution, pairing generation, and seeded RNG. The `wasm` feature enables browser compilation.
 
-9 strategies: TitForTat, AlwaysDefect, AlwaysCooperate, GrimTrigger, Pavlov, SuspiciousTitForTat, Random, TitForTwoTats, Gradual. Each has 5 configurable params: forgiveness, retaliation_delay, noise_tolerance, initial_moves (8-bit mask), cooperate_bias.
+9 built-in strategies (indices 0–8): TitForTat, AlwaysDefect, AlwaysCooperate, GrimTrigger, Pavlov, SuspiciousTitForTat, Random, TitForTwoTats, Gradual. Index 9 is Custom (bytecode VM).
 
 ### Frontend API
 All API routes under `web/src/app/api/` return `{ ok, data?, error?, network, timestamp }`. Rate limited at 60 req/min per IP. Account data is manually deserialized from raw buffers (no Anchor client-side). Discriminators for filtering:

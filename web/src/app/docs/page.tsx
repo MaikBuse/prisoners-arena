@@ -123,12 +123,22 @@ export default function HowItWorksPage() {
             </p>
 
             <div className="mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Commitment Formula</div>
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Built-in Strategies (0-8)</div>
               <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-sm">
                 SHA256(strategy_byte || salt[16])
               </div>
               <p className="text-xs text-[var(--muted)] mt-2">
                 17 bytes total: 1 byte strategy index, 16 bytes random salt.
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Custom Strategy (index 9)</div>
+              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-sm">
+                SHA256(9u8 || SHA256(bytecode) || salt[16])
+              </div>
+              <p className="text-xs text-[var(--muted)] mt-2">
+                49 bytes total: 1 byte (always 9), 32 bytes SHA256 of bytecode, 16 bytes random salt. See <a href="/docs/custom-strategy-vm#commit-reveal" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Custom Strategy VM</a> for details.
               </p>
             </div>
 
@@ -342,17 +352,17 @@ export default function HowItWorksPage() {
             </p>
 
             <div className="neon-card rounded-xl p-4 mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Pool Breakdown</div>
+              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Pool Breakdown (illustrative)</div>
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="w-full bg-neutral-100 rounded-full h-6 overflow-hidden flex">
-                    <div className="bg-emerald-500 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ width: '80%' }}>
+                    <div className="bg-emerald-500 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 8 }}>
                       Winner Pool
                     </div>
-                    <div className="bg-amber-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ width: '10%' }}>
+                    <div className="bg-amber-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 1 }}>
                       Op
                     </div>
-                    <div className="bg-neutral-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ width: '10%' }}>
+                    <div className="bg-neutral-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 1 }}>
                       Fee
                     </div>
                   </div>
@@ -376,7 +386,7 @@ export default function HowItWorksPage() {
                 <strong>Winner determination:</strong> Top 25% of players by score (minimum 1 winner). All winners receive an equal share of the winner pool.
               </p>
               <p>
-                <strong>Claim window:</strong> Winners have 30 days from payout start to claim their prize. Unclaimed funds are swept to accumulated house fees. Entries can be closed by anyone after expiry to reclaim rent.
+                <strong>Claim window:</strong> Winners have 30 days from payout start to claim their prize. Unclaimed funds are swept to accumulated house fees. Expired entries are closed by the operator, returning rent to the player.
               </p>
             </div>
           </Section>

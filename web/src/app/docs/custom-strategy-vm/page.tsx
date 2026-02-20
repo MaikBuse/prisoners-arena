@@ -57,7 +57,7 @@ export default function CustomStrategyVMPage() {
           {/* Overview */}
           <Section id="overview" title="Overview">
             <p className="text-[var(--muted)] mb-4">
-              The 9 built-in strategies with 5 tunable parameters create enormous configuration space, but the strategic <em>structure</em> is fixed. A player who wants &ldquo;cooperate for 5 rounds, then play Tit-for-Tat, but always defect if the opponent has defected more than 60% of the time&rdquo; cannot express that today.
+              The 9 built-in strategies cover the classic approaches, but the strategic <em>structure</em> is fixed. A player who wants &ldquo;cooperate for 5 rounds, then play Tit-for-Tat, but always defect if the opponent has defected more than 60% of the time&rdquo; cannot express that today.
             </p>
             <p className="text-[var(--muted)] mb-6">
               The Custom Strategy VM lets players compose arbitrary decision logic as compact bytecode programs (max 64 bytes). Programs are interpreted on-chain during match execution — fully deterministic, verifiable, and reproducible. <strong>Custom</strong> is strategy variant index <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">9</code>, alongside the existing built-in strategies.
@@ -145,8 +145,8 @@ export default function CustomStrategyVMPage() {
                 The VM never panics. Every anomalous condition falls back to <strong>Cooperate</strong>:
               </p>
               <ul className="list-disc list-inside text-sm text-[var(--muted)] space-y-1">
-                <li><strong>Stack underflow</strong> &mdash; missing values read as 0</li>
-                <li><strong>Stack overflow</strong> &mdash; excess pushes silently dropped</li>
+                <li><strong>Stack underflow</strong> &mdash; halt, Cooperate</li>
+                <li><strong>Stack overflow</strong> &mdash; halt, Cooperate</li>
                 <li><strong>Out-of-bounds history</strong> &mdash; returns 0 (Cooperate)</li>
                 <li><strong>Unknown opcode</strong> &mdash; immediate halt, Cooperate</li>
                 <li><strong>Fuel exhaustion</strong> &mdash; Cooperate</li>
@@ -382,7 +382,7 @@ export default function CustomStrategyVMPage() {
 
               <ExampleProgram
                 name="TitForTwoTats"
-                size="10 bytes"
+                size="9 bytes"
                 description="Only retaliate after two consecutive opponent defections."
                 code={`02          OPP_LAST            ; [last]
 01 01       PUSH 1              ; [last, 1]
@@ -454,7 +454,7 @@ export default function CustomStrategyVMPage() {
                 <tbody>
                   <tr className="border-b border-[var(--card-border)]">
                     <td className="px-4 py-2 font-medium">Built-in</td>
-                    <td className="px-4 py-2 font-mono text-xs text-[var(--muted)]">SHA256(strategy_u8 || params[5] || salt[16])</td>
+                    <td className="px-4 py-2 font-mono text-xs text-[var(--muted)]">SHA256(strategy_u8 || salt[16])</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2 font-medium">Custom</td>

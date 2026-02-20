@@ -44,20 +44,20 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
       onClick={onClose}
     >
       <div
-        className="relative w-[calc(100%-1rem)] sm:w-full max-w-2xl mx-2 sm:mx-4 neon-card rounded-2xl overflow-hidden"
+        className="relative w-[calc(100%-1rem)] sm:w-full max-w-2xl lg:max-w-4xl mx-2 sm:mx-4 neon-card rounded-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
       <div className="max-h-[90vh] sm:max-h-[85vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-[var(--card-bg)] border-b border-[var(--card-border)] px-5 py-4 rounded-t-2xl">
+        <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--card-border)] px-5 py-4 sm:px-6 sm:py-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-wrap gap-2 min-w-0">
-              <span className="text-sm text-[var(--muted)] font-mono shrink-0">#{rank}{isWinner && ' 🏆'}</span>
+              <span className="text-sm sm:text-base text-[var(--muted)] font-mono shrink-0">#{rank}{isWinner && ' 🏆'}</span>
               <a
                 href={explorerLink(entry.player)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-mono text-sm truncate"
+                className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-mono text-sm sm:text-base truncate"
               >
                 {truncateAddress(entry.player, 6)}
               </a>
@@ -72,7 +72,7 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
               ✕
             </button>
           </div>
-          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[var(--muted)]">
+          <div className="flex items-center flex-wrap gap-x-4 sm:gap-x-5 gap-y-1 mt-2 text-xs sm:text-sm text-[var(--muted)]">
             <span>Score: <span className="font-bold text-[var(--foreground)]">{entry.score}</span></span>
             <span>Matches: {entry.matchesPlayed} / {effectiveK(t.matchesPerPlayer, t.participantCount)}</span>
             {t.state === 'Payout' && (
@@ -82,12 +82,12 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 space-y-5">
+        <div className="px-5 py-4 sm:px-6 sm:py-5 space-y-5">
           {/* Match History */}
           {hasMatches && (
             <div>
               <div className="border-t border-[var(--card-border)] pt-4">
-                <div className="text-xs font-bold text-[var(--muted)] mb-2">Match History</div>
+                <div className="text-xs sm:text-sm font-bold text-[var(--muted)] mb-2">Match History</div>
                 <MatchHistory tournament={t} playerIndex={playerIndex} />
               </div>
             </div>

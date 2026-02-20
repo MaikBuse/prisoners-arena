@@ -45,7 +45,7 @@ export const STRATEGY_CONFIGS: Record<number, StrategyConfig> = {
     weaknesses: ['Can trigger mutual defection', 'Worse than TFT against cooperators', 'Slow to establish trust'],
   },
   6: { // Random
-    shortDescription: 'Randomly cooperates or defects each round.',
+    shortDescription: 'Randomly cooperates or defects each round (50/50).',
     description: 'Randomly cooperates or defects each round with 50% probability.',
     strengths: ['Unpredictable', 'Cannot be counter-strategized', 'Good baseline comparison'],
     weaknesses: ['No adaptation', 'Average performance', 'Cannot build mutual cooperation'],

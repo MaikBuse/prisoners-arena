@@ -52,16 +52,9 @@ enum Commands {
         wallet: String,
         #[arg(long, default_value = "tit-for-tat")]
         strategy: String,
-        #[arg(long, default_value = "0")]
-        forgiveness: u8,
-        #[arg(long, default_value = "0")]
-        retaliation_delay: u8,
-        #[arg(long, default_value = "0")]
-        noise_tolerance: u8,
-        #[arg(long, default_value = "0")]
-        initial_moves: u8,
-        #[arg(long, default_value = "50")]
-        cooperate_bias: u8,
+        /// Hex-encoded bytecode (required when strategy=custom)
+        #[arg(long)]
+        bytecode: Option<String>,
         /// Hex-encoded 16-byte salt (random if omitted)
         #[arg(long)]
         salt: Option<String>,
@@ -171,8 +164,8 @@ fn main() -> Result<()> {
         Commands::Status => commands::info::status(&cfg),
         Commands::Tournament { id } => commands::info::tournament(&cfg, id),
         Commands::Entries { tournament } => commands::info::entries(&cfg, tournament),
-        Commands::Enter { wallet, strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, salt, dry_run } => {
-            commands::player::enter(&cfg, &wallet, &strategy, forgiveness, retaliation_delay, noise_tolerance, initial_moves, cooperate_bias, salt.as_deref(), dry_run)
+        Commands::Enter { wallet, strategy, bytecode, salt, dry_run } => {
+            commands::player::enter(&cfg, &wallet, &strategy, bytecode.as_deref(), salt.as_deref(), dry_run)
         }
         Commands::Reveal { wallet, salt, dry_run } => {
             commands::player::reveal(&cfg, &wallet, salt.as_deref(), dry_run)

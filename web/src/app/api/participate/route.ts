@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
     },
     strategies: STRATEGIES.map(s => ({
       value: s.index,
-      name: s.key,
-      description: s.name,
+      key: s.key,
+      name: s.name,
       short_description: STRATEGY_CONFIGS[s.index]?.shortDescription ?? '',
       long_description: STRATEGY_CONFIGS[s.index]?.description ?? '',
     })),
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
     verification: {
       tool: 'solana-verify',
       tool_url: 'https://github.com/Ellipsis-Labs/solana-verifiable-build',
-      command: `solana-verify verify-from-repo --program-id ${programId} --remote https://github.com/makoto-kusanagi/prisoners-arena-program --library-name prisoners_arena`,
+      command: `solana-verify verify-from-repo https://github.com/makoto-kusanagi/prisoners-arena-program --program-id ${programId} --library-name prisoners_arena`,
     },
     source_url: 'https://github.com/MaikBuse/prisoners-arena',
     explorer_url: explorerLink(programId),
