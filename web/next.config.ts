@@ -1,11 +1,17 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ['better-sqlite3'],
-  turbopack: {},
+  turbopack: {
+    root: __dirname,
+  },
   webpack(config) {
-    // Allow importing .wasm files as static assets
+    config.resolve.modules = [
+      path.resolve(__dirname, 'node_modules'),
+      ...(config.resolve.modules || ['node_modules']),
+    ];
     config.module.rules.push({
       test: /\.wasm$/,
       type: 'asset/resource',

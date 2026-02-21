@@ -26,7 +26,7 @@ export function getNetworkConfig(network: NetworkId): NetworkConfig {
     };
   }
   return {
-    programId: '2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga',
+    programId: getEnv('DEVNET_PROGRAM_ID') || '2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga',
     rpcUrl: getEnv('DEVNET_RPC_URL') || getEnv('RPC_URL') || 'https://api.devnet.solana.com',
     network: 'devnet',
     baseUrl: 'https://prisoners-arena.dev',
