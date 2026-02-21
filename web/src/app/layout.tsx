@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { getNetworkConfig } from '@/lib/network-config';
+import type { NetworkId } from '@/lib/network-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,16 +17,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const hdrs = await headers();
+  const network = (hdrs.get('x-network') as NetworkId) || 'devnet';
+  const cfg = getNetworkConfig(network);
+
   const envPayload = JSON.stringify({
-    PROGRAM_ID: process.env.PROGRAM_ID || '',
-    RPC_URL: process.env.RPC_URL || '',
-    NETWORK: process.env.NETWORK || '',
-    BASE_URL: process.env.BASE_URL || '',
+    PROGRAM_ID: cfg.programId,
+    RPC_URL: cfg.rpcUrl,
+    NETWORK: cfg.network,
+    BASE_URL: cfg.baseUrl,
   });
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" data-network={network}>
       <body className="min-h-screen">
         <script
           dangerouslySetInnerHTML={{

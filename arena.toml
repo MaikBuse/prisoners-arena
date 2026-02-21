@@ -17,3 +17,12 @@ registration_duration = 60
 matches_per_player = 6
 house_fee_bps = 0
 reveal_duration = 60
+
+[simulator]
+funder = "~/.config/solana/id.json"
+player_count = 4
+wallet_dir = "./simulator-wallets"
+strategies = []
+min_player_balance = 100000000
+topup_amount = 500000000
+tx_delay_ms = 500

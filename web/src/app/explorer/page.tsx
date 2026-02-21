@@ -28,7 +28,7 @@ const staggerContainer = {
 };
 
 const PHASE_COLORS: Record<string, string> = {
-  Registration: 'rgba(16, 185, 129, 0.15)',
+  Registration: 'color-mix(in srgb, var(--color-accent) 15%, transparent)',
   Reveal: 'rgba(245, 158, 11, 0.15)',
   Running: 'rgba(59, 130, 246, 0.15)',
   Payout: 'rgba(168, 85, 247, 0.15)',
@@ -452,7 +452,7 @@ function ExplorerContent() {
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.3 }}
                           >
-                            <span className="glow-emerald">&#10003;</span>
+                            <span className="glow-accent">&#10003;</span>
                             Tournament completed. All prizes distributed.
                           </motion.div>
                         ) : t.payoutStartedAt !== '0' && (

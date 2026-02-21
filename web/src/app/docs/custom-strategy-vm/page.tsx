@@ -470,7 +470,7 @@ export default function CustomStrategyVMPage() {
                 The inner <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">SHA256(bytecode)</code> hash produces a fixed 32-byte digest regardless of program length, keeping the outer preimage at a fixed 49 bytes (1 + 32 + 16). The bytecode hash can also be displayed independently as a program fingerprint.
               </p>
               <p>
-                <strong>Forfeit handling:</strong> <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code> always assigns a built-in strategy — forfeited players never receive Custom. No change to the existing forfeit mechanism.
+                <strong>Forfeit handling:</strong> The forfeit mechanism uses on-chain SlotHashes sysvar data to deterministically assign a built-in strategy (index 0–8) — forfeited players never receive Custom.
               </p>
             </div>
           </Section>
@@ -549,7 +549,7 @@ fn main() {
 
     // Test against AlwaysDefect
     let custom  = PlayerStrategy::Custom(bytecode);
-    let defector = PlayerStrategy::Builtin(match_logic::Strategy::AlwaysDefect);
+    let defector = PlayerStrategy::Builtin(match_logic::Strategy::new(match_logic::StrategyBase::AlwaysDefect));
 
     let seed = [0u8; 32];
     let result = run_match(&custom, &defector, &seed, 0, 8);

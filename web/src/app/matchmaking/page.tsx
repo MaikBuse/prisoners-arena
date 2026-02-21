@@ -128,7 +128,7 @@ export default function MatchmakingPage() {
             <Row label="Configured K" value={String(configK)} />
             <Row label="Effective K" value={String(calc.k)} highlight />
             <div className="border-t border-card-border my-2" />
-            <Row label="Pairing mode" value={playerCount <= 200 ? 'Full round-robin' : 'Offset pairing'} />
+            <Row label="Pairing mode" value={playerCount <= 200 ? 'Full round-robin' : 'Feistel permutation'} />
             <Row label="Round tier" value={`${calc.tier} (${calc.endProb * 100}% end probability after min)`} />
             <Row label="Rounds per match" value={`${calc.minRounds}–${calc.maxRounds} (avg ≈ ${calc.avgRounds.toFixed(1)})`} />
             <div className="border-t border-card-border my-2" />
@@ -153,7 +153,7 @@ export default function MatchmakingPage() {
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-1">Large tournaments (n &gt; 200)</h3>
-              <p>The configured K is clamped to [49, 99] and used directly. Players are paired using offset pairing (deterministic, no duplicates).</p>
+              <p>The configured K is clamped to [49, 99] and used directly. Players are paired using a Feistel-network permutation (deterministic, no duplicates, O(1) memory per match).</p>
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-1">Round Tiers</h3>

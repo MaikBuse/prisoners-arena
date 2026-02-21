@@ -3,11 +3,15 @@ import { upsertTournament, getTournament, getCachedEntryData, healClosedTourname
 import type { CachedEntryData } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
 import { NextRequest } from 'next/server';
+import { resolveNetwork } from '@/lib/config';
+import { runWithNetwork } from '@/lib/network-context';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const limited = rateLimited(req);
-  if (limited) return limited;
-  try {
+  const network = resolveNetwork(req);
+  return runWithNetwork(network, async () => {
+    const limited = rateLimited(req);
+    if (limited) return limited;
+    try {
     const { id } = await params;
     const idNum = parseInt(id, 10);
     if (isNaN(idNum)) return apiError('Invalid tournament ID', 'INVALID_ID', 400);
@@ -67,4 +71,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (e) {
     return apiError((e as Error).message, 'FETCH_ERROR', 500);
   }
+  });
 }

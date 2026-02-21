@@ -86,7 +86,7 @@ export function LightRays({
   className,
   style,
   count = 7,
-  color = "rgba(16, 185, 129, 0.2)",
+  color = "color-mix(in srgb, var(--color-accent) 20%, transparent)",
   blur = 36,
   speed = 14,
   length = "70vh",

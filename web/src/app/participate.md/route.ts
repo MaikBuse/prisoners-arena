@@ -1,12 +1,16 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, explorerLink, fetchCurrentTournament } from '@/lib/solana';
-import { getConfig } from '@/lib/config';
+import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, EXPLORER_BASE, explorerLink, fetchCurrentTournament } from '@/lib/solana';
+import { getConfig, resolveNetwork } from '@/lib/config';
 import { rateLimited } from '@/lib/api';
 import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
+import { runWithNetwork } from '@/lib/network-context';
+import { getAllNetworkConfigs } from '@/lib/network-config';
 
 export async function GET(request: NextRequest) {
-  const limited = rateLimited(request);
-  if (limited) return limited;
+  const network = resolveNetwork(request);
+  return runWithNetwork(network, async () => {
+    const limited = rateLimited(request);
+    if (limited) return limited;
   const programId = getProgramId().toBase58();
   const network = getNetwork();
   const rpcUrl = getConfig().rpcUrl;
@@ -53,12 +57,25 @@ solana-verify verify-from-repo \\
 
 This confirms the on-chain bytecode was built from the published source — no trust required.
 
-## Program Details
-- **Program ID:** \`${programId}\`
-- **Network:** ${network}
-- **RPC:** \`${rpcUrl}\` (or use your preferred RPC provider)
-- **Explorer:** ${explorerUrl}
-- **IDL:** ${baseUrl}/api/idl
+## Program Deployments
+
+${(() => {
+  const configs = getAllNetworkConfigs();
+  const explorerUrl = (pid: string, net: string) => {
+    const base = `${EXPLORER_BASE}/address/${pid}`;
+    return net === 'mainnet-beta' ? base : `${base}?cluster=${net}`;
+  };
+  return `| | Devnet | Mainnet |
+|---|---|---|
+| **Program ID** | \`${configs[0].programId}\` | \`${configs[1].programId}\` |
+| **Network** | devnet | mainnet-beta |
+| **RPC** | \`${configs[0].rpcUrl}\` | \`${configs[1].rpcUrl}\` |
+| **Base URL** | ${configs[0].baseUrl.replace('https://', '')} | ${configs[1].baseUrl.replace('https://', '')} |
+| **IDL** | ${configs[0].baseUrl}/api/idl | ${configs[1].baseUrl}/api/idl |
+| **Explorer** | [View on Explorer](${explorerUrl(configs[0].programId, configs[0].network)}) | [View on Explorer](${explorerUrl(configs[1].programId, configs[1].network)}) |
+
+> **You are currently viewing:** ${network}`;
+})()}
 ${tournamentSection}
 ## How to Enter (Commit-Reveal)
 
@@ -96,7 +113,7 @@ Once the tournament transitions to the **Reveal** state:
 1. **Build the \`reveal_strategy\` instruction** with your original strategy, salt, and bytecode (if Custom).
 2. **Sign and submit.** The program verifies the commitment hash against your revealed data. For built-in strategies, it checks \`SHA256(strategy || salt) == commitment\`. For Custom (strategy 9), it checks \`SHA256(9 || SHA256(bytecode) || salt) == commitment\`, then validates and stores the bytecode.
 
-> **Warning:** If you do not reveal before the reveal deadline, your entry is treated as a forfeit — a deterministic strategy will be assigned based on your commitment hash, and you remain eligible for payouts but cannot choose your strategy.
+> **Warning:** If you do not reveal before the reveal deadline, your entry is treated as a forfeit — a strategy will be assigned based on on-chain SlotHashes at forfeit time (unpredictable at registration), and you remain eligible for payouts but cannot choose your strategy.
 
 ## PDA Derivation
 - **Config:** seeds = [\`"config"\`], program = \`${programId}\`
@@ -130,7 +147,7 @@ For the full VM specification, instruction set, and example programs, see the [C
 ## Game Rules
 
 - **Round tiers:** Standard (20–50 rounds, 5% end probability per round after minimum) when ≤1000 participants. Compressed (10–30 rounds, 7% end probability) when >1000 participants.
-- **Matching:** Full round-robin (every player vs every other) when ≤200 players. Circular offset pairing when >200 players, with K clamped to 49–99 matches per player.
+- **Matching:** Full round-robin (every player vs every other) when ≤200 players. Feistel-network permutation when >200 players, with K clamped to 49–99 matches per player.
 - **Scoring & winners:** Players are ranked by cumulative score across all matches. Top 25% (minimum 1 winner) split the prize pool equally.
 - **Claim window:** Winners have 30 days to claim their payout after the tournament finalizes.
 
@@ -188,7 +205,7 @@ The best participants don't just pick a strategy once — they iterate. The API 
 
 **Arguments:** \`strategy: u8, salt: [u8; 16], bytecode: Option<Vec<u8>>\`
 
-### claim_refund (during Registration or Reveal)
+### claim_refund (during Registration)
 | Account | Type | Writable |
 |---------|------|----------|
 | tournament | PDA | Yes |
@@ -220,8 +237,8 @@ These endpoints read on-chain data and return it as JSON. They are a convenience
 - One entry per wallet per tournament
 - **Save your salt and strategy** — you need them to reveal
 - Reveal must happen during the Reveal state before \`reveal_ends\` deadline
-- Failing to reveal assigns a deterministic strategy based on your commitment hash (forfeit)
-- Refund available during Registration or Reveal (anytime before matches begin)
+- Failing to reveal assigns a strategy using on-chain randomness (forfeit)
+- Refund available during Registration only (before the operator closes registration)
 - Winners = top 25% by score (ties included), equal split of prize pool
 - 30-day claim window after tournament ends
 `;
@@ -231,5 +248,6 @@ These endpoints read on-chain data and return it as JSON. They are a convenience
       'Content-Type': 'text/markdown; charset=utf-8',
       'Cache-Control': 'public, s-maxage=10',
     },
+  });
   });
 }

@@ -2,11 +2,15 @@ import { fetchConfig, fetchTournament, getProgramId } from '@/lib/solana';
 import { upsertTournament, getTournament, healClosedTournament } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 import { NextRequest } from 'next/server';
+import { resolveNetwork } from '@/lib/config';
+import { runWithNetwork } from '@/lib/network-context';
 
 export async function GET(req: NextRequest) {
-  const limited = rateLimited(req);
-  if (limited) return limited;
-  try {
+  const network = resolveNetwork(req);
+  return runWithNetwork(network, async () => {
+    const limited = rateLimited(req);
+    if (limited) return limited;
+    try {
     const url = new URL(req.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 50);
     const offset = parseInt(url.searchParams.get('offset') || '0');
@@ -39,4 +43,5 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     return apiError((e as Error).message, 'FETCH_ERROR', 500);
   }
+  });
 }

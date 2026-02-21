@@ -1,12 +1,16 @@
 import { NextRequest } from 'next/server';
-import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, fetchCurrentTournament, explorerLink } from '@/lib/solana';
-import { getConfig } from '@/lib/config';
+import { getProgramId, getNetwork, getBaseUrl, STRATEGIES, EXPLORER_BASE, fetchCurrentTournament, explorerLink } from '@/lib/solana';
+import { getConfig, resolveNetwork } from '@/lib/config';
 import { apiSuccess, rateLimited } from '@/lib/api';
 import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
+import { runWithNetwork } from '@/lib/network-context';
+import { getAllNetworkConfigs } from '@/lib/network-config';
 
 export async function GET(request: NextRequest) {
-  const limited = rateLimited(request);
-  if (limited) return limited;
+  const network = resolveNetwork(request);
+  return runWithNetwork(network, async () => {
+    const limited = rateLimited(request);
+    if (limited) return limited;
   let currentTournament: { id: number; state: string; stake_lamports: string } | null = null;
   try {
     const t = await fetchCurrentTournament();
@@ -109,7 +113,7 @@ export async function GET(request: NextRequest) {
           'system_program',
         ],
         data: {},
-        notes: 'During Registration or Reveal state. Refunds stake + entry rent.',
+        notes: 'During Registration state only. Once registration closes, refunds are no longer available.',
       },
       claim_payout: {
         discriminator: [127, 240, 132, 62, 227, 198, 146, 133],
@@ -131,5 +135,17 @@ export async function GET(request: NextRequest) {
     },
     source_url: 'https://github.com/MaikBuse/prisoners-arena',
     explorer_url: explorerLink(programId),
+    networks: Object.fromEntries(getAllNetworkConfigs().map(c => {
+      const expBase = `${EXPLORER_BASE}/address/${c.programId}`;
+      const expUrl = c.network === 'mainnet-beta' ? expBase : `${expBase}?cluster=${c.network}`;
+      return [c.network, {
+        program_id: c.programId,
+        rpc_url: c.rpcUrl,
+        base_url: c.baseUrl,
+        explorer_url: expUrl,
+        idl_url: `${c.baseUrl}/api/idl`,
+      }];
+    })),
   }, 3600);
+  });
 }

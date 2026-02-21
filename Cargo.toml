@@ -4,6 +4,7 @@ members = [
     "contract/programs/prisoners-arena",
     "operator",
     "cli",
+    "simulator",
 ]
 resolver = "2"
 

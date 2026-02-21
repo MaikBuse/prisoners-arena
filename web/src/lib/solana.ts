@@ -1,22 +1,28 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getConfig } from './config';
 
-// Lazy-initialized singletons
-let _programId: PublicKey | null = null;
-let _connection: Connection | null = null;
+// Per-network lazy-initialized instances
+const _programIds = new Map<string, PublicKey>();
+const _connections = new Map<string, Connection>();
 
 export function getProgramId(): PublicKey {
-  if (!_programId) {
-    _programId = new PublicKey(getConfig().programId);
+  const config = getConfig();
+  let pid = _programIds.get(config.network);
+  if (!pid) {
+    pid = new PublicKey(config.programId);
+    _programIds.set(config.network, pid);
   }
-  return _programId;
+  return pid;
 }
 
 export function getConnection(): Connection {
-  if (!_connection) {
-    _connection = new Connection(getConfig().rpcUrl, 'confirmed');
+  const config = getConfig();
+  let conn = _connections.get(config.network);
+  if (!conn) {
+    conn = new Connection(config.rpcUrl, 'confirmed');
+    _connections.set(config.network, conn);
   }
-  return _connection;
+  return conn;
 }
 
 export function getNetwork(): string {
@@ -73,18 +79,22 @@ export function explorerLink(address: string, type: 'address' | 'tx' = 'address'
   return `${base}?cluster=${network}`;
 }
 
-// Cache
+// Cache (keys prefixed with network to prevent cross-network contamination)
 const cache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL_CURRENT = 10_000;
 
+function networkCacheKey(key: string): string {
+  return `${getConfig().network}:${key}`;
+}
+
 function getCached<T>(key: string, ttl: number): T | null {
-  const entry = cache.get(key);
+  const entry = cache.get(networkCacheKey(key));
   if (entry && Date.now() - entry.ts < ttl) return entry.data as T;
   return null;
 }
 
 function setCache(key: string, data: unknown) {
-  cache.set(key, { data, ts: Date.now() });
+  cache.set(networkCacheKey(key), { data, ts: Date.now() });
 }
 
 // Buffer helpers

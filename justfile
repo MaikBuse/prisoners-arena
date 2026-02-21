@@ -32,7 +32,7 @@ test-contract:
     anchor test --provider.cluster localnet -- --features testing
 
 # Build everything
-build: build-match-logic build-wasm build-contract build-operator
+build: build-match-logic build-wasm build-contract build-operator build-simulator
 
 # Build match-logic native
 build-match-logic:
@@ -54,6 +54,10 @@ build-contract-verifiable:
 # Build operator
 build-operator:
     cd operator && cargo build --release
+
+# Build simulator
+build-simulator:
+    cd simulator && cargo build --release
 
 # Clean all builds
 clean:
@@ -81,6 +85,10 @@ cli *ARGS:
 dev-operator:
     cargo run -p prisoners-operator
 
+# Run simulator
+dev-simulator:
+    cargo run -p prisoners-simulator
+
 # Run operator in manual mode (single cycle then exit)
 operator-manual:
     cargo run -p prisoners-operator -- --manual
@@ -105,9 +113,11 @@ fmt:
     cd contract/crates/match-logic && cargo fmt
     cd contract/programs/prisoners-arena && cargo fmt
     cd operator && cargo fmt
+    cd simulator && cargo fmt
 
 # Lint all code
 lint:
     cd contract/crates/match-logic && cargo clippy
     cd contract/programs/prisoners-arena && cargo clippy
     cd operator && cargo clippy
+    cd simulator && cargo clippy

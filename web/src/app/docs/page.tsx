@@ -1,9 +1,12 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { TracingBeam } from '@/components/TracingBeam';
-import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
+import { STRATEGIES, EXPLORER_BASE } from '@/lib/solana';
 import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
+import { getNetworkConfig, getAllNetworkConfigs } from '@/lib/network-config';
+import type { NetworkId } from '@/lib/network-config';
 
 export const metadata: Metadata = {
   title: 'How It Works — Prisoner\'s Arena',
@@ -23,9 +26,19 @@ const SECTIONS = [
   { id: 'security', label: 'Security' },
 ] as const;
 
-export default function HowItWorksPage() {
-  const programId = getProgramId().toBase58();
-  const network = getNetwork();
+function makeExplorerLink(address: string, network: string, type: 'address' | 'tx' = 'address'): string {
+  const base = `${EXPLORER_BASE}/${type}/${address}`;
+  if (network === 'mainnet-beta') return base;
+  return `${base}?cluster=${network}`;
+}
+
+export default async function HowItWorksPage() {
+  const hdrs = await headers();
+  const networkId = (hdrs.get('x-network') as NetworkId) || 'devnet';
+  const cfg = getNetworkConfig(networkId);
+  const programId = cfg.programId;
+  const network = cfg.network;
+  const explorerLink = (address: string) => makeExplorerLink(address, network);
 
   return (
     <>
@@ -71,19 +84,27 @@ export default function HowItWorksPage() {
             <p className="text-muted mb-6">
               The entire tournament lifecycle is governed by an on-chain Solana program. Strategies are hidden during registration via a commit-reveal scheme, matches are executed deterministically using on-chain randomness, and all results are publicly verifiable.
             </p>
-            <div className="space-y-3">
-              <InfoRow label="Program ID">
-                <a href={explorerLink(programId)} target="_blank" rel="noopener noreferrer"
-                   className="font-mono text-accent hover:text-accent-hover break-all">{programId}</a>
-              </InfoRow>
-              <InfoRow label="Network">
-                <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono">{network}</span>
-              </InfoRow>
-              <InfoRow label="Source">
-                <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
-                   className="text-accent hover:text-accent-hover">prisoners-arena-program ↗</a>
-              </InfoRow>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {getAllNetworkConfigs().map(c => {
+                const isActive = c.network === network;
+                return (
+                  <div key={c.network} className={`rounded-xl border p-4 ${isActive ? 'border-accent bg-accent/5' : 'border-card-border bg-surface'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono"
+                            data-network={c.network}>{c.network === 'mainnet-beta' ? 'mainnet' : c.network}</span>
+                      {isActive && <span className="text-[10px] text-accent font-medium">Active</span>}
+                    </div>
+                    <div className="text-xs text-muted mb-1">Program ID</div>
+                    <a href={makeExplorerLink(c.programId, c.network)} target="_blank" rel="noopener noreferrer"
+                       className="font-mono text-sm text-accent hover:text-accent-hover break-all">{c.programId}</a>
+                  </div>
+                );
+              })}
             </div>
+            <InfoRow label="Source">
+              <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
+                 className="text-accent hover:text-accent-hover">prisoners-arena-program ↗</a>
+            </InfoRow>
           </Section>
 
           {/* Tournament Lifecycle */}
@@ -153,7 +174,7 @@ export default function HowItWorksPage() {
             <div>
               <div className="text-xs font-bold text-muted uppercase mb-2">Forfeit Handling</div>
               <p className="text-sm text-muted">
-                If a player fails to reveal before the deadline, they are assigned a deterministic fallback strategy based on <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code>. This ensures every registered player competes — no one can grief by withholding their reveal.
+                If a player fails to reveal before the deadline, the operator calls <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">forfeit_unrevealed</code>, which derives a built-in strategy index from the on-chain <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">SlotHashes</code> sysvar — unpredictable at registration time, preventing players from gaming forfeit outcomes. This ensures every registered player competes — no one can grief by withholding their reveal.
               </p>
             </div>
 
@@ -267,7 +288,7 @@ export default function HowItWorksPage() {
                   <tr>
                     <td className="px-4 py-2">n &gt; 200</td>
                     <td className="px-4 py-2 font-mono">clamp(K, 49, 99)</td>
-                    <td className="px-4 py-2 text-muted">Circular offset pairing</td>
+                    <td className="px-4 py-2 text-muted">Feistel-network permutation</td>
                   </tr>
                 </tbody>
               </table>
@@ -275,10 +296,10 @@ export default function HowItWorksPage() {
 
             <div className="space-y-3 text-sm text-muted">
               <p>
-                <strong>Total matches:</strong> <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">n × K / 2</code> — each match involves two players, so total unique pairings is half the sum of all individual match counts.
+                <strong>Total matches:</strong> approximately <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">n × K / 2</code> — each match involves two players, so total unique pairings is roughly half the sum of all individual match counts. The exact count depends on the pairing mode and whether offsets are clamped.
               </p>
               <p>
-                <strong>Pairing method:</strong> For small tournaments (≤200 players), full round-robin ensures every player faces every other player exactly once. For larger tournaments, circular offset pairing distributes opponents evenly.
+                <strong>Pairing method:</strong> For small tournaments (≤200 players), full round-robin ensures every player faces every other player exactly once. For larger tournaments, a Feistel-network permutation pairs players deterministically with O(1) memory per match.
               </p>
               <p>
                 <strong>Deterministic seed:</strong> The randomness seed is derived from <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">SlotHashes[16..48]</code> with the first 4 bytes XOR&apos;d with <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">tournament_id</code>, captured at the moment the reveal phase closes. This seed drives round counts and per-round RNG. The operator cannot manipulate it.
@@ -294,7 +315,7 @@ export default function HowItWorksPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold mb-0.5">Matchmaking Visualizer</div>
-                  <p className="text-sm text-muted">See how pairings are generated, explore the round-robin and circular offset algorithms, and verify match fairness interactively.</p>
+                  <p className="text-sm text-muted">See how pairings are generated, explore the round-robin and Feistel permutation algorithms, and verify match fairness interactively.</p>
                 </div>
                 <svg className="w-5 h-5 text-muted shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />

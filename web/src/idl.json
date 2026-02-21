@@ -98,7 +98,7 @@
     {
       "name": "claim_refund",
       "docs": [
-        "Claim refund during registration or reveal phase"
+        "Claim refund during registration phase"
       ],
       "discriminator": [
         15,

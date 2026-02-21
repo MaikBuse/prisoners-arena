@@ -42,6 +42,13 @@
   --color-badge-completed: #6b7280;
 }
 
+/* Mainnet-beta purple theme override */
+html[data-network="mainnet-beta"] {
+  --color-accent: #a855f7;
+  --color-accent-hover: #c084fc;
+  --color-badge-registration: #a855f7;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -174,6 +181,7 @@ body {
 /* Glow filters */
 .glow-blue { filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.4)); }
 .glow-emerald { filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.4)); }
+.glow-accent { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 40%, transparent)); }
 
 /* Dark scrollbar */
 @layer base {

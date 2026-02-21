@@ -2684,6 +2684,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "prisoners-simulator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sha2",
+ "shellexpand",
+ "solana-client",
+ "solana-commitment-config",
+ "solana-sdk",
+ "solana-system-interface 3.0.0",
+ "tokio",
+ "toml 1.0.1+spec-1.1.0",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,19 +1,28 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { TracingBeam } from '@/components/TracingBeam';
-import { getProgramId, getNetwork, STRATEGIES } from '@/lib/solana';
-import { getConfig } from '@/lib/config';
+import { STRATEGIES, EXPLORER_BASE } from '@/lib/solana';
+import { getNetworkConfig, getAllNetworkConfigs } from '@/lib/network-config';
+import type { NetworkId } from '@/lib/network-config';
 
 export const metadata: Metadata = {
   title: 'API Documentation — Prisoner\'s Arena',
   description: 'REST API documentation for Prisoner\'s Arena. Endpoints for querying tournaments, entries, and participation guides.',
 };
 
-export default function DocsPage() {
-  const programId = getProgramId().toBase58();
-  const network = getNetwork();
-  const rpcUrl = getConfig().rpcUrl;
+function makeExplorerLink(address: string, network: string): string {
+  const base = `${EXPLORER_BASE}/address/${address}`;
+  if (network === 'mainnet-beta') return base;
+  return `${base}?cluster=${network}`;
+}
+
+export default async function DocsPage() {
+  const hdrs = await headers();
+  const networkId = (hdrs.get('x-network') as NetworkId) || 'devnet';
+  const cfg = getNetworkConfig(networkId);
+  const network = cfg.network;
 
   return (
     <>
@@ -22,12 +31,30 @@ export default function DocsPage() {
       <a href="/" className="text-sm text-accent hover:text-accent-hover mb-6 inline-block">← Back to Arena</a>
 
       <h1 className="text-3xl font-bold mb-2">API Documentation</h1>
-      <p className="text-muted mb-8">REST API for querying Prisoner's Arena tournament state. No authentication required.</p>
+      <p className="text-muted mb-8">REST API for querying Prisoner&#39;s Arena tournament state. No authentication required.</p>
 
       <div className="space-y-4 mb-12">
-        <InfoRow label="Program ID" value={programId} mono />
-        <InfoRow label="Network" value={network} />
-        <InfoRow label="RPC" value={rpcUrl} mono />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {getAllNetworkConfigs().map(c => {
+            const isActive = c.network === network;
+            return (
+              <div key={c.network} className={`rounded-xl border p-4 ${isActive ? 'border-accent bg-accent/5' : 'border-card-border bg-surface'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono"
+                        data-network={c.network}>{c.network === 'mainnet-beta' ? 'mainnet' : c.network}</span>
+                  {isActive && <span className="text-[10px] text-accent font-medium">Active</span>}
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div><span className="text-muted">Program ID</span></div>
+                  <a href={makeExplorerLink(c.programId, c.network)} target="_blank" rel="noopener noreferrer"
+                     className="font-mono text-sm text-accent hover:text-accent-hover break-all block">{c.programId}</a>
+                  <div className="pt-1"><span className="text-muted">RPC</span> <span className="font-mono">{c.rpcUrl}</span></div>
+                  <div><span className="text-muted">Base URL</span> <span className="font-mono">{c.baseUrl}</span></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
         <InfoRow label="Rate Limit" value="60 requests/minute per IP" />
         <InfoRow label="Format" value="JSON — all responses include ok, data, network, timestamp" />
       </div>
@@ -156,9 +183,9 @@ export default function DocsPage() {
           response={`{
   "ok": true,
   "data": {
-    "program_id": "${programId}",
-    "network": "${network}",
-    "rpc_url": "${rpcUrl}",
+    "program_id": "${cfg.programId}",
+    "network": "${cfg.network}",
+    "rpc_url": "${cfg.rpcUrl}",
     "current_tournament": { "id": 0, "state": "Registration", "stake_lamports": "100000000" },
     "pda_seeds": {
       "config": ["config"],

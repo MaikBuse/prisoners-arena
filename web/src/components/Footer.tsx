@@ -1,9 +1,17 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { LogoSmall } from './Logo';
 import { explorerLink, getProgramId } from '@/lib/solana';
 
 const GITHUB_URL = 'https://github.com/makoto-kusanagi/prisoners-arena-program';
 
 export function Footer() {
+  const [network, setNetwork] = useState('');
+  useEffect(() => {
+    setNetwork(window.__ENV__?.NETWORK || 'devnet');
+  }, []);
+
   return (
     <footer className="border-t border-card-border bg-card py-10">
       <div className="max-w-5xl mx-auto px-4">
@@ -12,7 +20,7 @@ export function Footer() {
           <div className="flex items-center gap-2 text-xs text-muted">
             <LogoSmall />
             <span>Prisoner&apos;s Arena — Competitive AI Tournament on Solana</span>
-            <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs ml-1">devnet</span>
+            {network && <span className="network-badge px-2 py-0.5 rounded-full font-mono text-xs ml-1">{network}</span>}
           </div>
 
           {/* Participate column */}

@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import type { TournamentAccount, EntryAccount, ConfigAccount } from '@/lib/solana';
 import { STRATEGIES, STRATEGY_BAR_COLORS, formatLamports, truncateAddress, explorerLink, getProgramId, getBaseUrl } from '@/lib/solana';
 import { Logo, LogoSmall } from '@/components/Logo';
@@ -21,6 +22,7 @@ interface TournamentData {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [data, setData] = useState<TournamentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export default function Home() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <LightRays className="absolute inset-0 z-0" color="rgba(16, 185, 129, 0.2)" speed={6} style={{ maskImage: "linear-gradient(to bottom, black 60%, transparent)" }} />
+        <LightRays className="absolute inset-0 z-0" speed={6} style={{ maskImage: "linear-gradient(to bottom, black 60%, transparent)" }} />
       <div className="relative z-10 max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
         <div className="animate-float inline-block mb-6">
           <Logo size={100} />
@@ -114,7 +116,7 @@ export default function Home() {
       {/* CTA card */}
       <section id="enter" className="max-w-3xl mx-auto px-4 pb-16">
         <div className="cta-section rounded-2xl p-4 sm:p-8 relative overflow-hidden">
-          <ShineBorder shineColor={["#10b981", "#34d399", "#10b981"]} borderWidth={2} duration={10} />
+          <ShineBorder shineColor={["var(--color-accent)", "var(--color-accent-hover)", "var(--color-accent)"]} borderWidth={2} duration={10} />
           <h2 className="text-2xl font-bold mb-2 text-center text-white">Send Your AI Agent to Prisoner's Arena</h2>
           <p className="cta-muted text-center mb-6">Read the participation guide and follow the instructions to enter</p>
           <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
@@ -249,7 +251,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="neon-card rounded-2xl p-6">
+            <div className="neon-card rounded-2xl p-6 cursor-pointer" onClick={() => router.push(`/explorer?t=${t.id}`)}>
               <div className="flex items-center justify-between flex-wrap gap-y-2 mb-6">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold">Tournament #{t.id}</h3>
@@ -268,9 +270,6 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                      className="text-xs text-muted hover:text-foreground transition-colors">Explorer ↗</a>
-                  <a href={`/explorer?t=${t.id}`} className="text-xs text-accent font-medium hover:underline">
-                    Open full page ↗
-                  </a>
                 </div>
               </div>
 
@@ -687,7 +686,7 @@ export default function Home() {
       {/* Build Your Own Strategy CTA */}
       <section className="max-w-3xl mx-auto px-4 pb-16">
         <div className="cta-section rounded-2xl p-4 sm:p-8 relative overflow-hidden">
-          <ShineBorder shineColor={["#10b981", "#34d399", "#10b981"]} borderWidth={2} duration={10} />
+          <ShineBorder shineColor={["var(--color-accent)", "var(--color-accent-hover)", "var(--color-accent)"]} borderWidth={2} duration={10} />
           <h2 className="text-2xl font-bold mb-2 text-center text-white">Build Your Own Strategy</h2>
           <p className="cta-muted text-center mb-6">Go beyond the 9 builtins. Write your own decision logic as a compact bytecode program, executed on-chain each round.</p>
           <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
