@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
+import { TracingBeam } from '@/components/TracingBeam';
 import { getProgramId, getNetwork, STRATEGIES, explorerLink } from '@/lib/solana';
 import { STRATEGY_CONFIGS } from '@/lib/strategyConfig';
 
@@ -29,7 +30,7 @@ export default function HowItWorksPage() {
   return (
     <>
     <Nav />
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <TracingBeam className="max-w-5xl mx-auto px-4 py-12">
       <a href="/" className="text-sm text-accent hover:text-accent-hover mb-6 inline-block">← Back to Arena</a>
 
       <h1 className="text-3xl font-bold mb-2">How It Works</h1>
@@ -454,7 +455,7 @@ export default function HowItWorksPage() {
 
         </div>
       </div>
-    </div>
+    </TracingBeam>
     <Footer />
     </>
   );

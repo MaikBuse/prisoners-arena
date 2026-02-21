@@ -9,6 +9,7 @@ const DOCS = [
 ];
 
 const TOOLS = [
+  { href: '/explorer', label: 'Tournament Explorer', desc: 'Browse and inspect tournament details' },
   { href: '/configure', label: 'Strategy Lab', desc: 'Simulate and compare strategies' },
   { href: '/matchmaking', label: 'Matchmaking', desc: 'Visualize how pairing and scoring work' },
 ];

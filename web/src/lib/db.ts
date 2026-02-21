@@ -33,7 +33,6 @@ export const SCHEMA_SQL = `
     reveal_ends TEXT NOT NULL,
     reveal_duration TEXT NOT NULL,
     reveals_completed INTEGER NOT NULL,
-    forfeits INTEGER NOT NULL,
     address TEXT NOT NULL,
     bump INTEGER NOT NULL,
     operator_costs TEXT NOT NULL DEFAULT '0',
@@ -128,10 +127,10 @@ export function upsertTournament(
         matches_completed, matches_total, randomness_seed, min_winning_score,
         winner_count, winner_pool, claims_processed, payout_started_at,
         entries_remaining, round_tier, reveal_ends, reveal_duration,
-        reveals_completed, forfeits, address, bump, operator_costs, account_closed,
+        reveals_completed, address, bump, operator_costs, account_closed,
         updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')
       )
     `).run(
       programId, t.id, t.state, t.stake, t.houseFeeBps, t.matchesPerPlayer,
@@ -139,7 +138,7 @@ export function upsertTournament(
       t.matchesCompleted, t.matchesTotal, t.randomnessSeed, t.minWinningScore,
       t.winnerCount, t.winnerPool, t.claimsProcessed, t.payoutStartedAt,
       t.entriesRemaining, t.roundTier, t.revealEnds, t.revealDuration,
-      t.revealsCompleted, t.forfeits, t.address, t.bump,
+      t.revealsCompleted, t.address, t.bump,
       t.operatorCosts ?? '0', accountClosed ? 1 : 0
     );
 
@@ -221,7 +220,6 @@ export function getTournament(programId: string, id: number): CachedTournament |
     revealEnds: row.reveal_ends as string,
     revealDuration: row.reveal_duration as string,
     revealsCompleted: row.reveals_completed as number,
-    forfeits: row.forfeits as number,
     players: playerRows.map(r => r.player as string),
     scores: playerRows.map(r => r.score as number),
     strategies: playerRows.map(r => r.strategy as number),
@@ -288,7 +286,7 @@ export function healClosedTournament(
   }
 
   // Infer winnerCount if matches ran to completion but it was never set
-  const activePlayerCount = tournament.participantCount - tournament.forfeits;
+  const activePlayerCount = tournament.participantCount;
   if (
     tournament.matchesCompleted >= tournament.matchesTotal &&
     tournament.matchesTotal > 0 &&

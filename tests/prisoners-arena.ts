@@ -295,7 +295,6 @@ describe("prisoners-arena", () => {
       expect(t.participantCount).to.equal(0);
       expect(t.pool.toNumber()).to.equal(0);
       expect(t.revealsCompleted).to.equal(0);
-      expect(t.forfeits).to.equal(0);
       expect(t.registrationEnds.toNumber()).to.be.greaterThan(0);
     });
 
@@ -967,6 +966,7 @@ describe("prisoners-arena", () => {
           .forfeitUnrevealed()
           .accounts({
             config: configKey, entry: eKey, tournament: t0Key,
+            slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
             operator: fake.publicKey,
           })
           .signers([fake])
@@ -1465,14 +1465,8 @@ describe("prisoners-arena", () => {
       }
     });
 
-    it("refund during Reveal phase succeeds", async () => {
-      // First close registration to enter Reveal state
-      await waitAndCloseRegistration(crTournamentKey);
-
-      const t = await program.account.tournament.fetch(crTournamentKey);
-      expect(t.state).to.deep.equal({ reveal: {} });
-
-      // Player 2 (index 2, AlwaysCooperate) claims refund during Reveal
+    it("refund during Registration phase succeeds", async () => {
+      // Player 2 (index 2, AlwaysCooperate) claims refund while still in Registration
       const p = crPlayers[2];
       const [eKey] = deriveE(pid, crTournamentKey, p.publicKey);
       const balBefore = await conn.getBalance(p.publicKey);
@@ -1488,6 +1482,30 @@ describe("prisoners-arena", () => {
 
       const balAfter = await conn.getBalance(p.publicKey);
       expect(balAfter).to.be.greaterThan(balBefore);
+    });
+
+    it("close_registration enters Reveal phase", async () => {
+      await waitAndCloseRegistration(crTournamentKey);
+      const t = await program.account.tournament.fetch(crTournamentKey);
+      expect(t.state).to.deep.equal({ reveal: {} });
+    });
+
+    it("refund during Reveal phase fails (InvalidState)", async () => {
+      // After M4 fix: refunds are only allowed during Registration
+      const [eKey] = deriveE(pid, crTournamentKey, crPlayers[0].publicKey);
+      try {
+        await program.methods
+          .claimRefund()
+          .accounts({
+            tournament: crTournamentKey, entry: eKey,
+            player: crPlayers[0].publicKey, systemProgram: SystemProgram.programId,
+          })
+          .signers([crPlayers[0]])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err) {
+        expect((err as AnchorError).error.errorCode.code).to.equal("InvalidState");
+      }
     });
 
     it("reveal with wrong strategy fails (CommitmentMismatch)", async () => {
@@ -1588,6 +1606,7 @@ describe("prisoners-arena", () => {
             .forfeitUnrevealed()
             .accounts({
               config: configKey, entry: eKey, tournament: crTournamentKey,
+              slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
               operator: operator.publicKey,
             })
             .signers([operator])
@@ -1612,6 +1631,7 @@ describe("prisoners-arena", () => {
           .forfeitUnrevealed()
           .accounts({
             config: configKey, entry: eKey, tournament: crTournamentKey,
+            slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
             operator: operator.publicKey,
           })
           .signers([operator])
@@ -1645,6 +1665,7 @@ describe("prisoners-arena", () => {
         .forfeitUnrevealed()
         .accounts({
           config: configKey, entry: eKey, tournament: crTournamentKey,
+          slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
           operator: operator.publicKey,
         })
         .signers([operator])
@@ -1655,7 +1676,6 @@ describe("prisoners-arena", () => {
       expect(entry.revealed).to.equal(true);
 
       const t = await program.account.tournament.fetch(crTournamentKey);
-      expect(t.forfeits).to.equal(0);
       expect(t.revealsCompleted).to.equal(2);
       // Player still in tournament
       expect(t.players[1].toString()).to.equal(crPlayers[1].publicKey.toString());
@@ -2261,6 +2281,7 @@ describe("prisoners-arena", () => {
                 .forfeitUnrevealed()
                 .accounts({
                   config: configKey, entry: eKey, tournament: tKey,
+                  slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
                   operator: operator.publicKey,
                 })
                 .signers([operator])
@@ -2372,6 +2393,7 @@ describe("prisoners-arena", () => {
             .forfeitUnrevealed()
             .accounts({
               config: configKey, entry: eKey, tournament: tCKey,
+              slotHashes: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY,
               operator: operator.publicKey,
             })
             .signers([operator])
@@ -2379,11 +2401,11 @@ describe("prisoners-arena", () => {
         }
 
         // Now all 3 are "revealed" (1 manually + 2 auto-assigned).
-        // active = participant_count - forfeits = 3 - 0 = 3 (odd).
+        // active = participant_count = 3 (odd).
         // But we may also have players from the MinParticipantsNotReached test.
         // Let's check the actual state.
         let t = await program.account.tournament.fetch(tCKey);
-        const activeCount = t.participantCount - t.forfeits;
+        const activeCount = t.participantCount;
 
         // Find the last active player for odd-count refund
         let lastActiveIdx = -1;
@@ -2412,6 +2434,11 @@ describe("prisoners-arena", () => {
         // Verify refund received
         const balAfter = await conn.getBalance(lastActivePlayer);
         expect(balAfter).to.be.greaterThan(balBefore);
+        // Entry account should no longer exist (closed in close_reveal)
+        const refundEntryInfo = await conn.getAccountInfo(lastEKey);
+        expect(refundEntryInfo).to.be.null;
+        // entries_remaining should reflect the decrement
+        expect(tAfter.entriesRemaining).to.equal(tAfter.participantCount);
       });
 
       it("finalize_tournament fails before all matches complete (MatchesIncomplete)", async () => {

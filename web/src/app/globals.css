@@ -165,3 +165,33 @@ body {
     animation: shine var(--duration, 14s) linear infinite;
   }
 }
+
+/* Medal gradients */
+.medal-gold { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.medal-silver { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
+.medal-bronze { background: linear-gradient(135deg, #f97316, #ea580c); }
+
+/* Glow filters */
+.glow-blue { filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.4)); }
+.glow-emerald { filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.4)); }
+
+/* Dark scrollbar */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1f1f1f transparent;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+}
+
+/* Countdown digit card */
+.countdown-digit {
+  background: var(--color-surface);
+  border: 1px solid var(--color-card-border);
+  border-radius: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}

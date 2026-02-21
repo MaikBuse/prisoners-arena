@@ -81,9 +81,10 @@ pub fn forfeit_unrevealed(
         AccountMeta::new_readonly(config_pda, false),
         AccountMeta::new(entry_pda, false),
         AccountMeta::new(tournament_pda, false),
+        AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
         AccountMeta::new(operator.pubkey(), true),
     ];
-    
+
     let instruction = Instruction {
         program_id: *program_id,
         accounts,

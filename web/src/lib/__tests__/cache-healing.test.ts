@@ -58,7 +58,6 @@ function makeTournament(overrides: Partial<TournamentAccount> = {}): TournamentA
     revealEnds: '1700050000',
     revealDuration: '3600',
     revealsCompleted: 4,
-    forfeits: 0,
     players: ['Alice111', 'Bob22222', 'Carol333', 'Dave4444'],
     scores: [80, 60, 40, 20],
     strategies: [0, 1, 2, 3],
@@ -357,8 +356,7 @@ describe('healClosedTournament()', () => {
       claimsProcessed: 0,
       entriesRemaining: 4,
       participantCount: 4,
-      forfeits: 0,
-      pool: '400000000',    // 4 SOL
+        pool: '400000000',    // 4 SOL
       houseFeeBps: 500,     // 5%
       operatorCosts: '0',
     });
@@ -423,8 +421,7 @@ describe('healClosedTournament()', () => {
       claimsProcessed: 0,
       entriesRemaining: 20,
       participantCount: 20,
-      forfeits: 0,
-      pool: '100000000000',
+        pool: '100000000000',
       houseFeeBps: 1000,  // 10%
       operatorCosts: '500000000',  // 0.5 SOL
       scores: Array.from({ length: 20 }, (_, i) => 100 - i),
@@ -527,8 +524,7 @@ describe('healClosedTournament()', () => {
       pool: '800000000',
       houseFeeBps: 0,
       operatorCosts: '0',
-      forfeits: 0,
-      players,
+        players,
       scores,
       strategies: Array(8).fill(0),
     });

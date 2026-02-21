@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { motion } from 'motion/react';
 import type { TournamentAccount } from '@/lib/solana';
 import type { ScoreboardEntry } from '@/lib/api';
 import { truncateAddress, explorerLink } from '@/lib/solana';
@@ -39,15 +40,23 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
   const hasMatches = (t.state === 'Running' || t.state === 'Payout') && t.matchesCompleted > 0;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    <motion.div
+      className="fixed inset-0 z-50 flex items-start pt-4 sm:pt-8 justify-center bg-black/50"
       onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
     >
-      <div
+      <motion.div
         className="relative w-[calc(100%-1rem)] sm:w-full max-w-2xl lg:max-w-4xl mx-2 sm:mx-4 neon-card rounded-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
+        initial={{ y: 40, scale: 0.97, opacity: 0 }}
+        animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 40, scale: 0.97, opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
       >
-      <div className="max-h-[90vh] sm:max-h-[85vh] overflow-y-auto">
+      <div className="max-h-[calc(100dvh-1rem)] sm:max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-card border-b border-card-border px-5 py-4 sm:px-6 sm:py-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
@@ -76,7 +85,7 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
             <span>Score: <span className="font-bold text-foreground">{entry.score}</span></span>
             <span>Matches: {entry.matchesPlayed} / {effectiveK(t.matchesPerPlayer, t.participantCount)}</span>
             {t.state === 'Payout' && (
-              <span>{entry.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : ''}</span>
+              <span>{entry.paidOut ? 'Claimed' : isWinner ? 'Unclaimed' : ''}</span>
             )}
           </div>
         </div>
@@ -94,7 +103,7 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
           )}
         </div>
       </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

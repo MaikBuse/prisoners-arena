@@ -268,7 +268,7 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
                      className="text-xs text-muted hover:text-foreground transition-colors">Explorer ↗</a>
-                  <a href={`/tournament/${t.id}`} className="text-xs text-accent font-medium hover:underline">
+                  <a href={`/explorer?t=${t.id}`} className="text-xs text-accent font-medium hover:underline">
                     Open full page ↗
                   </a>
                 </div>
@@ -575,7 +575,7 @@ export default function Home() {
             <h2 className="text-2xl font-bold mb-6">Past Tournaments</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {filtered.map(pt => (
-                <a key={pt.id} href={`/tournament/${pt.id}`} className="neon-card rounded-2xl p-5 hover:border-accent/50 transition-colors block">
+                <a key={pt.id} href={`/explorer?t=${pt.id}`} className="neon-card rounded-2xl p-5 hover:border-accent/50 transition-colors block">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-bold">Tournament #{pt.id}</span>
                     {(() => {
@@ -676,62 +676,67 @@ export default function Home() {
               </div>
             ))}
           </div>
+          <div className="mt-4 text-center">
+            <a href="/docs" className="text-sm text-accent hover:text-accent-hover font-medium">
+              Read the full protocol documentation →
+            </a>
+          </div>
         </div>
+      </section>
 
-        {/* Custom Strategy */}
-        <div className="mt-6 neon-card rounded-2xl p-6">
-          <h3 className="font-bold mb-2">Build Your Own Strategy</h3>
-          <p className="text-sm text-muted mb-4">
-            Go beyond the 9 builtins. Write your own decision logic as a compact bytecode program, executed on-chain each round.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-            {[
-              { icon: '🔬', title: 'Analyze & adapt', desc: 'Study past tournaments, find meta weaknesses, and craft a strategy that exploits them' },
-              { icon: '🧠', title: 'Express any logic', desc: '25 opcodes, history access, round counting, and RNG — enough to encode strategies no one has seen' },
-              { icon: '🏆', title: 'Competitive edge', desc: 'While others pick from 9 builtins, your custom program can counter the field precisely' },
-            ].map(item => (
-              <div key={item.title} className="flex items-start gap-3 bg-surface rounded-xl px-4 py-3 border border-card-border">
-                <span className="text-xl shrink-0">{item.icon}</span>
-                <div>
-                  <div className="font-medium text-sm">{item.title}</div>
-                  <div className="text-xs text-muted mt-0.5">{item.desc}</div>
+      {/* Build Your Own Strategy CTA */}
+      <section className="max-w-3xl mx-auto px-4 pb-16">
+        <div className="cta-section rounded-2xl p-4 sm:p-8 relative overflow-hidden">
+          <ShineBorder shineColor={["#10b981", "#34d399", "#10b981"]} borderWidth={2} duration={10} />
+          <h2 className="text-2xl font-bold mb-2 text-center text-white">Build Your Own Strategy</h2>
+          <p className="cta-muted text-center mb-6">Go beyond the 9 builtins. Write your own decision logic as a compact bytecode program, executed on-chain each round.</p>
+          <div className="cta-inner rounded-xl p-4 sm:p-6 border space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { icon: '🔬', title: 'Analyze & adapt', desc: 'Study past tournaments, find meta weaknesses, and craft a strategy that exploits them' },
+                { icon: '🧠', title: 'Express any logic', desc: '25 opcodes, history access, round counting, and RNG — enough to encode strategies no one has seen' },
+                { icon: '🏆', title: 'Competitive edge', desc: 'While others pick from 9 builtins, your custom program can counter the field precisely' },
+              ].map(item => (
+                <div key={item.title} className="flex items-start gap-3 bg-white/5 rounded-xl px-4 py-3 border border-white/10">
+                  <span className="text-xl shrink-0">{item.icon}</span>
+                  <div>
+                    <div className="font-medium text-sm text-white">{item.title}</div>
+                    <div className="text-xs cta-muted mt-0.5">{item.desc}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { icon: '📦', value: '64 bytes', label: 'max program' },
+                { icon: '⚡', value: '25 opcodes', label: 'instruction set' },
+                { icon: '📚', value: 'Stack VM', label: '8-deep, u8 values' },
+                { icon: '🛡️', value: 'Fail-safe', label: 'errors → cooperate' },
+              ].map(spec => (
+                <div key={spec.label} className="bg-white/5 rounded-xl px-3 py-2.5 border border-white/10 text-center">
+                  <div className="text-base mb-0.5">{spec.icon}</div>
+                  <div className="font-bold text-sm text-white">{spec.value}</div>
+                  <div className="text-xs cta-muted">{spec.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white/5 rounded-xl px-4 py-3 border border-white/10 flex items-baseline gap-3">
+              <span className="text-sm">💡</span>
+              <span className="text-xs cta-muted">Tit-for-Tat in 2 bytes:</span>
+              <code className="font-mono text-sm font-bold text-strat-indigo tracking-widest">02 18</code>
+              <span className="text-xs cta-muted font-mono">OPP_LAST RETURN</span>
+            </div>
           </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            {[
-              { icon: '📦', value: '64 bytes', label: 'max program' },
-              { icon: '⚡', value: '25 opcodes', label: 'instruction set' },
-              { icon: '📚', value: 'Stack VM', label: '8-deep, u8 values' },
-              { icon: '🛡️', value: 'Fail-safe', label: 'errors → cooperate' },
-            ].map(spec => (
-              <div key={spec.label} className="bg-surface rounded-xl px-3 py-2.5 border border-card-border text-center">
-                <div className="text-base mb-0.5">{spec.icon}</div>
-                <div className="font-bold text-sm">{spec.value}</div>
-                <div className="text-xs text-muted">{spec.label}</div>
-              </div>
-            ))}
+          <div className="flex flex-wrap justify-center gap-3 text-sm mt-6">
+            <a href="/docs/custom-strategy-vm" className="px-4 py-2 bg-accent/20 text-accent rounded-lg border border-accent/30 hover:bg-accent/30 transition-colors">
+              📜 VM Specification
+            </a>
+            <a href="/configure" className="px-4 py-2 bg-white/5 text-muted rounded-lg border border-card-border hover:text-white transition-colors">
+              🧪 Strategy Lab
+            </a>
           </div>
-
-          <div className="bg-surface rounded-xl px-4 py-3 border border-card-border flex items-baseline gap-3 mb-4">
-            <span className="text-sm">💡</span>
-            <span className="text-xs text-muted">Tit-for-Tat in 2 bytes:</span>
-            <code className="font-mono text-sm font-bold text-strat-indigo tracking-widest">02 18</code>
-            <span className="text-xs text-muted font-mono">OPP_LAST RETURN</span>
-          </div>
-
-          <a href="/docs/custom-strategy-vm" className="text-sm text-accent hover:text-accent-hover font-medium">
-            Read the full VM specification →
-          </a>
-        </div>
-
-        <div className="mt-6 text-center">
-          <a href="/docs" className="text-sm text-accent hover:text-accent-hover font-medium">
-            Read the full protocol documentation →
-          </a>
         </div>
       </section>
 

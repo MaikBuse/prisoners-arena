@@ -202,7 +202,6 @@ export interface TournamentAccount {
   revealEnds: string;           // v1.7
   revealDuration: string;       // v1.7
   revealsCompleted: number;     // v1.7
-  forfeits: number;             // v1.7
   players: string[];
   scores: number[];
   strategies: number[];
@@ -240,7 +239,6 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   const revealEnds = readI64LE(data, offset).toString(); offset += 8;
   const revealDuration = readI64LE(data, offset).toString(); offset += 8;
   const revealsCompleted = readU32LE(data, offset); offset += 4;
-  const forfeits = readU32LE(data, offset); offset += 4;
 
   const playersLen = readU32LE(data, offset); offset += 4;
   const players: string[] = [];
@@ -264,7 +262,7 @@ export function deserializeTournament(data: Buffer, address: string): Tournament
   // v1.8: operator_costs (reads from padding on old accounts → 0)
   const operatorCosts = (offset + 8 <= data.length) ? readU64LE(data, offset).toString() : '0';
 
-  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, forfeits, players, scores, strategies, bump, operatorCosts, address };
+  return { id, state, stake, houseFeeBps, matchesPerPlayer, registrationDuration, pool, participantCount, registrationEnds, matchesCompleted, matchesTotal, randomnessSeed, minWinningScore, winnerCount, winnerPool, claimsProcessed, payoutStartedAt, entriesRemaining, roundTier, revealEnds, revealDuration, revealsCompleted, players, scores, strategies, bump, operatorCosts, address };
 }
 
 export interface EntryAccount {
