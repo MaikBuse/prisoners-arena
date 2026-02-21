@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveNetworkFromHost } from './lib/network-config';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const hostname = request.headers.get('host')?.split(':')[0] ?? 'localhost';
   const network = resolveNetworkFromHost(hostname);
 

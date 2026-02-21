@@ -45,8 +45,8 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Standalone output (copy from nested app/ dir — Next.js mirrors WORKDIR structure)
-COPY --from=builder /app/.next/standalone/app ./
+# Standalone output
+COPY --from=builder /app/.next/standalone/ ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
