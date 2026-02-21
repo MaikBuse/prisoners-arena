@@ -48,7 +48,6 @@ pub struct Tournament {
     pub reveal_ends: i64,           // NEW v1.7
     pub reveal_duration: i64,       // NEW v1.7
     pub reveals_completed: u32,     // NEW v1.7
-    pub forfeits: u32,              // NEW v1.7
     // Note: players vec comes next in serialization, followed by bump, then operator_costs
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
@@ -152,7 +151,6 @@ impl Tournament {
         let reveal_ends = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let reveal_duration = i64::from_le_bytes(data[o..o + 8].try_into()?); o += 8;
         let reveals_completed = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
-        let forfeits = u32::from_le_bytes(data[o..o + 4].try_into()?); o += 4;
         // Vecs
         let players_len = u32::from_le_bytes(data[o..o + 4].try_into()?) as usize; o += 4;
         let mut players = Vec::with_capacity(players_len);
@@ -170,7 +168,7 @@ impl Tournament {
         } else {
             0
         };
-        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, forfeits, players, scores, strategies, bump, operator_costs })
+        Ok(Tournament { id, state, stake, house_fee_bps, matches_per_player, registration_duration, pool, participant_count, registration_ends, matches_completed, matches_total, randomness_seed, min_winning_score, winner_count, winner_pool, claims_processed, payout_started_at, entries_remaining, round_tier, reveal_ends, reveal_duration, reveals_completed, players, scores, strategies, bump, operator_costs })
     }
 }
 

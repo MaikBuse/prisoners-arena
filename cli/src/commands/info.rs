@@ -41,17 +41,13 @@ pub fn status(cfg: &ArenaConfig) -> Result<()> {
         }
         state::TournamentState::Reveal => {
             let remaining = tournament.reveal_ends - now;
-            let active = tournament.participant_count - tournament.forfeits;
-            println!("  Revealed:     {}/{}", tournament.reveals_completed, active);
+            println!("  Revealed:     {}/{}", tournament.reveals_completed, tournament.participant_count);
             if remaining > 0 {
                 let hours = remaining / 3600;
                 let mins = (remaining % 3600) / 60;
                 println!("  Time Left:    {}h {}m", hours, mins);
             } else {
                 println!("  Reveal:       EXPIRED (awaiting close)");
-            }
-            if tournament.forfeits > 0 {
-                println!("  Forfeits:     {}", tournament.forfeits);
             }
         }
         state::TournamentState::Running => {
@@ -84,9 +80,6 @@ pub fn tournament(cfg: &ArenaConfig, id: u32) -> Result<()> {
     if t.reveal_ends > 0 {
         println!("  Reveal Ends:        {}", t.reveal_ends);
         println!("  Reveals Completed:  {}", t.reveals_completed);
-    }
-    if t.forfeits > 0 {
-        println!("  Forfeits:           {}", t.forfeits);
     }
     println!("  Matches:            {}/{}", t.matches_completed, t.matches_total);
     if t.operator_costs > 0 {
