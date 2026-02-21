@@ -44,7 +44,6 @@ pub struct Tournament {
     pub reveal_ends: i64,           // NEW v1.7
     pub reveal_duration: i64,       // NEW v1.7
     pub reveals_completed: u32,     // NEW v1.7
-    pub forfeits: u32,              // NEW v1.7
     pub players: Vec<Pubkey>,
     pub scores: Vec<u32>,
     pub strategies: Vec<u8>,
@@ -234,10 +233,7 @@ impl Tournament {
         
         let reveals_completed = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
         offset += 4;
-        
-        let forfeits = u32::from_le_bytes(data[offset..offset + 4].try_into()?);
-        offset += 4;
-        
+
         // Vec<Pubkey> players
         let players_len = u32::from_le_bytes(data[offset..offset + 4].try_into()?) as usize;
         offset += 4;
@@ -298,7 +294,6 @@ impl Tournament {
             reveal_ends,
             reveal_duration,
             reveals_completed,
-            forfeits,
             players,
             scores,
             strategies,

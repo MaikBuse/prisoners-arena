@@ -142,7 +142,7 @@ pub fn close_reveal(
     let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament.id);
     
     // Check if we need to refund the last player (odd active count)
-    let active_count = tournament.participant_count - tournament.forfeits;
+    let active_count = tournament.participant_count;
     let need_refund = active_count % 2 == 1 && active_count > 0;
     
     let mut accounts = vec![
@@ -212,8 +212,7 @@ pub fn run_matches(
     let mut entry_accounts: Vec<AccountMeta> = Vec::new();
     let mut seen_entries: std::collections::HashSet<Pubkey> = std::collections::HashSet::new();
     
-    // Use active count for pairing (participant_count - forfeits)
-    let active_count = tournament.participant_count - tournament.forfeits;
+    let active_count = tournament.participant_count;
     
     for batch_idx in 0..matches_to_run {
         let match_index = tournament.matches_completed + batch_idx;

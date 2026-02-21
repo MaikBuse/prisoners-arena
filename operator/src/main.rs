@@ -327,7 +327,7 @@ async fn run_cycle(
         }
 
         TournamentState::Reveal => {
-            let active_count = tournament.participant_count - tournament.forfeits;
+            let active_count = tournament.participant_count;
             info!(
                 "Tournament #{} in Reveal | {}/{} revealed | deadline in {}s",
                 tournament.id,
