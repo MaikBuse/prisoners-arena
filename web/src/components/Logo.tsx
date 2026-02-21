@@ -12,23 +12,23 @@ export function Logo({ size = 80 }: { size?: number }) {
       {/* Hexagon */}
       <polygon
         points={hexPoints(cx, cy, s * 0.46)}
-        stroke="#10b981"
+        stroke="var(--color-accent)"
         strokeWidth={s * 0.02}
-        fill="rgba(16, 185, 129, 0.04)"
+        fill="color-mix(in srgb, var(--color-accent) 4%, transparent)"
       />
       {/* 2x2 grid centered */}
       {/* Top-left: CC (green) */}
       <rect x={cx - gridOffset} y={cy - gridOffset} width={cellSize} height={cellSize} rx={s * 0.02}
-        fill="rgba(16, 185, 129, 0.25)" stroke="#10b981" strokeWidth={s * 0.01} />
+        fill="color-mix(in srgb, var(--color-accent) 25%, transparent)" stroke="var(--color-accent)" strokeWidth={s * 0.01} />
       {/* Top-right: CD (red) */}
       <rect x={cx + gap / 2} y={cy - gridOffset} width={cellSize} height={cellSize} rx={s * 0.02}
-        fill="rgba(239, 68, 68, 0.25)" stroke="#ef4444" strokeWidth={s * 0.01} />
+        fill="color-mix(in srgb, var(--color-error) 25%, transparent)" stroke="var(--color-error)" strokeWidth={s * 0.01} />
       {/* Bottom-left: DC (red) */}
       <rect x={cx - gridOffset} y={cy + gap / 2} width={cellSize} height={cellSize} rx={s * 0.02}
-        fill="rgba(239, 68, 68, 0.25)" stroke="#ef4444" strokeWidth={s * 0.01} />
+        fill="color-mix(in srgb, var(--color-error) 25%, transparent)" stroke="var(--color-error)" strokeWidth={s * 0.01} />
       {/* Bottom-right: DD (gray) */}
       <rect x={cx + gap / 2} y={cy + gap / 2} width={cellSize} height={cellSize} rx={s * 0.02}
-        fill="rgba(107, 114, 128, 0.25)" stroke="#6b7280" strokeWidth={s * 0.01} />
+        fill="color-mix(in srgb, var(--color-muted) 25%, transparent)" stroke="var(--color-muted)" strokeWidth={s * 0.01} />
     </svg>
   );
 }

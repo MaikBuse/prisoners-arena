@@ -15,10 +15,10 @@ export default function ConfigurePage() {
     <>
       <Nav />
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
+        <a href="/" className="text-sm text-accent hover:text-accent-hover mb-6 inline-block">← Back to Arena</a>
         <div>
           <h1 className="text-2xl font-bold mb-1">Strategy Lab</h1>
-          <p className="text-sm text-[var(--muted)]">
+          <p className="text-sm text-muted">
             Preview strategy performance before entering a tournament.
           </p>
         </div>

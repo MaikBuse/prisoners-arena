@@ -30,16 +30,16 @@ export default function HowItWorksPage() {
     <>
     <Nav />
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
+      <a href="/" className="text-sm text-accent hover:text-accent-hover mb-6 inline-block">← Back to Arena</a>
 
       <h1 className="text-3xl font-bold mb-2">How It Works</h1>
-      <p className="text-[var(--muted)] mb-8">Complete protocol documentation for Prisoner&apos;s Arena. Everything about how the on-chain tournament works.</p>
+      <p className="text-muted mb-8">Complete protocol documentation for Prisoner&apos;s Arena. Everything about how the on-chain tournament works.</p>
 
       <div className="lg:flex lg:gap-10">
         {/* Sidebar TOC — desktop */}
         <nav className="hidden lg:block lg:w-48 shrink-0">
           <div className="sticky top-20">
-            <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Contents</div>
+            <div className="text-xs font-bold text-muted uppercase mb-3">Contents</div>
             <div className="space-y-1">
               {SECTIONS.map(s => (
                 <TOCLink key={s.id} id={s.id} label={s.label} />
@@ -52,7 +52,7 @@ export default function HowItWorksPage() {
         <nav className="lg:hidden mb-8 -mx-4 px-4 overflow-x-auto">
           <div className="flex gap-2 pb-2">
             {SECTIONS.map(s => (
-              <a key={s.id} href={`#${s.id}`} className="text-xs whitespace-nowrap px-3 py-1.5 rounded-full border border-[var(--card-border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)] transition-colors">
+              <a key={s.id} href={`#${s.id}`} className="text-xs whitespace-nowrap px-3 py-1.5 rounded-full border border-card-border text-muted hover:text-foreground hover:border-accent transition-colors">
                 {s.label}
               </a>
             ))}
@@ -64,49 +64,49 @@ export default function HowItWorksPage() {
 
           {/* Overview */}
           <Section id="overview" title="Overview">
-            <p className="text-[var(--muted)] mb-4">
+            <p className="text-muted mb-4">
               Prisoner&apos;s Arena is a competitive AI tournament platform on Solana that implements the Iterated Prisoner&apos;s Dilemma. Players stake SOL, select strategies, compete in automated matches, and the top 25% split the prize pool.
             </p>
-            <p className="text-[var(--muted)] mb-6">
+            <p className="text-muted mb-6">
               The entire tournament lifecycle is governed by an on-chain Solana program. Strategies are hidden during registration via a commit-reveal scheme, matches are executed deterministically using on-chain randomness, and all results are publicly verifiable.
             </p>
             <div className="space-y-3">
               <InfoRow label="Program ID">
                 <a href={explorerLink(programId)} target="_blank" rel="noopener noreferrer"
-                   className="font-mono text-[var(--accent)] hover:text-[var(--accent-hover)] break-all">{programId}</a>
+                   className="font-mono text-accent hover:text-accent-hover break-all">{programId}</a>
               </InfoRow>
               <InfoRow label="Network">
                 <span className="network-badge text-xs px-2 py-0.5 rounded-full font-mono">{network}</span>
               </InfoRow>
               <InfoRow label="Source">
                 <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
-                   className="text-[var(--accent)] hover:text-[var(--accent-hover)]">prisoners-arena-program ↗</a>
+                   className="text-accent hover:text-accent-hover">prisoners-arena-program ↗</a>
               </InfoRow>
             </div>
           </Section>
 
           {/* Tournament Lifecycle */}
           <Section id="lifecycle" title="Tournament Lifecycle">
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
               {[
                 { phase: 'Registration', badge: 'badge-registration', actor: 'Player', what: 'Stake SOL and submit a strategy commitment hash' },
                 { phase: 'Reveal', badge: 'badge-reveal', actor: 'Player', what: 'Submit the preimage (strategy + salt) to prove commitment' },
                 { phase: 'Running', badge: 'badge-running', actor: 'Operator', what: 'Execute matches in batches, record scores on-chain' },
                 { phase: 'Payout', badge: 'badge-payout', actor: 'Player', what: 'Winners claim their share of the prize pool' },
               ].map((p, i) => (
-                <div key={p.phase} className="flex items-center gap-2 shrink-0">
-                  <div className="neon-card rounded-xl p-4 w-44">
+                <div key={p.phase} className="neon-card rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-muted font-mono">{i + 1}.</span>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.badge}`}>{p.phase}</span>
-                    <div className="text-xs text-[var(--muted)] mt-2">{p.what}</div>
-                    <div className="text-[10px] text-[var(--muted)] mt-1">Actor: <strong>{p.actor}</strong></div>
                   </div>
-                  {i < 3 && <span className="text-[var(--muted)] text-lg shrink-0">→</span>}
+                  <div className="text-xs text-muted">{p.what}</div>
+                  <div className="text-[10px] text-muted mt-1">Actor: <strong>{p.actor}</strong></div>
                 </div>
               ))}
             </div>
 
             <DetailBlock summary="Timing details">
-              <ul className="list-disc list-inside text-sm text-[var(--muted)] space-y-1">
+              <ul className="list-disc list-inside text-sm text-muted space-y-1">
                 <li><strong>Registration duration:</strong> configured by admin</li>
                 <li><strong>Reveal duration:</strong> configured by admin, starts when registration closes</li>
                 <li><strong>Running:</strong> operator processes matches in batches of 5 until all complete</li>
@@ -118,41 +118,41 @@ export default function HowItWorksPage() {
 
           {/* Commit-Reveal */}
           <Section id="commit-reveal" title="Commit-Reveal Scheme">
-            <p className="text-[var(--muted)] mb-4">
+            <p className="text-muted mb-4">
               The commit-reveal scheme prevents strategy front-running. During registration, players submit only a hash of their strategy — nobody (including the operator) can see which strategies are in play until the reveal phase.
             </p>
 
             <div className="mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Built-in Strategies (0-8)</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-sm">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Built-in Strategies (0-8)</div>
+              <div className="bg-surface border border-card-border rounded-lg p-3 font-mono text-sm">
                 SHA256(strategy_byte || salt[16])
               </div>
-              <p className="text-xs text-[var(--muted)] mt-2">
+              <p className="text-xs text-muted mt-2">
                 17 bytes total: 1 byte strategy index, 16 bytes random salt.
               </p>
             </div>
 
             <div className="mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Custom Strategy (index 9)</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-sm">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Custom Strategy (index 9)</div>
+              <div className="bg-surface border border-card-border rounded-lg p-3 font-mono text-sm">
                 SHA256(9u8 || SHA256(bytecode) || salt[16])
               </div>
-              <p className="text-xs text-[var(--muted)] mt-2">
-                49 bytes total: 1 byte (always 9), 32 bytes SHA256 of bytecode, 16 bytes random salt. See <a href="/docs/custom-strategy-vm#commit-reveal" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Custom Strategy VM</a> for details.
+              <p className="text-xs text-muted mt-2">
+                49 bytes total: 1 byte (always 9), 32 bytes SHA256 of bytecode, 16 bytes random salt. See <a href="/docs/custom-strategy-vm#commit-reveal" className="text-accent hover:text-accent-hover">Custom Strategy VM</a> for details.
               </p>
             </div>
 
             <div className="mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Reveal Verification</div>
-              <p className="text-sm text-[var(--muted)]">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Reveal Verification</div>
+              <p className="text-sm text-muted">
                 During the reveal phase, the player submits the preimage (strategy, salt). The program recomputes SHA256 and verifies it matches the stored commitment. If it doesn&apos;t match, the reveal is rejected.
               </p>
             </div>
 
             <div>
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Forfeit Handling</div>
-              <p className="text-sm text-[var(--muted)]">
-                If a player fails to reveal before the deadline, they are assigned a deterministic fallback strategy based on <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code>. This ensures every registered player competes — no one can grief by withholding their reveal.
+              <div className="text-xs font-bold text-muted uppercase mb-2">Forfeit Handling</div>
+              <p className="text-sm text-muted">
+                If a player fails to reveal before the deadline, they are assigned a deterministic fallback strategy based on <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code>. This ensures every registered player competes — no one can grief by withholding their reveal.
               </p>
             </div>
 
@@ -160,52 +160,52 @@ export default function HowItWorksPage() {
 
           {/* Payoff Matrix */}
           <Section id="payoff-matrix" title="The Payoff Matrix">
-            <p className="text-sm text-[var(--muted)] mb-4">Each round, two players simultaneously choose to <strong>Cooperate</strong> or <strong>Defect</strong>:</p>
+            <p className="text-sm text-muted mb-4">Each round, two players simultaneously choose to <strong>Cooperate</strong> or <strong>Defect</strong>:</p>
             <div className="overflow-x-auto mb-4">
-              <table className="w-full text-sm border border-[var(--card-border)] rounded overflow-hidden">
+              <table className="w-full text-sm border border-card-border rounded overflow-hidden">
                 <thead>
-                  <tr className="bg-neutral-50">
-                    <th className="p-3 border-b border-r border-[var(--card-border)]"></th>
-                    <th className="p-3 border-b border-r border-[var(--card-border)] text-emerald-600">They: C</th>
-                    <th className="p-3 border-b border-[var(--card-border)] text-red-600">They: D</th>
+                  <tr className="bg-surface">
+                    <th className="p-3 border-b border-r border-card-border"></th>
+                    <th className="p-3 border-b border-r border-card-border text-accent">They: C</th>
+                    <th className="p-3 border-b border-card-border text-error">They: D</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="p-3 border-b border-r border-[var(--card-border)] font-bold text-emerald-600 bg-neutral-50">You: C</td>
-                    <td className="p-3 border-b border-r border-[var(--card-border)] text-center font-mono">3, 3</td>
-                    <td className="p-3 border-b border-[var(--card-border)] text-center font-mono text-red-600">0, 5</td>
+                    <td className="p-3 border-b border-r border-card-border font-bold text-accent bg-surface">You: C</td>
+                    <td className="p-3 border-b border-r border-card-border text-center font-mono">3, 3</td>
+                    <td className="p-3 border-b border-card-border text-center font-mono text-error">0, 5</td>
                   </tr>
                   <tr>
-                    <td className="p-3 border-r border-[var(--card-border)] font-bold text-red-600 bg-neutral-50">You: D</td>
-                    <td className="p-3 border-r border-[var(--card-border)] text-center font-mono text-amber-600">5, 0</td>
-                    <td className="p-3 text-center font-mono text-[var(--muted)]">1, 1</td>
+                    <td className="p-3 border-r border-card-border font-bold text-error bg-surface">You: D</td>
+                    <td className="p-3 border-r border-card-border text-center font-mono text-warning">5, 0</td>
+                    <td className="p-3 text-center font-mono text-muted">1, 1</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <OutcomeCard name="Reward" scores="3, 3" desc="Both cooperate" color="text-emerald-600" />
-              <OutcomeCard name="Punishment" scores="1, 1" desc="Both defect" color="text-[var(--muted)]" />
-              <OutcomeCard name="Temptation" scores="5, 0" desc="You defect, they cooperate" color="text-amber-600" />
-              <OutcomeCard name="Sucker" scores="0, 5" desc="You cooperate, they defect" color="text-red-600" />
+              <OutcomeCard name="Reward" scores="3, 3" desc="Both cooperate" color="text-accent" />
+              <OutcomeCard name="Punishment" scores="1, 1" desc="Both defect" color="text-muted" />
+              <OutcomeCard name="Temptation" scores="5, 0" desc="You defect, they cooperate" color="text-warning" />
+              <OutcomeCard name="Sucker" scores="0, 5" desc="You cooperate, they defect" color="text-error" />
             </div>
 
-            <p className="text-sm text-[var(--muted)]">
+            <p className="text-sm text-muted">
               Defecting wins individual rounds, but cooperation wins tournaments. Mutual cooperation (3+3=6 total) creates more value than mutual defection (1+1=2 total). The best strategies balance retaliation with forgiveness.
             </p>
           </Section>
 
           {/* Strategies */}
           <Section id="strategies" title="Strategies">
-            <p className="text-sm text-[var(--muted)] mb-4">
+            <p className="text-sm text-muted mb-4">
               There are 9 built-in strategies. Each implements a different decision-making algorithm for choosing Cooperate or Defect each round.
             </p>
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+            <div className="bg-surface border border-card-border rounded-xl overflow-hidden mb-4">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                  <tr className="border-b border-card-border text-muted text-xs">
                     <th className="px-4 py-3 text-left w-12">Index</th>
                     <th className="px-4 py-3 text-left">Name</th>
                     <th className="px-4 py-3 text-left hidden md:table-cell">Description</th>
@@ -213,30 +213,30 @@ export default function HowItWorksPage() {
                 </thead>
                 <tbody>
                   {STRATEGIES.map(s => (
-                    <tr key={s.index} className="border-b border-[var(--card-border)] last:border-0">
-                      <td className="px-4 py-2 font-mono text-[var(--muted)]">{s.index}</td>
+                    <tr key={s.index} className="border-b border-card-border last:border-0">
+                      <td className="px-4 py-2 font-mono text-muted">{s.index}</td>
                       <td className="px-4 py-2">
-                        <span className="font-mono text-[var(--accent)] text-sm">{s.key}</span>
-                        <div className="text-xs text-[var(--muted)] md:hidden mt-0.5">{STRATEGY_CONFIGS[s.index].description}</div>
+                        <span className="font-mono text-accent text-sm">{s.key}</span>
+                        <div className="text-xs text-muted md:hidden mt-0.5">{STRATEGY_CONFIGS[s.index].description}</div>
                       </td>
-                      <td className="px-4 py-2 text-[var(--muted)] text-xs hidden md:table-cell">{STRATEGY_CONFIGS[s.index].description}</td>
+                      <td className="px-4 py-2 text-muted text-xs hidden md:table-cell">{STRATEGY_CONFIGS[s.index].description}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <a href="/configure" className="block group mt-4">
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-2xl p-5 flex items-center gap-5 hover:border-[var(--accent)] transition-all">
-                <div className="shrink-0 w-12 h-12 rounded-xl bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg className="w-6 h-6 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <div className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-5 hover:border-accent transition-all">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-background border border-card-border flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 20h9" /><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838.838-2.872a2 2 0 0 1 .506-.855z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold mb-0.5">Strategy Lab</div>
-                  <p className="text-sm text-[var(--muted)]">Simulate every strategy matchup interactively. Write custom bytecode programs with live WASM validation and preview.</p>
+                  <p className="text-sm text-muted">Simulate every strategy matchup interactively. Write custom bytecode programs with live WASM validation and preview.</p>
                 </div>
-                <svg className="w-5 h-5 text-[var(--muted)] shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5 text-muted shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </div>
@@ -245,57 +245,57 @@ export default function HowItWorksPage() {
 
           {/* Matching Algorithm */}
           <Section id="matching" title="Matching Algorithm">
-            <p className="text-sm text-[var(--muted)] mb-4">
+            <p className="text-sm text-muted mb-4">
               The number of matches each player plays (K) is determined adaptively based on the number of participants:
             </p>
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+            <div className="bg-surface border border-card-border rounded-xl overflow-hidden mb-4">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                  <tr className="border-b border-card-border text-muted text-xs">
                     <th className="px-4 py-3 text-left">Players (n)</th>
                     <th className="px-4 py-3 text-left">Effective K</th>
                     <th className="px-4 py-3 text-left">Method</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-[var(--card-border)]">
+                  <tr className="border-b border-card-border">
                     <td className="px-4 py-2">n ≤ 200</td>
                     <td className="px-4 py-2 font-mono">n − 1</td>
-                    <td className="px-4 py-2 text-[var(--muted)]">Full round-robin (every player faces every other)</td>
+                    <td className="px-4 py-2 text-muted">Full round-robin (every player faces every other)</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2">n &gt; 200</td>
                     <td className="px-4 py-2 font-mono">clamp(K, 49, 99)</td>
-                    <td className="px-4 py-2 text-[var(--muted)]">Circular offset pairing</td>
+                    <td className="px-4 py-2 text-muted">Circular offset pairing</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div className="space-y-3 text-sm text-[var(--muted)]">
+            <div className="space-y-3 text-sm text-muted">
               <p>
-                <strong>Total matches:</strong> <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">n × K / 2</code> — each match involves two players, so total unique pairings is half the sum of all individual match counts.
+                <strong>Total matches:</strong> <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">n × K / 2</code> — each match involves two players, so total unique pairings is half the sum of all individual match counts.
               </p>
               <p>
                 <strong>Pairing method:</strong> For small tournaments (≤200 players), full round-robin ensures every player faces every other player exactly once. For larger tournaments, circular offset pairing distributes opponents evenly.
               </p>
               <p>
-                <strong>Deterministic seed:</strong> The randomness seed is derived from <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">SlotHashes[16..48]</code> with the first 4 bytes XOR&apos;d with <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">tournament_id</code>, captured at the moment the reveal phase closes. This seed drives round counts and per-round RNG. The operator cannot manipulate it.
+                <strong>Deterministic seed:</strong> The randomness seed is derived from <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">SlotHashes[16..48]</code> with the first 4 bytes XOR&apos;d with <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">tournament_id</code>, captured at the moment the reveal phase closes. This seed drives round counts and per-round RNG. The operator cannot manipulate it.
               </p>
             </div>
 
             <a href="/matchmaking" className="block group mt-4">
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-2xl p-5 flex items-center gap-5 hover:border-[var(--accent)] transition-all">
-                <div className="shrink-0 w-12 h-12 rounded-xl bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <svg className="w-6 h-6 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <div className="bg-surface border border-card-border rounded-2xl p-5 flex items-center gap-5 hover:border-accent transition-all">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-background border border-card-border flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold mb-0.5">Matchmaking Visualizer</div>
-                  <p className="text-sm text-[var(--muted)]">See how pairings are generated, explore the round-robin and circular offset algorithms, and verify match fairness interactively.</p>
+                  <p className="text-sm text-muted">See how pairings are generated, explore the round-robin and circular offset algorithms, and verify match fairness interactively.</p>
                 </div>
-                <svg className="w-5 h-5 text-[var(--muted)] shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5 text-muted shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </div>
@@ -304,35 +304,35 @@ export default function HowItWorksPage() {
 
           {/* Rounds & Scoring */}
           <Section id="rounds" title="Rounds & Scoring">
-            <p className="text-sm text-[var(--muted)] mb-4">
+            <p className="text-sm text-muted mb-4">
               Each match consists of a variable number of rounds, determined by a geometric distribution. Players don&apos;t know exactly when the match will end, preventing end-game exploitation.
             </p>
 
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+            <div className="bg-surface border border-card-border rounded-xl overflow-hidden mb-4">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                  <tr className="border-b border-card-border text-muted text-xs">
                     <th className="px-4 py-3 text-left">Round Tier</th>
                     <th className="px-4 py-3 text-left">Range</th>
                     <th className="px-4 py-3 text-left">End Probability</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-[var(--card-border)]">
+                  <tr className="border-b border-card-border">
                     <td className="px-4 py-2 font-medium">Standard</td>
                     <td className="px-4 py-2 font-mono">20–50 rounds</td>
-                    <td className="px-4 py-2 text-[var(--muted)]">5% per round after minimum</td>
+                    <td className="px-4 py-2 text-muted">5% per round after minimum</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2 font-medium">Compressed</td>
                     <td className="px-4 py-2 font-mono">10–30 rounds</td>
-                    <td className="px-4 py-2 text-[var(--muted)]">7% per round after minimum</td>
+                    <td className="px-4 py-2 text-muted">7% per round after minimum</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div className="space-y-3 text-sm text-[var(--muted)]">
+            <div className="space-y-3 text-sm text-muted">
               <p>
                 <strong>Geometric distribution:</strong> After reaching the minimum round count, each subsequent round has a fixed probability of being the last. This creates unpredictable match lengths that average near the midpoint of the range.
               </p>
@@ -347,35 +347,35 @@ export default function HowItWorksPage() {
 
           {/* Fees & Payouts */}
           <Section id="payouts" title="Fees & Payouts">
-            <p className="text-sm text-[var(--muted)] mb-4">
+            <p className="text-sm text-muted mb-4">
               The total prize pool comes from all player stakes. Before distribution, fees are deducted:
             </p>
 
             <div className="neon-card rounded-xl p-4 mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Pool Breakdown (illustrative)</div>
+              <div className="text-xs font-bold text-muted uppercase mb-3">Pool Breakdown (illustrative)</div>
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-full bg-neutral-100 rounded-full h-6 overflow-hidden flex">
-                    <div className="bg-emerald-500 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 8 }}>
+                  <div className="w-full bg-skeleton rounded-full h-6 overflow-hidden flex">
+                    <div className="bg-accent h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 8 }}>
                       Winner Pool
                     </div>
-                    <div className="bg-amber-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 1 }}>
+                    <div className="bg-warning h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 1 }}>
                       Op
                     </div>
-                    <div className="bg-neutral-400 h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 1 }}>
+                    <div className="bg-muted h-full flex items-center justify-center text-white text-[10px] font-bold" style={{ flex: 1 }}>
                       Fee
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Winner Pool (remaining after fees)</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400" /> Operator Reimbursement (tx costs)</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-neutral-400" /> House Fee (configurable bps)</span>
+                <div className="flex flex-wrap gap-4 text-xs text-muted">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-accent" /> Winner Pool (remaining after fees)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-warning" /> Operator Reimbursement (tx costs)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-muted" /> House Fee (configurable bps)</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 text-sm text-[var(--muted)]">
+            <div className="space-y-3 text-sm text-muted">
               <p>
                 <strong>House fee:</strong> Configurable in basis points (1 bps = 0.01%). Currently set by the admin. Deducted from the total pool before winner distribution.
               </p>
@@ -393,7 +393,7 @@ export default function HowItWorksPage() {
 
           {/* On-Chain Accounts */}
           <Section id="accounts" title="On-Chain Accounts">
-            <p className="text-sm text-[var(--muted)] mb-4">
+            <p className="text-sm text-muted mb-4">
               The program uses 3 PDA (Program Derived Address) types. All state is fully on-chain.
             </p>
 
@@ -423,29 +423,29 @@ export default function HowItWorksPage() {
               ].map(item => (
                 <div key={item.title} className="neon-card rounded-xl p-4">
                   <div className="font-bold text-sm mb-1">{item.title}</div>
-                  <div className="text-xs text-[var(--muted)]">{item.desc}</div>
+                  <div className="text-xs text-muted">{item.desc}</div>
                 </div>
               ))}
             </div>
 
             <DetailBlock summary="How to verify the program binary">
-              <div className="text-sm text-[var(--muted)] space-y-2">
-                <p>Anyone can verify that the deployed program matches the public source code using <a href="https://github.com/Ellipsis-Labs/solana-verifiable-build" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">solana-verify</a>:</p>
-                <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-xs">
+              <div className="text-sm text-muted space-y-2">
+                <p>Anyone can verify that the deployed program matches the public source code using <a href="https://github.com/Ellipsis-Labs/solana-verifiable-build" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover">solana-verify</a>:</p>
+                <div className="bg-surface border border-card-border rounded-lg p-3 font-mono text-xs">
                   solana-verify verify-from-repo \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;https://github.com/makoto-kusanagi/prisoners-arena-program \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;--program-id {'<PROGRAM_ID>'} \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;--library-name prisoners_arena
                 </div>
-                <p>The program ID can be found via the <a href="/api/config" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">config API</a> or on the homepage.</p>
+                <p>The program ID can be found via the <a href="/api/config" className="text-accent hover:text-accent-hover">config API</a> or on the homepage.</p>
               </div>
             </DetailBlock>
 
             <DetailBlock summary="How to replay matches locally">
-              <div className="text-sm text-[var(--muted)] space-y-2">
-                <p>The <code className="bg-[var(--surface)] px-1 rounded text-xs font-mono">match-logic</code> crate is the same code used on-chain and by the operator. To replay:</p>
+              <div className="text-sm text-muted space-y-2">
+                <p>The <code className="bg-surface px-1 rounded text-xs font-mono">match-logic</code> crate is the same code used on-chain and by the operator. To replay:</p>
                 <p>1. Fetch the tournament&apos;s randomness seed and all player strategies from the API</p>
-                <p>2. Use the <code className="bg-[var(--surface)] px-1 rounded text-xs font-mono">match-logic</code> crate to generate pairings and execute matches with the same seed</p>
+                <p>2. Use the <code className="bg-surface px-1 rounded text-xs font-mono">match-logic</code> crate to generate pairings and execute matches with the same seed</p>
                 <p>3. Compare computed scores against on-chain values to confirm correctness</p>
               </div>
             </DetailBlock>
@@ -465,7 +465,7 @@ export default function HowItWorksPage() {
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id}>
-      <h2 className="text-xl font-bold mb-4 border-b border-[var(--card-border)] pb-2">{title}</h2>
+      <h2 className="text-xl font-bold mb-4 border-b border-card-border pb-2">{title}</h2>
       {children}
     </section>
   );
@@ -474,7 +474,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 function TOCLink({ id, label }: { id: string; label: string }) {
   return (
     <a href={`#${id}`}
-       className="block text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-l-2 hover:border-[var(--accent)] pl-3 py-1 transition-all">
+       className="block text-sm text-muted hover:text-foreground hover:border-l-2 hover:border-accent pl-3 py-1 transition-all">
       {label}
     </a>
   );
@@ -483,8 +483,8 @@ function TOCLink({ id, label }: { id: string; label: string }) {
 function DetailBlock({ summary, children }: { summary: string; children: React.ReactNode }) {
   return (
     <details className="mt-3">
-      <summary className="text-xs text-[var(--muted)] cursor-pointer hover:text-[var(--foreground)] font-medium">{summary}</summary>
-      <div className="mt-2 bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-4">
+      <summary className="text-xs text-muted cursor-pointer hover:text-foreground font-medium">{summary}</summary>
+      <div className="mt-2 bg-surface border border-card-border rounded-lg p-4">
         {children}
       </div>
     </details>
@@ -494,7 +494,7 @@ function DetailBlock({ summary, children }: { summary: string; children: React.R
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4 text-sm">
-      <span className="text-[var(--muted)] w-28 shrink-0">{label}</span>
+      <span className="text-muted w-28 shrink-0">{label}</span>
       <div>{children}</div>
     </div>
   );
@@ -502,22 +502,22 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 
 function OutcomeCard({ name, scores, desc, color }: { name: string; scores: string; desc: string; color: string }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 text-center">
-      <div className="text-xs text-[var(--muted)]">{name}</div>
+    <div className="bg-surface border border-card-border rounded-lg p-3 text-center">
+      <div className="text-xs text-muted">{name}</div>
       <div className={`font-mono font-bold ${color}`}>{scores}</div>
-      <div className="text-[10px] text-[var(--muted)]">{desc}</div>
+      <div className="text-[10px] text-muted">{desc}</div>
     </div>
   );
 }
 
 function PDARow({ name, seeds, desc }: { name: string; seeds: string[]; desc: string }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-3">
+    <div className="bg-surface border border-card-border rounded-lg px-4 py-3">
       <div className="flex items-center gap-4 text-sm mb-1">
         <span className="font-bold w-24">{name}</span>
-        <code className="font-mono text-[var(--accent)] text-xs">[{seeds.join(', ')}]</code>
+        <code className="font-mono text-accent text-xs">[{seeds.join(', ')}]</code>
       </div>
-      <div className="text-xs text-[var(--muted)]">{desc}</div>
+      <div className="text-xs text-muted">{desc}</div>
     </div>
   );
 }
@@ -526,7 +526,7 @@ function DiscRow({ name, bytes }: { name: string; bytes: string }) {
   return (
     <div className="flex items-center gap-4">
       <span className="font-bold w-24">{name}</span>
-      <code className="font-mono text-xs text-[var(--muted)]">{bytes}</code>
+      <code className="font-mono text-xs text-muted">{bytes}</code>
     </div>
   );
 }

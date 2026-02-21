@@ -94,10 +94,10 @@ export function BytecodeEditor({ bytecode, onChange }: Props) {
   }, [source, onChange]);
 
   const byteCount = assemblyResult?.bytecode?.length ?? 0;
-  const byteColor = byteCount === 0 ? 'text-[var(--muted)]'
-    : byteCount <= 48 ? 'text-green-600'
-    : byteCount <= 64 ? 'text-amber-600'
-    : 'text-red-600';
+  const byteColor = byteCount === 0 ? 'text-muted'
+    : byteCount <= 48 ? 'text-success'
+    : byteCount <= 64 ? 'text-warning'
+    : 'text-error';
 
   const hexDump = assemblyResult?.bytecode
     ? `[${assemblyResult.bytecode.map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`
@@ -110,12 +110,12 @@ export function BytecodeEditor({ bytecode, onChange }: Props) {
     <div className="space-y-3">
       {/* Example loader */}
       <div className="flex flex-wrap gap-1.5">
-        <span className="text-xs text-[var(--muted)] self-center mr-1">Examples:</span>
+        <span className="text-xs text-muted self-center mr-1">Examples:</span>
         {EXAMPLE_PROGRAMS.map(ex => (
           <button
             key={ex.name}
             onClick={() => loadExample(ex.bytecode)}
-            className="px-2 py-0.5 text-[11px] rounded border border-[var(--card-border)] text-[var(--muted)] hover:border-indigo-400 hover:text-indigo-600 transition-colors cursor-pointer"
+            className="px-2 py-0.5 text-[11px] rounded border border-card-border text-muted hover:border-strat-indigo hover:text-strat-indigo transition-colors cursor-pointer"
           >
             {ex.name}
           </button>
@@ -127,7 +127,7 @@ export function BytecodeEditor({ bytecode, onChange }: Props) {
         value={source}
         onChange={e => setSource(e.target.value)}
         placeholder={`; Write assembly here\n; Example: OPP_LAST RETURN\n;\n; Use examples above to get started`}
-        className="w-full min-h-[200px] font-mono text-sm bg-neutral-50 border border-[var(--card-border)] rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-300 whitespace-pre overflow-x-auto"
+        className="w-full min-h-[200px] font-mono text-sm bg-surface border border-card-border rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-strat-indigo whitespace-pre overflow-x-auto"
         spellCheck={false}
       />
 
@@ -138,10 +138,10 @@ export function BytecodeEditor({ bytecode, onChange }: Props) {
             {byteCount} / 64 bytes
           </span>
           {validation.loading && (
-            <span className="text-[var(--muted)]">Validating...</span>
+            <span className="text-muted">Validating...</span>
           )}
           {!validation.loading && assemblyResult?.bytecode && validation.valid && (
-            <span className="text-green-600 flex items-center gap-1">
+            <span className="text-success flex items-center gap-1">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
@@ -149,14 +149,14 @@ export function BytecodeEditor({ bytecode, onChange }: Props) {
             </span>
           )}
           {hasWasmError && (
-            <span className="text-red-600">{validation.error}</span>
+            <span className="text-error">{validation.error}</span>
           )}
         </div>
       </div>
 
       {/* Assembly errors */}
       {hasErrors && (
-        <div className="text-xs text-red-600 space-y-0.5">
+        <div className="text-xs text-error space-y-0.5">
           {assemblyResult!.errors.map((err, i) => (
             <div key={i}>{err}</div>
           ))}
@@ -168,14 +168,14 @@ export function BytecodeEditor({ bytecode, onChange }: Props) {
         <div>
           <button
             onClick={() => setHexOpen(!hexOpen)}
-            className="text-[11px] text-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer flex items-center gap-1"
+            className="text-[11px] text-muted hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
           >
             <span>{hexOpen ? '▾' : '▸'}</span>
             Hex dump
           </button>
           {hexOpen && (
             <div className="relative mt-1">
-              <pre className="text-[11px] font-mono bg-neutral-50 border border-[var(--card-border)] rounded p-2 overflow-x-auto">
+              <pre className="text-[11px] font-mono bg-surface border border-card-border rounded p-2 overflow-x-auto">
                 {hexDump}
               </pre>
               <div className="absolute top-1 right-1">

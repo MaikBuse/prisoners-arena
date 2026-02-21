@@ -11,11 +11,6 @@ import { PlayerDetailModal } from '@/components/PlayerDetailModal';
 import { displayState } from '@/lib/tournament-utils';
 import { effectiveK } from '@/lib/matchmaking';
 
-const BAR_COLORS: Record<string, string> = {
-  blue: 'bar-blue', red: 'bar-red', green: 'bar-green', purple: 'bar-purple',
-  amber: 'bar-amber', orange: 'bar-orange', gray: 'bar-gray', cyan: 'bar-cyan', pink: 'bar-pink',
-};
-
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [tournament, setTournament] = useState<TournamentAccount | null>(null);
@@ -96,16 +91,16 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         {loading ? (
           <div className="space-y-6">
             <div className="neon-card rounded-2xl p-8 animate-pulse">
-              <div className="h-8 bg-neutral-200 rounded w-1/3 mb-4" />
-              <div className="h-24 bg-neutral-200 rounded" />
+              <div className="h-8 bg-skeleton rounded w-1/3 mb-4" />
+              <div className="h-24 bg-skeleton rounded" />
             </div>
           </div>
         ) : error && !t ? (
           <div className="neon-card rounded-2xl p-8 text-center">
-            <p className="text-red-600 font-medium mb-3">⚠️ {error}</p>
+            <p className="text-error font-medium mb-3">⚠️ {error}</p>
             <button
               onClick={() => { setLoading(true); setError(null); fetchData(); }}
-              className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white font-medium hover:opacity-90 transition-opacity"
+              className="px-4 py-2 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
             >
               Retry
             </button>
@@ -114,8 +109,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           <div className="neon-card rounded-2xl p-12 text-center">
             <div className="text-4xl mb-4">🔍</div>
             <h2 className="text-xl font-bold mb-2">Tournament Not Found</h2>
-            <p className="text-[var(--muted)]">Tournament #{id} doesn&apos;t exist or hasn&apos;t been created yet.</p>
-            <a href="/" className="inline-block mt-4 text-[var(--accent)] hover:text-[var(--accent-hover)]">← Back to Dashboard</a>
+            <p className="text-muted">Tournament #{id} doesn&apos;t exist or hasn&apos;t been created yet.</p>
+            <a href="/" className="inline-block mt-4 text-accent hover:text-accent-hover">← Back to Dashboard</a>
           </div>
         ) : (
           <div className="space-y-6">
@@ -137,7 +132,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   })()}
                 </div>
                 <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer"
-                   className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                   className="text-xs text-muted hover:text-foreground transition-colors">
                   Explorer ↗
                 </a>
               </div>
@@ -156,12 +151,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                 const deadlinePassed = nowSec >= Number(t.registrationEnds);
                 const needed = Math.max(0, minParticipants - t.participantCount);
                 return (
-                  <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+                  <div className="mt-6 pt-6 border-t border-card-border">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {deadlinePassed && needed > 0 ? (
                         <div className="text-center">
-                          <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">Registration Open</div>
-                          <div className="text-2xl font-bold font-mono text-amber-500">
+                          <div className="text-xs text-muted uppercase tracking-wider mb-1">Registration Open</div>
+                          <div className="text-2xl font-bold font-mono text-warning">
                             Waiting for {needed} more player{needed !== 1 ? 's' : ''}
                           </div>
                         </div>
@@ -170,12 +165,12 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                           targetTimestamp={Number(t.registrationEnds)}
                           label="Registration Ends"
                           expiredText="Starting soon"
-                          expiredClassName="text-emerald-500"
+                          expiredClassName="text-accent"
                         />
                       )}
                       <div className="flex flex-col items-center justify-center">
                         <div className="text-4xl font-bold">{t.participantCount}</div>
-                        <div className="text-sm text-[var(--muted)] mt-1">participants registered</div>
+                        <div className="text-sm text-muted mt-1">participants registered</div>
                       </div>
                     </div>
                   </div>
@@ -183,38 +178,38 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               })()}
 
               {t.state === 'Reveal' && (
-                <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+                <div className="mt-6 pt-6 border-t border-card-border">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <CountdownTimer
                       targetTimestamp={Number(t.revealEnds)}
                       label="Reveal Ends"
                       expiredText="Closing soon"
-                      expiredClassName="text-amber-500"
+                      expiredClassName="text-warning"
                     />
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-4xl font-bold">{t.revealsCompleted} / {t.participantCount}</div>
-                      <div className="text-sm text-[var(--muted)] mt-1">strategies revealed</div>
+                      <div className="text-sm text-muted mt-1">strategies revealed</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {t.state === 'Running' && (
-                <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
-                  <div className="flex items-center justify-between text-sm text-[var(--muted)] mb-2">
+                <div className="mt-6 pt-6 border-t border-card-border">
+                  <div className="flex items-center justify-between text-sm text-muted mb-2">
                     <span>Match Progress</span>
                     <span className="font-mono">{t.matchesCompleted} / {t.matchesTotal} ({t.matchesTotal > 0 ? Math.round(t.matchesCompleted / t.matchesTotal * 100) : 0}%)</span>
                   </div>
-                  <div className="bg-neutral-100 rounded-full h-4 overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                  <div className="bg-skeleton rounded-full h-4 overflow-hidden">
+                    <div className="h-full bg-info rounded-full transition-all duration-1000"
                       style={{ width: `${t.matchesTotal > 0 ? (t.matchesCompleted / t.matchesTotal * 100) : 0}%` }} />
                   </div>
-                  <div className="text-xs text-[var(--muted)] mt-2">K={effectiveK(t.matchesPerPlayer, t.participantCount)} matches per player</div>
+                  <div className="text-xs text-muted mt-2">K={effectiveK(t.matchesPerPlayer, t.participantCount)} matches per player</div>
                 </div>
               )}
 
               {t.state === 'Payout' && (
-                <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
+                <div className="mt-6 pt-6 border-t border-card-border">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <StatCard label="🏆 Winners" value={String(t.winnerCount)} />
                     <StatCard label="Per Winner" value={t.winnerCount > 0 ? `${formatLamports((BigInt(t.winnerPool) / BigInt(t.winnerCount)).toString())} SOL` : '—'} />
@@ -222,7 +217,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     <StatCard label="Claimed" value={`${t.claimsProcessed} / ${t.winnerCount}`} />
                   </div>
                   {displayState(t) === 'Completed' ? (
-                    <div className="text-xs text-[var(--muted)] mt-3">
+                    <div className="text-xs text-muted mt-3">
                       Tournament completed. All prizes distributed.
                     </div>
                   ) : t.payoutStartedAt !== '0' && (
@@ -238,9 +233,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               )}
 
               {/* Meta */}
-              <div className="mt-4 pt-4 border-t border-[var(--card-border)] flex flex-wrap gap-4 text-xs text-[var(--muted)]">
-                <span>Program: <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(getProgramId().toBase58(), 6)}</a></span>
-                <span>Account: <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">{truncateAddress(t.address, 6)}</a></span>
+              <div className="mt-4 pt-4 border-t border-card-border flex flex-wrap gap-4 text-xs text-muted">
+                <span>Program: <a href={explorerLink(getProgramId().toBase58())} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover">{truncateAddress(getProgramId().toBase58(), 6)}</a></span>
+                <span>Account: <a href={explorerLink(t.address)} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover">{truncateAddress(t.address, 6)}</a></span>
                 <span>Matches/player: {effectiveK(t.matchesPerPlayer, t.participantCount)}</span>
               </div>
             </div>
@@ -265,13 +260,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       const avgScore = d.count > 0 ? (d.totalScore / d.count).toFixed(1) : '—';
                       return (
                         <div key={s.index} className="flex items-center gap-3">
-                          <span className="text-xs text-[var(--muted)] w-28 truncate">{s.name}</span>
-                          <div className="flex-1 bg-neutral-100 rounded-full h-3 overflow-hidden">
-                            <div className={`h-full rounded-full ${BAR_COLORS[s.color]} transition-all duration-500`}
+                          <span className="text-xs text-muted w-28 truncate">{s.name}</span>
+                          <div className="flex-1 bg-skeleton rounded-full h-3 overflow-hidden">
+                            <div className={`h-full rounded-full ${STRATEGY_BAR_COLORS[s.color]} transition-all duration-500`}
                               style={{ width: `${(d.count / maxCount) * 100}%` }} />
                           </div>
-                          <span className="text-xs text-[var(--muted)] w-6 text-right">{d.count}</span>
-                          <span className="text-xs text-[var(--muted)] w-16 text-right font-mono" title="Avg score">avg {avgScore}</span>
+                          <span className="text-xs text-muted w-6 text-right">{d.count}</span>
+                          <span className="text-xs text-muted w-16 text-right font-mono" title="Avg score">avg {avgScore}</span>
                         </div>
                       );
                     });
@@ -283,22 +278,22 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             {/* Scoreboard */}
             {displayBoard.length > 0 && (
               <div className="neon-card rounded-2xl overflow-hidden">
-                <div className="p-5 border-b border-[var(--card-border)] flex items-center justify-between">
+                <div className="p-5 border-b border-card-border flex items-center justify-between">
                   <h2 className="text-lg font-bold">Scoreboard</h2>
-                  <span className="text-xs text-[var(--muted)]">{displayBoard.length} players</span>
+                  <span className="text-xs text-muted">{displayBoard.length} players</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-[var(--muted)] text-xs border-b border-[var(--card-border)]">
+                      <tr className="text-muted text-xs border-b border-card-border">
                         <th className="px-3 sm:px-5 py-3 text-left w-12">#</th>
-                        <th className="px-3 sm:px-5 py-3 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('player')}>
+                        <th className="px-3 sm:px-5 py-3 text-left cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort('player')}>
                           Player{sortIcon('player')}
                         </th>
-                        <th className="px-3 sm:px-5 py-3 text-left cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('strategy')}>
+                        <th className="px-3 sm:px-5 py-3 text-left cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort('strategy')}>
                           Strategy{sortIcon('strategy')}
                         </th>
-                        <th className="px-3 sm:px-5 py-3 text-right cursor-pointer hover:text-[var(--foreground)] select-none" onClick={() => toggleSort('score')}>
+                        <th className="px-3 sm:px-5 py-3 text-right cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort('score')}>
                           Score{sortIcon('score')}
                         </th>
                         <th className="px-3 sm:px-5 py-3 text-right hidden sm:table-cell">Matches</th>
@@ -312,31 +307,31 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                         return (
                           <tr
                             key={e.player}
-                            className={`border-b border-[var(--card-border)] hover:bg-neutral-50 transition-colors cursor-pointer ${
-                              isWinner ? 'bg-amber-50/50' : ''
-                            } ${isSelected ? 'bg-neutral-50' : ''}`}
+                            className={`border-b border-card-border hover:bg-white/5 transition-colors cursor-pointer ${
+                              isWinner ? 'bg-warning/10' : ''
+                            } ${isSelected ? 'bg-white/5' : ''}`}
                             onClick={() => setExpandedPlayer(isSelected ? null : e.player)}
                           >
-                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-[var(--muted)] whitespace-nowrap">
+                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-muted whitespace-nowrap">
                               <span className="inline-flex items-center gap-1">{i + 1}{isWinner && ' 🏆'}</span>
                             </td>
                             <td className="px-3 sm:px-5 py-2 sm:py-3 font-mono text-sm">
                               <a href={explorerLink(e.player)} target="_blank" rel="noopener noreferrer"
-                                 className="text-[var(--accent)] hover:text-[var(--accent-hover)]"
+                                 className="text-accent hover:text-accent-hover"
                                  onClick={(ev) => ev.stopPropagation()}>{truncateAddress(e.player, 6)}</a>
                               <CopyButton text={e.player} />
                             </td>
                             <td className="px-3 sm:px-5 py-2 sm:py-3">
                               <span className="inline-flex items-center flex-wrap gap-y-1">
                                 {e.revealed === false ? (
-                                  <span className="text-[var(--muted)]">🔒 Hidden</span>
+                                  <span className="text-muted">🔒 Hidden</span>
                                 ) : (
-                                  e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-[var(--muted)]">—</span>
+                                  e.strategy >= 0 ? <StrategyBadge strategy={e.strategy} /> : <span className="text-xs text-muted">—</span>
                                 )}
                               </span>
                             </td>
                             <td className="px-3 sm:px-5 py-2 sm:py-3 text-right font-mono font-bold">{e.score}</td>
-                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-right text-[var(--muted)] hidden sm:table-cell">
+                            <td className="px-3 sm:px-5 py-2 sm:py-3 text-right text-muted hidden sm:table-cell">
                               {`${e.matchesPlayed} / ${effectiveK(t.matchesPerPlayer, t.participantCount)}`}
                             </td>
                             {t.state === 'Payout' && (
@@ -378,7 +373,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <div className="neon-card rounded-2xl p-8 text-center">
                 <div className="text-4xl mb-3">🎯</div>
                 <h3 className="font-bold text-lg mb-2">No participants yet</h3>
-                <p className="text-[var(--muted)] text-sm">Be the first to enter! Read the <a href="/participate.md" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">participation guide</a>.</p>
+                <p className="text-muted text-sm">Be the first to enter! Read the <a href="/participate.md" className="text-accent hover:text-accent-hover">participation guide</a>.</p>
               </div>
             )}
           </div>
@@ -390,10 +385,9 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-[var(--surface)] rounded-xl px-4 py-3 border border-[var(--card-border)]">
-      <div className="text-xs text-[var(--muted)]">{label}</div>
+    <div className="bg-surface rounded-xl px-4 py-3 border border-card-border">
+      <div className="text-xs text-muted">{label}</div>
       <div className="font-bold mt-0.5">{value}</div>
     </div>
   );
 }
-

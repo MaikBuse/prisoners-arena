@@ -22,16 +22,16 @@ export default function CustomStrategyVMPage() {
     <>
     <Nav />
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">&larr; Back to Arena</a>
+      <a href="/" className="text-sm text-accent hover:text-accent-hover mb-6 inline-block">&larr; Back to Arena</a>
 
       <h1 className="text-3xl font-bold mb-2">Custom Strategy VM</h1>
-      <p className="text-[var(--muted)] mb-8">Write arbitrary Prisoner&apos;s Dilemma strategies as compact bytecode programs, interpreted on-chain within the match execution pipeline.</p>
+      <p className="text-muted mb-8">Write arbitrary Prisoner&apos;s Dilemma strategies as compact bytecode programs, interpreted on-chain within the match execution pipeline.</p>
 
       <div className="lg:flex lg:gap-10">
         {/* Sidebar TOC — desktop */}
         <nav className="hidden lg:block lg:w-48 shrink-0">
           <div className="sticky top-20">
-            <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Contents</div>
+            <div className="text-xs font-bold text-muted uppercase mb-3">Contents</div>
             <div className="space-y-1">
               {SECTIONS.map(s => (
                 <TOCLink key={s.id} id={s.id} label={s.label} />
@@ -44,7 +44,7 @@ export default function CustomStrategyVMPage() {
         <nav className="lg:hidden mb-8 -mx-4 px-4 overflow-x-auto">
           <div className="flex gap-2 pb-2">
             {SECTIONS.map(s => (
-              <a key={s.id} href={`#${s.id}`} className="text-xs whitespace-nowrap px-3 py-1.5 rounded-full border border-[var(--card-border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent)] transition-colors">
+              <a key={s.id} href={`#${s.id}`} className="text-xs whitespace-nowrap px-3 py-1.5 rounded-full border border-card-border text-muted hover:text-foreground hover:border-accent transition-colors">
                 {s.label}
               </a>
             ))}
@@ -56,40 +56,40 @@ export default function CustomStrategyVMPage() {
 
           {/* Overview */}
           <Section id="overview" title="Overview">
-            <p className="text-[var(--muted)] mb-4">
+            <p className="text-muted mb-4">
               The 9 built-in strategies cover the classic approaches, but the strategic <em>structure</em> is fixed. A player who wants &ldquo;cooperate for 5 rounds, then play Tit-for-Tat, but always defect if the opponent has defected more than 60% of the time&rdquo; cannot express that today.
             </p>
-            <p className="text-[var(--muted)] mb-6">
-              The Custom Strategy VM lets players compose arbitrary decision logic as compact bytecode programs (max 64 bytes). Programs are interpreted on-chain during match execution — fully deterministic, verifiable, and reproducible. <strong>Custom</strong> is strategy variant index <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">9</code>, alongside the existing built-in strategies.
+            <p className="text-muted mb-6">
+              The Custom Strategy VM lets players compose arbitrary decision logic as compact bytecode programs (max 64 bytes). Programs are interpreted on-chain during match execution — fully deterministic, verifiable, and reproducible. <strong>Custom</strong> is strategy variant index <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">9</code>, alongside the existing built-in strategies.
             </p>
 
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl p-4 mb-4">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-3">Architecture Flow</div>
-              <div className="font-mono text-sm text-[var(--muted)] space-y-2">
+            <div className="bg-surface border border-card-border rounded-xl p-4 mb-4">
+              <div className="text-xs font-bold text-muted uppercase mb-3">Architecture Flow</div>
+              <div className="font-mono text-sm text-muted space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-1.5">Write bytecode (max 64 bytes)</span>
+                  <span className="bg-background border border-card-border rounded-lg px-3 py-1.5">Write bytecode (max 64 bytes)</span>
                   <span>&rarr;</span>
-                  <span className="bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-1.5">SHA256(hash) &rarr; commitment</span>
+                  <span className="bg-background border border-card-border rounded-lg px-3 py-1.5">SHA256(hash) &rarr; commitment</span>
                   <span>&rarr;</span>
-                  <span className="bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-1.5">validate() &rarr; stored on-chain</span>
+                  <span className="bg-background border border-card-border rounded-lg px-3 py-1.5">validate() &rarr; stored on-chain</span>
                   <span>&rarr;</span>
-                  <span className="bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-1.5">execute_bytecode() per round</span>
+                  <span className="bg-background border border-card-border rounded-lg px-3 py-1.5">execute_bytecode() per round</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 text-sm text-[var(--muted)]">
+            <div className="space-y-3 text-sm text-muted">
               <p>Built-in strategies remain as native optimized code paths — zero performance regression for existing players.</p>
-              <p>The VM lives in the <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">match-logic</code> crate and compiles to both native (on-chain contract) and WASM (frontend replay).</p>
+              <p>The VM lives in the <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">match-logic</code> crate and compiles to both native (on-chain contract) and WASM (frontend replay).</p>
             </div>
           </Section>
 
           {/* Machine Model */}
           <Section id="machine-model" title="Machine Model">
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+            <div className="bg-surface border border-card-border rounded-xl overflow-hidden mb-4">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                  <tr className="border-b border-card-border text-muted text-xs">
                     <th className="px-4 py-3 text-left">Property</th>
                     <th className="px-4 py-3 text-left">Value</th>
                   </tr>
@@ -103,9 +103,9 @@ export default function CustomStrategyVMPage() {
                     ['Default on error', 'Cooperate'],
                     ['Jump model', 'Forward-only (guarantees termination)'],
                   ].map(([prop, val]) => (
-                    <tr key={prop} className="border-b border-[var(--card-border)] last:border-0">
+                    <tr key={prop} className="border-b border-card-border last:border-0">
                       <td className="px-4 py-2 font-medium">{prop}</td>
-                      <td className="px-4 py-2 font-mono text-[var(--muted)]">{val}</td>
+                      <td className="px-4 py-2 font-mono text-muted">{val}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -113,11 +113,11 @@ export default function CustomStrategyVMPage() {
             </div>
 
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Inputs Available Per Round</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Inputs Available Per Round</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left">Input</th>
                       <th className="px-4 py-3 text-left">Source</th>
                     </tr>
@@ -129,9 +129,9 @@ export default function CustomStrategyVMPage() {
                       ['Round number', 'u8, 0-indexed'],
                       ['Deterministic RNG', 'SeededRng, unique per player per round'],
                     ].map(([input, source]) => (
-                      <tr key={input} className="border-b border-[var(--card-border)] last:border-0">
+                      <tr key={input} className="border-b border-card-border last:border-0">
                         <td className="px-4 py-2 font-medium">{input}</td>
-                        <td className="px-4 py-2 text-[var(--muted)]">{source}</td>
+                        <td className="px-4 py-2 text-muted">{source}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -140,11 +140,11 @@ export default function CustomStrategyVMPage() {
             </div>
 
             <div>
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Error Handling</div>
-              <p className="text-sm text-[var(--muted)] mb-3">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Error Handling</div>
+              <p className="text-sm text-muted mb-3">
                 The VM never panics. Every anomalous condition falls back to <strong>Cooperate</strong>:
               </p>
-              <ul className="list-disc list-inside text-sm text-[var(--muted)] space-y-1">
+              <ul className="list-disc list-inside text-sm text-muted space-y-1">
                 <li><strong>Stack underflow</strong> &mdash; halt, Cooperate</li>
                 <li><strong>Stack overflow</strong> &mdash; halt, Cooperate</li>
                 <li><strong>Out-of-bounds history</strong> &mdash; returns 0 (Cooperate)</li>
@@ -152,7 +152,7 @@ export default function CustomStrategyVMPage() {
                 <li><strong>Fuel exhaustion</strong> &mdash; Cooperate</li>
                 <li><strong>Program falls off end</strong> &mdash; Cooperate</li>
               </ul>
-              <p className="text-sm text-[var(--muted)] mt-3">
+              <p className="text-sm text-muted mt-3">
                 This &ldquo;fail-safe to cooperation&rdquo; penalizes broken programs without crashing the match.
               </p>
             </div>
@@ -163,11 +163,11 @@ export default function CustomStrategyVMPage() {
 
             {/* Terminals */}
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Terminals</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Terminals</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left w-14">Hex</th>
                       <th className="px-4 py-3 text-left">Mnemonic</th>
                       <th className="px-4 py-3 text-left w-14">Bytes</th>
@@ -181,12 +181,12 @@ export default function CustomStrategyVMPage() {
                       ['16', 'DEFECT', '1', '\u2192 halt', 'Return Defect immediately'],
                       ['18', 'RETURN', '1', '[v] \u2192 halt', 'Pop top; 0 = Cooperate, nonzero = Defect'],
                     ].map(([hex, mnemonic, bytes, stack, desc]) => (
-                      <tr key={hex} className="border-b border-[var(--card-border)] last:border-0">
-                        <td className="px-4 py-2 font-mono text-[var(--accent)]">{hex}</td>
+                      <tr key={hex} className="border-b border-card-border last:border-0">
+                        <td className="px-4 py-2 font-mono text-accent">{hex}</td>
                         <td className="px-4 py-2 font-mono font-medium">{mnemonic}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)]">{bytes}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)] text-xs hidden md:table-cell">{stack}</td>
-                        <td className="px-4 py-2 text-[var(--muted)] text-xs hidden sm:table-cell">{desc}</td>
+                        <td className="px-4 py-2 font-mono text-muted">{bytes}</td>
+                        <td className="px-4 py-2 font-mono text-muted text-xs hidden md:table-cell">{stack}</td>
+                        <td className="px-4 py-2 text-muted text-xs hidden sm:table-cell">{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -196,11 +196,11 @@ export default function CustomStrategyVMPage() {
 
             {/* Literals & Input */}
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Literals &amp; Input</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Literals &amp; Input</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left w-14">Hex</th>
                       <th className="px-4 py-3 text-left">Mnemonic</th>
                       <th className="px-4 py-3 text-left w-14">Bytes</th>
@@ -221,12 +221,12 @@ export default function CustomStrategyVMPage() {
                       ['09', 'RAND', '1', '\u2192 [0..99]', 'Deterministic random 0\u201399'],
                       ['17', 'SCORE_LAST', '1', '\u2192 [0..5]', 'My payoff from last round (3 if round 0)'],
                     ].map(([hex, mnemonic, bytes, stack, desc]) => (
-                      <tr key={hex} className="border-b border-[var(--card-border)] last:border-0">
-                        <td className="px-4 py-2 font-mono text-[var(--accent)]">{hex}</td>
+                      <tr key={hex} className="border-b border-card-border last:border-0">
+                        <td className="px-4 py-2 font-mono text-accent">{hex}</td>
                         <td className="px-4 py-2 font-mono font-medium">{mnemonic}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)]">{bytes}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)] text-xs hidden md:table-cell">{stack}</td>
-                        <td className="px-4 py-2 text-[var(--muted)] text-xs hidden sm:table-cell">{desc}</td>
+                        <td className="px-4 py-2 font-mono text-muted">{bytes}</td>
+                        <td className="px-4 py-2 font-mono text-muted text-xs hidden md:table-cell">{stack}</td>
+                        <td className="px-4 py-2 text-muted text-xs hidden sm:table-cell">{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -236,11 +236,11 @@ export default function CustomStrategyVMPage() {
 
             {/* Arithmetic */}
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Arithmetic (saturating)</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Arithmetic (saturating)</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left w-14">Hex</th>
                       <th className="px-4 py-3 text-left">Mnemonic</th>
                       <th className="px-4 py-3 text-left hidden md:table-cell">Stack</th>
@@ -253,11 +253,11 @@ export default function CustomStrategyVMPage() {
                       ['0B', 'SUB', '[a, b] \u2192 [a\u2212b]', 'Floored at 0'],
                       ['0C', 'MUL', '[a, b] \u2192 [a\u00d7b]', 'Capped at 255'],
                     ].map(([hex, mnemonic, stack, desc]) => (
-                      <tr key={hex} className="border-b border-[var(--card-border)] last:border-0">
-                        <td className="px-4 py-2 font-mono text-[var(--accent)]">{hex}</td>
+                      <tr key={hex} className="border-b border-card-border last:border-0">
+                        <td className="px-4 py-2 font-mono text-accent">{hex}</td>
                         <td className="px-4 py-2 font-mono font-medium">{mnemonic}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)] text-xs hidden md:table-cell">{stack}</td>
-                        <td className="px-4 py-2 text-[var(--muted)] text-xs hidden sm:table-cell">{desc}</td>
+                        <td className="px-4 py-2 font-mono text-muted text-xs hidden md:table-cell">{stack}</td>
+                        <td className="px-4 py-2 text-muted text-xs hidden sm:table-cell">{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -267,11 +267,11 @@ export default function CustomStrategyVMPage() {
 
             {/* Comparison & Logic */}
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Comparison &amp; Logic</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Comparison &amp; Logic</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left w-14">Hex</th>
                       <th className="px-4 py-3 text-left">Mnemonic</th>
                       <th className="px-4 py-3 text-left hidden md:table-cell">Stack</th>
@@ -287,11 +287,11 @@ export default function CustomStrategyVMPage() {
                       ['11', 'AND', '[a, b] \u2192 [0|1]', 'Both nonzero \u2192 1'],
                       ['12', 'OR', '[a, b] \u2192 [0|1]', 'Either nonzero \u2192 1'],
                     ].map(([hex, mnemonic, stack, desc]) => (
-                      <tr key={hex} className="border-b border-[var(--card-border)] last:border-0">
-                        <td className="px-4 py-2 font-mono text-[var(--accent)]">{hex}</td>
+                      <tr key={hex} className="border-b border-card-border last:border-0">
+                        <td className="px-4 py-2 font-mono text-accent">{hex}</td>
                         <td className="px-4 py-2 font-mono font-medium">{mnemonic}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)] text-xs hidden md:table-cell">{stack}</td>
-                        <td className="px-4 py-2 text-[var(--muted)] text-xs hidden sm:table-cell">{desc}</td>
+                        <td className="px-4 py-2 font-mono text-muted text-xs hidden md:table-cell">{stack}</td>
+                        <td className="px-4 py-2 text-muted text-xs hidden sm:table-cell">{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -301,11 +301,11 @@ export default function CustomStrategyVMPage() {
 
             {/* Stack & Control Flow */}
             <div>
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Stack &amp; Control Flow</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Stack &amp; Control Flow</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left w-14">Hex</th>
                       <th className="px-4 py-3 text-left">Mnemonic</th>
                       <th className="px-4 py-3 text-left w-14">Bytes</th>
@@ -319,12 +319,12 @@ export default function CustomStrategyVMPage() {
                       ['14', 'JMP_FWD off', '2', '\u2014', 'Jump forward off bytes (unconditional)'],
                       ['15', 'JMP_FWD_IF off', '2', '[cond] \u2192 \u2014', 'Pop; if nonzero, jump forward off bytes'],
                     ].map(([hex, mnemonic, bytes, stack, desc]) => (
-                      <tr key={hex} className="border-b border-[var(--card-border)] last:border-0">
-                        <td className="px-4 py-2 font-mono text-[var(--accent)]">{hex}</td>
+                      <tr key={hex} className="border-b border-card-border last:border-0">
+                        <td className="px-4 py-2 font-mono text-accent">{hex}</td>
                         <td className="px-4 py-2 font-mono font-medium">{mnemonic}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)]">{bytes}</td>
-                        <td className="px-4 py-2 font-mono text-[var(--muted)] text-xs hidden md:table-cell">{stack}</td>
-                        <td className="px-4 py-2 text-[var(--muted)] text-xs hidden sm:table-cell">{desc}</td>
+                        <td className="px-4 py-2 font-mono text-muted">{bytes}</td>
+                        <td className="px-4 py-2 font-mono text-muted text-xs hidden md:table-cell">{stack}</td>
+                        <td className="px-4 py-2 text-muted text-xs hidden sm:table-cell">{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -335,7 +335,7 @@ export default function CustomStrategyVMPage() {
 
           {/* Examples */}
           <Section id="examples" title="Example Programs">
-            <p className="text-sm text-[var(--muted)] mb-6">
+            <p className="text-sm text-muted mb-6">
               Classic strategies re-implemented as bytecode. These demonstrate how the VM&apos;s small instruction set can express complex decision logic.
             </p>
 
@@ -421,17 +421,17 @@ export default function CustomStrategyVMPage() {
 
           {/* Strategy Lab CTA */}
           <a href="/configure" className="block group">
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-2xl p-6 flex items-center gap-5 hover:border-[var(--accent)] transition-all">
-              <div className="shrink-0 w-14 h-14 rounded-xl bg-[var(--background)] border border-[var(--card-border)] flex items-center justify-center group-hover:scale-110 transition-transform">
-                <svg className="w-7 h-7 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <div className="bg-surface border border-card-border rounded-2xl p-6 flex items-center gap-5 hover:border-accent transition-all">
+              <div className="shrink-0 w-14 h-14 rounded-xl bg-background border border-card-border flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-7 h-7 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-lg mb-1">Try it in the Strategy Lab</div>
-                <p className="text-sm text-[var(--muted)]">Write assembly, get instant WASM validation, and preview your custom strategy against all 9 built-ins — right in the browser.</p>
+                <p className="text-sm text-muted">Write assembly, get instant WASM validation, and preview your custom strategy against all 9 built-ins — right in the browser.</p>
               </div>
-              <svg className="w-5 h-5 text-[var(--muted)] shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-5 h-5 text-muted shrink-0 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </div>
@@ -439,44 +439,44 @@ export default function CustomStrategyVMPage() {
 
           {/* Commit-Reveal */}
           <Section id="commit-reveal" title="Commit-Reveal for Custom Strategies">
-            <p className="text-[var(--muted)] mb-4">
+            <p className="text-muted mb-4">
               Custom strategies use a two-level hashing scheme to keep the commitment preimage fixed-length while allowing variable-length bytecode.
             </p>
 
-            <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden mb-4">
+            <div className="bg-surface border border-card-border rounded-xl overflow-hidden mb-4">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                  <tr className="border-b border-card-border text-muted text-xs">
                     <th className="px-4 py-3 text-left">Strategy Type</th>
                     <th className="px-4 py-3 text-left">Commitment Hash</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-[var(--card-border)]">
+                  <tr className="border-b border-card-border">
                     <td className="px-4 py-2 font-medium">Built-in</td>
-                    <td className="px-4 py-2 font-mono text-xs text-[var(--muted)]">SHA256(strategy_u8 || salt[16])</td>
+                    <td className="px-4 py-2 font-mono text-xs text-muted">SHA256(strategy_u8 || salt[16])</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2 font-medium">Custom</td>
-                    <td className="px-4 py-2 font-mono text-xs text-[var(--muted)]">SHA256(9u8 || SHA256(bytecode[0..len]) || salt[16])</td>
+                    <td className="px-4 py-2 font-mono text-xs text-muted">SHA256(9u8 || SHA256(bytecode[0..len]) || salt[16])</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div className="space-y-3 text-sm text-[var(--muted)]">
+            <div className="space-y-3 text-sm text-muted">
               <p>
-                The inner <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">SHA256(bytecode)</code> hash produces a fixed 32-byte digest regardless of program length, keeping the outer preimage at a fixed 49 bytes (1 + 32 + 16). The bytecode hash can also be displayed independently as a program fingerprint.
+                The inner <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">SHA256(bytecode)</code> hash produces a fixed 32-byte digest regardless of program length, keeping the outer preimage at a fixed 49 bytes (1 + 32 + 16). The bytecode hash can also be displayed independently as a program fingerprint.
               </p>
               <p>
-                <strong>Forfeit handling:</strong> <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code> always assigns a built-in strategy — forfeited players never receive Custom. No change to the existing forfeit mechanism.
+                <strong>Forfeit handling:</strong> <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">commitment[0] % 9</code> always assigns a built-in strategy — forfeited players never receive Custom. No change to the existing forfeit mechanism.
               </p>
             </div>
           </Section>
 
           {/* Validation */}
           <Section id="validation" title="Bytecode Validation">
-            <p className="text-[var(--muted)] mb-4">
+            <p className="text-muted mb-4">
               Six checks are performed on-chain during the reveal phase to reject malformed programs before they enter the match pipeline:
             </p>
 
@@ -489,32 +489,32 @@ export default function CustomStrategyVMPage() {
                 ['5. Jump bounds', 'pc + offset \u2264 bytecode.len() for all jumps'],
                 ['6. Has terminal', 'At least one COOP, DEFECT, or RETURN instruction must exist'],
               ].map(([rule, desc]) => (
-                <div key={rule} className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-3">
+                <div key={rule} className="bg-surface border border-card-border rounded-lg px-4 py-3">
                   <div className="flex items-start gap-3 text-sm">
                     <span className="font-bold font-mono shrink-0">{rule}</span>
-                    <span className="text-[var(--muted)]">{desc}</span>
+                    <span className="text-muted">{desc}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <p className="text-sm text-[var(--muted)]">
-              Stack depth is <strong>not</strong> validated statically — underflow and overflow are handled gracefully at runtime (see <a href="#machine-model" className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Machine Model</a> error handling).
+            <p className="text-sm text-muted">
+              Stack depth is <strong>not</strong> validated statically — underflow and overflow are handled gracefully at runtime (see <a href="#machine-model" className="text-accent hover:text-accent-hover">Machine Model</a> error handling).
             </p>
           </Section>
 
           {/* Testing Locally */}
           <Section id="testing" title="Testing Locally">
-            <p className="text-[var(--muted)] mb-4">
-              The <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">match-logic</code> crate provides everything you need to validate and test custom bytecode programs locally before submitting them on-chain.
+            <p className="text-muted mb-4">
+              The <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">match-logic</code> crate provides everything you need to validate and test custom bytecode programs locally before submitting them on-chain.
             </p>
 
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Key Functions</div>
-              <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+              <div className="text-xs font-bold text-muted uppercase mb-2">Key Functions</div>
+              <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+                    <tr className="border-b border-card-border text-muted text-xs">
                       <th className="px-4 py-3 text-left">Function</th>
                       <th className="px-4 py-3 text-left hidden sm:table-cell">Description</th>
                     </tr>
@@ -525,9 +525,9 @@ export default function CustomStrategyVMPage() {
                       ['run_match(strategy_a, strategy_b, seed, match_index, participant_count)', 'Executes a full match between two PlayerStrategy values. Returns a MatchResult with round-by-round history and total scores.'],
                       ['replay_match(...) (WASM)', 'Browser-compatible binding. Accepts JSON-serialized strategies, returns JSON MatchResult. Use for frontend testing.'],
                     ].map(([fn_, desc]) => (
-                      <tr key={fn_} className="border-b border-[var(--card-border)] last:border-0">
+                      <tr key={fn_} className="border-b border-card-border last:border-0">
                         <td className="px-4 py-2 font-mono text-xs">{fn_}</td>
-                        <td className="px-4 py-2 text-[var(--muted)] text-xs hidden sm:table-cell">{desc}</td>
+                        <td className="px-4 py-2 text-muted text-xs hidden sm:table-cell">{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -536,8 +536,8 @@ export default function CustomStrategyVMPage() {
             </div>
 
             <div className="mb-6">
-              <div className="text-xs font-bold text-[var(--muted)] uppercase mb-2">Example: Validate &amp; Run a Custom Strategy</div>
-              <pre className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl p-4 font-mono text-xs text-[var(--muted)] overflow-x-auto whitespace-pre">{`use match_logic::{validate_bytecode, run_match, PlayerStrategy};
+              <div className="text-xs font-bold text-muted uppercase mb-2">Example: Validate &amp; Run a Custom Strategy</div>
+              <pre className="bg-surface border border-card-border rounded-xl p-4 font-mono text-xs text-muted overflow-x-auto whitespace-pre">{`use match_logic::{validate_bytecode, run_match, PlayerStrategy};
 
 fn main() {
     // TitForTat as bytecode: OPP_LAST RETURN
@@ -563,12 +563,12 @@ fn main() {
 }`}</pre>
             </div>
 
-            <div className="space-y-3 text-sm text-[var(--muted)]">
+            <div className="space-y-3 text-sm text-muted">
               <p>
-                Add <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">match-logic</code> as a dependency in your <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">Cargo.toml</code> to test locally with <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">cargo run</code>. The same code that runs on-chain will execute on your machine &mdash; results are deterministic given the same seed.
+                Add <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">match-logic</code> as a dependency in your <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">Cargo.toml</code> to test locally with <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">cargo run</code>. The same code that runs on-chain will execute on your machine &mdash; results are deterministic given the same seed.
               </p>
               <p>
-                For browser-based testing, the WASM <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">replay_match()</code> binding accepts JSON strategies like <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-xs font-mono">{`{"Custom": [2, 24]}`}</code> and returns a full JSON match result.
+                For browser-based testing, the WASM <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">replay_match()</code> binding accepts JSON strategies like <code className="bg-surface px-1.5 py-0.5 rounded text-xs font-mono">{`{"Custom": [2, 24]}`}</code> and returns a full JSON match result.
               </p>
             </div>
           </Section>
@@ -586,7 +586,7 @@ fn main() {
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id}>
-      <h2 className="text-xl font-bold mb-4 border-b border-[var(--card-border)] pb-2">{title}</h2>
+      <h2 className="text-xl font-bold mb-4 border-b border-card-border pb-2">{title}</h2>
       {children}
     </section>
   );
@@ -595,7 +595,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 function TOCLink({ id, label }: { id: string; label: string }) {
   return (
     <a href={`#${id}`}
-       className="block text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:border-l-2 hover:border-[var(--accent)] pl-3 py-1 transition-all">
+       className="block text-sm text-muted hover:text-foreground hover:border-l-2 hover:border-accent pl-3 py-1 transition-all">
       {label}
     </a>
   );
@@ -603,13 +603,13 @@ function TOCLink({ id, label }: { id: string; label: string }) {
 
 function ExampleProgram({ name, size, description, code }: { name: string; size: string; description: string; code: string }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl p-4">
+    <div className="bg-surface border border-card-border rounded-xl p-4">
       <div className="flex items-baseline gap-3 mb-2">
-        <h3 className="font-bold font-mono text-[var(--accent)]">{name}</h3>
-        <span className="text-xs text-[var(--muted)]">{size}</span>
+        <h3 className="font-bold font-mono text-accent">{name}</h3>
+        <span className="text-xs text-muted">{size}</span>
       </div>
-      <p className="text-sm text-[var(--muted)] mb-3">{description}</p>
-      <pre className="bg-[var(--background)] border border-[var(--card-border)] rounded-lg p-3 font-mono text-xs text-[var(--muted)] overflow-x-auto whitespace-pre">{code}</pre>
+      <p className="text-sm text-muted mb-3">{description}</p>
+      <pre className="bg-background border border-card-border rounded-lg p-3 font-mono text-xs text-muted overflow-x-auto whitespace-pre">{code}</pre>
     </div>
   );
 }

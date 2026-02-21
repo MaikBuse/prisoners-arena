@@ -1,14 +1,45 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f5f5f5;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-border: #e5e5e5;
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --muted: #737373;
-  --surface: #fafafa;
+@theme {
+  /* Core theme */
+  --color-background: #0a0a0a;
+  --color-foreground: #ededed;
+  --color-card: #111111;
+  --color-card-border: #1f1f1f;
+  --color-accent: #10b981;
+  --color-accent-hover: #34d399;
+  --color-muted: #a3a3a3;
+  --color-surface: #161616;
+
+  /* Semantic */
+  --color-error: #f87171;
+  --color-warning: #fbbf24;
+  --color-success: #4ade80;
+  --color-info: #60a5fa;
+  --color-skeleton: #262626;
+
+  /* Game-specific */
+  --color-cooperate: #4ade80;
+  --color-defect: #f87171;
+
+  /* Strategy palette (10 strategies) */
+  --color-strat-blue: #60a5fa;
+  --color-strat-red: #f87171;
+  --color-strat-green: #4ade80;
+  --color-strat-purple: #a78bfa;
+  --color-strat-amber: #fbbf24;
+  --color-strat-orange: #fb923c;
+  --color-strat-gray: #9ca3af;
+  --color-strat-cyan: #22d3ee;
+  --color-strat-pink: #f472b6;
+  --color-strat-indigo: #818cf8;
+
+  /* Badge state colors */
+  --color-badge-registration: #10b981;
+  --color-badge-reveal: #f59e0b;
+  --color-badge-running: #3b82f6;
+  --color-badge-payout: #a855f7;
+  --color-badge-completed: #6b7280;
 }
 
 html {
@@ -21,87 +52,87 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-background);
+  color: var(--color-foreground);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
 /* Neon glow effects on borders/accents */
 .neon-border {
-  border-color: #10b981;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15), inset 0 0 12px rgba(16, 185, 129, 0.03);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 15%, transparent), inset 0 0 12px color-mix(in srgb, var(--color-accent) 3%, transparent);
 }
 
 .neon-card {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .neon-card:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  box-shadow: 0 0 25px color-mix(in srgb, var(--color-accent) 15%, transparent), 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* CTA section - dark with neon */
 .cta-section {
-  background: #0f172a;
-  color: #e2e8f0;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.1);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .cta-section .cta-muted {
-  color: #94a3b8;
+  color: var(--color-muted);
 }
 
 .cta-section .cta-inner {
-  background: #1e293b;
-  border-color: #334155;
+  background: var(--color-surface);
+  border-color: var(--color-card-border);
 }
 
 .cta-section .cta-code {
-  background: #0f172a;
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #34d399;
+  background: var(--color-background);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  color: var(--color-accent-hover);
 }
 
 /* Tournament state badges */
 .badge-registration {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: color-mix(in srgb, var(--color-badge-registration) 15%, transparent);
+  color: var(--color-accent-hover);
+  border: 1px solid color-mix(in srgb, var(--color-badge-registration) 30%, transparent);
 }
 
 .badge-reveal {
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: color-mix(in srgb, var(--color-badge-reveal) 15%, transparent);
+  color: var(--color-warning);
+  border: 1px solid color-mix(in srgb, var(--color-badge-reveal) 30%, transparent);
 }
 
 .badge-running {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: color-mix(in srgb, var(--color-badge-running) 15%, transparent);
+  color: var(--color-info);
+  border: 1px solid color-mix(in srgb, var(--color-badge-running) 30%, transparent);
 }
 
 .badge-payout {
-  background: rgba(168, 85, 247, 0.1);
-  color: #7c3aed;
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: color-mix(in srgb, var(--color-badge-payout) 15%, transparent);
+  color: var(--color-strat-purple);
+  border: 1px solid color-mix(in srgb, var(--color-badge-payout) 30%, transparent);
 }
 
 .badge-completed {
-  background: rgba(107, 114, 128, 0.1);
-  color: #4b5563;
-  border: 1px solid rgba(107, 114, 128, 0.3);
+  background: color-mix(in srgb, var(--color-badge-completed) 15%, transparent);
+  color: var(--color-strat-gray);
+  border: 1px solid color-mix(in srgb, var(--color-badge-completed) 30%, transparent);
 }
 
 /* Network badge */
 .network-badge {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent-hover);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 @keyframes float {
@@ -110,8 +141,8 @@ body {
 }
 
 @keyframes pulse-neon {
-  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.1); }
-  50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.2); }
+  0%, 100% { box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent) 10%, transparent); }
+  50% { box-shadow: 0 0 40px color-mix(in srgb, var(--color-accent) 20%, transparent); }
 }
 
 @keyframes count-up {
@@ -123,24 +154,14 @@ body {
 .animate-pulse-neon { animation: pulse-neon 2s ease-in-out infinite; }
 .animate-count-up { animation: count-up 0.5s ease-out forwards; }
 
-/* Strategy badge colors on light bg */
-.strat-blue { color: #2563eb; }
-.strat-red { color: #dc2626; }
-.strat-green { color: #16a34a; }
-.strat-purple { color: #7c3aed; }
-.strat-amber { color: #d97706; }
-.strat-orange { color: #ea580c; }
-.strat-gray { color: #6b7280; }
-.strat-cyan { color: #0891b2; }
-.strat-pink { color: #db2777; }
+@keyframes shine {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
 
-/* Bar chart colors */
-.bar-blue { background: #3b82f6; }
-.bar-red { background: #ef4444; }
-.bar-green { background: #22c55e; }
-.bar-purple { background: #a855f7; }
-.bar-amber { background: #f59e0b; }
-.bar-orange { background: #f97316; }
-.bar-gray { background: #9ca3af; }
-.bar-cyan { background: #06b6d4; }
-.bar-pink { background: #ec4899; }
+@media (prefers-reduced-motion: no-preference) {
+  .animate-shine {
+    animation: shine var(--duration, 14s) linear infinite;
+  }
+}

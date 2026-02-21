@@ -52,30 +52,17 @@ export const STRATEGIES = [
 
 export type StrategyIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
-export const STRATEGY_COLORS: Record<string, string> = {
-  blue: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  red: 'bg-red-500/20 text-red-400 border-red-500/30',
-  green: 'bg-green-500/20 text-green-400 border-green-500/30',
-  purple: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  orange: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  pink: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  indigo: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-};
-
 export const STRATEGY_BAR_COLORS: Record<string, string> = {
-  blue: 'bg-blue-500',
-  red: 'bg-red-500',
-  green: 'bg-green-500',
-  purple: 'bg-purple-500',
-  amber: 'bg-amber-500',
-  orange: 'bg-orange-500',
-  gray: 'bg-gray-500',
-  cyan: 'bg-cyan-500',
-  pink: 'bg-pink-500',
-  indigo: 'bg-indigo-500',
+  blue: 'bg-strat-blue',
+  red: 'bg-strat-red',
+  green: 'bg-strat-green',
+  purple: 'bg-strat-purple',
+  amber: 'bg-strat-amber',
+  orange: 'bg-strat-orange',
+  gray: 'bg-strat-gray',
+  cyan: 'bg-strat-cyan',
+  pink: 'bg-strat-pink',
+  indigo: 'bg-strat-indigo',
 };
 
 // Explorer link — omit cluster param for mainnet-beta

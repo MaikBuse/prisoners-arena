@@ -29,7 +29,7 @@ export function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-neutral-500 hover:text-neutral-300 text-xs ml-1 cursor-pointer"
+      className="text-muted hover:text-foreground text-xs ml-1 cursor-pointer"
       title="Copy to clipboard"
     >
       {copied ? '✓' : '📋'}

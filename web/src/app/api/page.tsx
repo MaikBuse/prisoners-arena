@@ -18,10 +18,10 @@ export default function DocsPage() {
     <>
     <Nav />
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <a href="/" className="text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] mb-6 inline-block">← Back to Arena</a>
+      <a href="/" className="text-sm text-accent hover:text-accent-hover mb-6 inline-block">← Back to Arena</a>
 
       <h1 className="text-3xl font-bold mb-2">API Documentation</h1>
-      <p className="text-[var(--muted)] mb-8">REST API for querying Prisoner's Arena tournament state. No authentication required.</p>
+      <p className="text-muted mb-8">REST API for querying Prisoner's Arena tournament state. No authentication required.</p>
 
       <div className="space-y-4 mb-12">
         <InfoRow label="Program ID" value={programId} mono />
@@ -32,7 +32,7 @@ export default function DocsPage() {
       </div>
 
       {/* Endpoints */}
-      <h2 className="text-xl font-bold mb-6 border-b border-[var(--card-border)] pb-2">Endpoints</h2>
+      <h2 className="text-xl font-bold mb-6 border-b border-card-border pb-2">Endpoints</h2>
 
       <div className="space-y-8">
         <Endpoint
@@ -208,9 +208,9 @@ export default function DocsPage() {
       </div>
 
       {/* Error format */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">Error Responses</h2>
-      <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl p-4 font-mono text-sm">
-        <pre className="whitespace-pre-wrap text-[var(--muted)]">{`{
+      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-card-border pb-2">Error Responses</h2>
+      <div className="bg-surface border border-card-border rounded-xl p-4 font-mono text-sm">
+        <pre className="whitespace-pre-wrap text-muted">{`{
   "ok": false,
   "error": "Tournament not found",
   "code": "NOT_FOUND",
@@ -218,12 +218,12 @@ export default function DocsPage() {
   "timestamp": "2026-02-08T10:00:00Z"
 }`}</pre>
       </div>
-      <div className="mt-4 text-sm text-[var(--muted)]">
-        <p>Error codes: <code className="text-[var(--foreground)]">NOT_FOUND</code>, <code className="text-[var(--foreground)]">INVALID_ID</code>, <code className="text-[var(--foreground)]">FETCH_ERROR</code></p>
+      <div className="mt-4 text-sm text-muted">
+        <p>Error codes: <code className="text-foreground">NOT_FOUND</code>, <code className="text-foreground">INVALID_ID</code>, <code className="text-foreground">FETCH_ERROR</code></p>
       </div>
 
       {/* PDA Seeds */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">PDA Derivation</h2>
+      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-card-border pb-2">PDA Derivation</h2>
       <div className="space-y-3">
         <PDARow name="Config" seeds={['\"config\"']} />
         <PDARow name="Tournament" seeds={['\"tournament\"', 'u32_le_bytes(id)']} />
@@ -231,11 +231,11 @@ export default function DocsPage() {
       </div>
 
       {/* Strategies */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">Strategy Enum</h2>
-      <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-xl overflow-hidden">
+      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-card-border pb-2">Strategy Enum</h2>
+      <div className="bg-surface border border-card-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--card-border)] text-[var(--muted)] text-xs">
+            <tr className="border-b border-card-border text-muted text-xs">
               <th className="px-4 py-3 text-left">Value</th>
               <th className="px-4 py-3 text-left">Name</th>
               <th className="px-4 py-3 text-left">Display</th>
@@ -243,9 +243,9 @@ export default function DocsPage() {
           </thead>
           <tbody>
             {STRATEGIES.map(s => (
-              <tr key={s.index} className="border-b border-[var(--card-border)]">
+              <tr key={s.index} className="border-b border-card-border">
                 <td className="px-4 py-2 font-mono">{s.index}</td>
-                <td className="px-4 py-2 font-mono text-[var(--accent)]">{s.key}</td>
+                <td className="px-4 py-2 font-mono text-accent">{s.key}</td>
                 <td className="px-4 py-2">{s.name}</td>
               </tr>
             ))}
@@ -254,7 +254,7 @@ export default function DocsPage() {
       </div>
 
       {/* Account discriminators */}
-      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-[var(--card-border)] pb-2">Account Discriminators</h2>
+      <h2 className="text-xl font-bold mb-4 mt-12 border-b border-card-border pb-2">Account Discriminators</h2>
       <div className="space-y-2 text-sm">
         <DiscRow name="Config" bytes="[155, 12, 170, 224, 30, 250, 204, 130]" />
         <DiscRow name="Tournament" bytes="[175, 139, 119, 242, 115, 194, 57, 92]" />
@@ -270,8 +270,8 @@ export default function DocsPage() {
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-start gap-4 text-sm">
-      <span className="text-[var(--muted)] w-32 shrink-0">{label}</span>
-      <span className={mono ? 'font-mono text-[var(--accent)]' : ''}>{value}</span>
+      <span className="text-muted w-32 shrink-0">{label}</span>
+      <span className={mono ? 'font-mono text-accent' : ''}>{value}</span>
     </div>
   );
 }
@@ -282,28 +282,28 @@ function Endpoint({ method, path, description, params, response, cache }: {
   response: string; cache: string;
 }) {
   return (
-    <div className="border border-[var(--card-border)] rounded-xl overflow-hidden">
-      <div className="bg-[var(--surface)] px-5 py-3 border-b border-[var(--card-border)] flex items-center gap-3">
-        <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">{method}</span>
+    <div className="border border-card-border rounded-xl overflow-hidden">
+      <div className="bg-surface px-5 py-3 border-b border-card-border flex items-center gap-3">
+        <span className="text-xs font-bold px-2 py-0.5 rounded bg-accent/15 text-accent">{method}</span>
         <code className="font-mono text-sm font-bold">{path}</code>
-        <span className="text-xs text-[var(--muted)] ml-auto">Cache: {cache}</span>
+        <span className="text-xs text-muted ml-auto">Cache: {cache}</span>
       </div>
       <div className="px-5 py-3">
-        <p className="text-sm text-[var(--muted)] mb-3">{description}</p>
+        <p className="text-sm text-muted mb-3">{description}</p>
         {params && (
           <div className="mb-3">
-            <div className="text-xs font-bold text-[var(--muted)] uppercase mb-1">Parameters</div>
+            <div className="text-xs font-bold text-muted uppercase mb-1">Parameters</div>
             {params.map(p => (
               <div key={p.name} className="text-sm">
-                <code className="text-[var(--accent)]">{p.name}</code> — {p.desc}
-                <span className="text-[var(--muted)]"> (e.g. {p.example})</span>
+                <code className="text-accent">{p.name}</code> — {p.desc}
+                <span className="text-muted"> (e.g. {p.example})</span>
               </div>
             ))}
           </div>
         )}
         <details>
-          <summary className="text-xs text-[var(--muted)] cursor-pointer hover:text-[var(--foreground)]">Example response</summary>
-          <pre className="mt-2 bg-[var(--surface)] border border-[var(--card-border)] rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap text-[var(--muted)]">{response}</pre>
+          <summary className="text-xs text-muted cursor-pointer hover:text-foreground">Example response</summary>
+          <pre className="mt-2 bg-surface border border-card-border rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap text-muted">{response}</pre>
         </details>
       </div>
     </div>
@@ -312,18 +312,18 @@ function Endpoint({ method, path, description, params, response, cache }: {
 
 function PDARow({ name, seeds }: { name: string; seeds: string[] }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-3 flex items-center gap-4 text-sm">
+    <div className="bg-surface border border-card-border rounded-lg px-4 py-3 flex items-center gap-4 text-sm">
       <span className="font-bold w-24">{name}</span>
-      <code className="font-mono text-[var(--accent)]">[{seeds.join(', ')}]</code>
+      <code className="font-mono text-accent">[{seeds.join(', ')}]</code>
     </div>
   );
 }
 
 function DiscRow({ name, bytes }: { name: string; bytes: string }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--card-border)] rounded-lg px-4 py-2 flex items-center gap-4">
+    <div className="bg-surface border border-card-border rounded-lg px-4 py-2 flex items-center gap-4">
       <span className="font-bold w-24">{name}</span>
-      <code className="font-mono text-xs text-[var(--muted)]">{bytes}</code>
+      <code className="font-mono text-xs text-muted">{bytes}</code>
     </div>
   );
 }

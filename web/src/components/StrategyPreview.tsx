@@ -37,14 +37,14 @@ function MoveBoxes({ rounds, isA }: { rounds: { moveA: 'C' | 'D'; moveB: 'C' | '
           <div
             key={i}
             className={`w-4 h-4 rounded text-[8px] font-bold flex items-center justify-center
-              ${move === 'C' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+              ${move === 'C' ? 'bg-cooperate/15 text-cooperate' : 'bg-defect/15 text-defect'}`}
           >
             {move}
           </div>
         );
       })}
       {overflow && (
-        <span className="text-[9px] text-[var(--muted)]">+{rounds.length - MAX_DISPLAY_ROUNDS}</span>
+        <span className="text-[9px] text-muted">+{rounds.length - MAX_DISPLAY_ROUNDS}</span>
       )}
     </div>
   );
@@ -162,7 +162,7 @@ export function StrategyPreview({ strategy, bytecode }: Props) {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Preview vs All Strategies</h3>
-        <p className="text-sm text-[var(--muted)] py-8 text-center">
+        <p className="text-sm text-muted py-8 text-center">
           Write a valid bytecode program above to preview performance
         </p>
       </div>
@@ -173,7 +173,7 @@ export function StrategyPreview({ strategy, bytecode }: Props) {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Preview vs All Strategies</h3>
-        <div className="flex items-center justify-center py-8 gap-2 text-sm text-[var(--muted)]">
+        <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted">
           <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -188,7 +188,7 @@ export function StrategyPreview({ strategy, bytecode }: Props) {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Preview vs All Strategies</h3>
-        <p className="text-sm text-[var(--muted)] py-8 text-center">
+        <p className="text-sm text-muted py-8 text-center">
           Failed to load simulation results
         </p>
       </div>
@@ -203,12 +203,12 @@ export function StrategyPreview({ strategy, bytecode }: Props) {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Preview vs All Strategies</h3>
-        <span className="text-sm font-mono font-bold text-[var(--accent)]">
+        <span className="text-sm font-mono font-bold text-accent">
           Total: {stochastic ? totalAvg.toFixed(1) : totalAvg}
         </span>
       </div>
       {stochastic && (
-        <p className="text-[10px] text-[var(--muted)]">Average over 20 simulations with varying seeds</p>
+        <p className="text-[10px] text-muted">Average over 20 simulations with varying seeds</p>
       )}
       <div className="space-y-1">
         {results.map(r => {
@@ -219,10 +219,10 @@ export function StrategyPreview({ strategy, bytecode }: Props) {
             <div key={r.opponent}>
               <button
                 onClick={() => setExpanded(isExpanded ? null : r.opponent)}
-                className="w-full flex items-center gap-2 py-1 hover:bg-neutral-50 rounded px-1 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2 py-1 hover:bg-white/5 rounded px-1 transition-colors cursor-pointer"
               >
                 <span className="text-xs w-28 text-left truncate">{r.opponentName}</span>
-                <div className="flex-1 h-4 bg-neutral-100 rounded-full overflow-hidden">
+                <div className="flex-1 h-4 bg-skeleton rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${STRATEGY_BAR_COLORS[s.color]}`}
                     style={{ width: `${barWidth}%` }}
@@ -233,17 +233,17 @@ export function StrategyPreview({ strategy, bytecode }: Props) {
                     ? `${r.avgScore.toFixed(1)}±${r.stddev.toFixed(1)}`
                     : r.avgScore}
                 </span>
-                <span className="text-[10px] text-neutral-400">{isExpanded ? '▲' : '▼'}</span>
+                <span className="text-[10px] text-muted">{isExpanded ? '▲' : '▼'}</span>
               </button>
               {isExpanded && (
-                <div className="ml-1 pl-2 border-l-2 border-neutral-200 pb-1">
-                  <div className="text-[10px] text-[var(--muted)] mb-0.5">
+                <div className="ml-1 pl-2 border-l-2 border-card-border pb-1">
+                  <div className="text-[10px] text-muted mb-0.5">
                     Your moves ({r.roundCount} rounds):
                   </div>
                   <MoveBoxes rounds={r.sampleRounds} isA={true} />
-                  <div className="text-[10px] text-[var(--muted)] mt-1 mb-0.5">Opponent moves:</div>
+                  <div className="text-[10px] text-muted mt-1 mb-0.5">Opponent moves:</div>
                   <MoveBoxes rounds={r.sampleRounds} isA={false} />
-                  <div className="text-[10px] text-neutral-400 mt-1">
+                  <div className="text-[10px] text-muted mt-1">
                     Score: {r.sampleScoreA} – {r.sampleScoreB}
                   </div>
                 </div>

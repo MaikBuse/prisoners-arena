@@ -26,13 +26,13 @@ export function ConfigOutput({ strategy, bytecode }: Props) {
             <button
               key={t}
               disabled
-              className="px-2.5 py-1 text-xs rounded-md border border-[var(--card-border)] text-[var(--muted)] opacity-50 cursor-not-allowed"
+              className="px-2.5 py-1 text-xs rounded-md border border-card-border text-muted opacity-50 cursor-not-allowed"
             >
               {t}
             </button>
           ))}
         </div>
-        <p className="text-sm text-[var(--muted)] py-4 text-center">
+        <p className="text-sm text-muted py-4 text-center">
           Write a valid bytecode program above to generate commitment
         </p>
       </div>
@@ -119,8 +119,8 @@ const revealData = { strategy, salt };`;
             onClick={() => setTab(t)}
             className={`px-2.5 py-1 text-xs rounded-md border transition-colors cursor-pointer
               ${tab === t
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-medium'
-                : 'border-[var(--card-border)] text-[var(--muted)] hover:border-emerald-300'
+                ? 'bg-accent/15 border-accent/30 text-accent font-medium'
+                : 'border-card-border text-muted hover:border-accent'
               }`}
           >
             {t}
@@ -128,7 +128,7 @@ const revealData = { strategy, salt };`;
         ))}
       </div>
       <div className="relative">
-        <pre className="text-xs font-mono bg-neutral-50 border border-[var(--card-border)] rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+        <pre className="text-xs font-mono bg-surface border border-card-border rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
           {content}
         </pre>
         <div className="absolute top-2 right-2">

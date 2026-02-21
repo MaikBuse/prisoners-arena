@@ -49,15 +49,15 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
       >
       <div className="max-h-[90vh] sm:max-h-[85vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--card-border)] px-5 py-4 sm:px-6 sm:py-5 rounded-t-2xl">
+        <div className="sticky top-0 z-10 bg-card border-b border-card-border px-5 py-4 sm:px-6 sm:py-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-wrap gap-2 min-w-0">
-              <span className="text-sm sm:text-base text-[var(--muted)] font-mono shrink-0">#{rank}{isWinner && ' 🏆'}</span>
+              <span className="text-sm sm:text-base text-muted font-mono shrink-0">#{rank}{isWinner && ' 🏆'}</span>
               <a
                 href={explorerLink(entry.player)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-mono text-sm sm:text-base truncate"
+                className="text-accent hover:text-accent-hover font-mono text-sm sm:text-base truncate"
               >
                 {truncateAddress(entry.player, 6)}
               </a>
@@ -66,14 +66,14 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
             </div>
             <button
               onClick={onClose}
-              className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xl leading-none px-1 cursor-pointer"
+              className="text-muted hover:text-foreground transition-colors text-xl leading-none px-1 cursor-pointer"
               aria-label="Close"
             >
               ✕
             </button>
           </div>
-          <div className="flex items-center flex-wrap gap-x-4 sm:gap-x-5 gap-y-1 mt-2 text-xs sm:text-sm text-[var(--muted)]">
-            <span>Score: <span className="font-bold text-[var(--foreground)]">{entry.score}</span></span>
+          <div className="flex items-center flex-wrap gap-x-4 sm:gap-x-5 gap-y-1 mt-2 text-xs sm:text-sm text-muted">
+            <span>Score: <span className="font-bold text-foreground">{entry.score}</span></span>
             <span>Matches: {entry.matchesPlayed} / {effectiveK(t.matchesPerPlayer, t.participantCount)}</span>
             {t.state === 'Payout' && (
               <span>{entry.paidOut ? '✅ Claimed' : isWinner ? '⏳ Unclaimed' : ''}</span>
@@ -86,8 +86,8 @@ export function PlayerDetailModal({ tournament, entry, playerIndex, rank, isWinn
           {/* Match History */}
           {hasMatches && (
             <div>
-              <div className="border-t border-[var(--card-border)] pt-4">
-                <div className="text-xs sm:text-sm font-bold text-[var(--muted)] mb-2">Match History</div>
+              <div className="border-t border-card-border pt-4">
+                <div className="text-xs sm:text-sm font-bold text-muted mb-2">Match History</div>
                 <MatchHistory tournament={t} playerIndex={playerIndex} />
               </div>
             </div>

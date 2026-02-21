@@ -37,12 +37,12 @@ export function CountdownTimer({ targetTimestamp, label, expiredText, expiredCla
     return () => clearInterval(i);
   }, [targetTimestamp, expiredText]);
 
-  const expiredClass = expiredClassName ?? 'text-red-500';
+  const expiredClass = expiredClassName ?? 'text-error';
 
   return (
     <div className="text-center">
-      {label && <div className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">{label}</div>}
-      <div className={`text-2xl font-bold font-mono ${expired ? expiredClass : 'text-[var(--foreground)]'}`}>
+      {label && <div className="text-xs text-muted uppercase tracking-wider mb-1">{label}</div>}
+      <div className={`text-2xl font-bold font-mono ${expired ? expiredClass : 'text-foreground'}`}>
         {timeLeft || '...'}
       </div>
     </div>
