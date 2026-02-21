@@ -83,7 +83,7 @@ Autonomous loop that drives tournament lifecycle: closes registration, closes re
 - `web/.env.local` — Frontend env vars (`NEXT_PUBLIC_PROGRAM_ID`, `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_NETWORK`)
 - `Anchor.toml` — Anchor framework config
 
-Program ID (devnet): `7gJU56iACgPLsinhLCc2cSZs7ZuwSs1fHgFeDNdnZxSX`
+Program ID (devnet): `2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga`
 
 ## Contract Test Setup (Important)
 

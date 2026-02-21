@@ -1,5 +1,5 @@
 {
-  "address": "7gJU56iACgPLsinhLCc2cSZs7ZuwSs1fHgFeDNdnZxSX",
+  "address": "2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga",
   "metadata": {
     "name": "prisoners_arena",
     "version": "0.1.0",
@@ -439,6 +439,7 @@
           "docs": [
             "Optional: Entry to refund if odd active participant count"
           ],
+          "writable": true,
           "optional": true
         },
         {
@@ -1768,13 +1769,6 @@
             "name": "reveals_completed",
             "docs": [
               "Number of players who have revealed"
-            ],
-            "type": "u32"
-          },
-          {
-            "name": "forfeits",
-            "docs": [
-              "Number of players who forfeited (didn't reveal in time)"
             ],
             "type": "u32"
           },
