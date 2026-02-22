@@ -126,7 +126,10 @@ export function makeStrategyJson(strategyIndex: number, bytecode?: number[] | nu
     return JSON.stringify({ base: 'AlwaysCooperate' });
   }
   const base = STRATEGIES[strategyIndex]?.key;
-  if (!base) throw new Error(`Unknown strategy index: ${strategyIndex}`);
+  if (!base) {
+    console.warn(`makeStrategyJson: unknown strategy index ${strategyIndex}, falling back to AlwaysCooperate`);
+    return JSON.stringify({ base: 'AlwaysCooperate' });
+  }
   return JSON.stringify({ base });
 }
 
@@ -145,8 +148,9 @@ export async function getPlayerMatches(
   const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
-  // Get all pairings
-  const pairings: [number, number][] = wasm.get_tournament_pairings(n, k, seed);
+  // Get pairings with refunded players filtered out (strategy == 255)
+  const strategies = new Uint8Array(tournament.strategies);
+  const pairings: [number, number][] = wasm.get_tournament_pairings_filtered(n, k, seed, strategies);
 
   // Filter to pairings involving our player
   const matches: PlayerMatchInfo[] = [];
@@ -249,7 +253,8 @@ export async function getPlayerStats(
   const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
-  const pairings: [number, number][] = wasm.get_tournament_pairings(n, k, seed);
+  const strategies = new Uint8Array(tournament.strategies);
+  const pairings: [number, number][] = wasm.get_tournament_pairings_filtered(n, k, seed, strategies);
 
   let totalScore = 0;
   let wins = 0;

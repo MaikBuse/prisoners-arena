@@ -95,10 +95,12 @@ operator-manual:
 
 # Deploy to devnet (verifiable build)
 deploy-devnet: build-contract-verifiable
+    cp contract/target/deploy/prisoners_arena.so target/deploy/
     anchor deploy --provider.cluster devnet
 
 # Deploy to mainnet (verifiable build, careful!)
 deploy-mainnet: build-contract-verifiable
+    cp contract/target/deploy/prisoners_arena.so target/deploy/
     anchor deploy --provider.cluster mainnet
 
 # Verify deployed program matches source repo (devnet)
@@ -108,7 +110,8 @@ verify-contract-devnet:
         --program-id 2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga \
         --library-name prisoners_arena \
         --base-image solanafoundation/solana-verifiable-build:3.0.1 \
-        -u https://api.devnet.solana.com
+        -u https://api.devnet.solana.com \
+        -k ~/.config/solana/id.json
 
 # Verify deployed program matches source repo (mainnet)
 verify-contract-mainnet:
@@ -117,7 +120,8 @@ verify-contract-mainnet:
         --program-id 2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga \
         --library-name prisoners_arena \
         --base-image solanafoundation/solana-verifiable-build:3.0.1 \
-        -u https://api.mainnet-beta.solana.com
+        -u https://api.mainnet-beta.solana.com \
+        -k ~/.config/solana/id.json
 
 # Format all code
 fmt:
