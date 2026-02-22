@@ -406,6 +406,17 @@ export async function fetchTournamentList(limit = 10, offset = 0): Promise<Tourn
   return tournaments;
 }
 
+export async function getChainTimestamp(): Promise<number | null> {
+  try {
+    const clockPubkey = new PublicKey('SysvarC1ock11111111111111111111111111111111');
+    const info = await getConnection().getAccountInfo(clockPubkey);
+    if (!info || info.data.length < 40) return null;
+    return Number(Buffer.from(info.data).readBigInt64LE(32));
+  } catch {
+    return null;
+  }
+}
+
 export function formatLamports(lamports: string | bigint): string {
   const val = typeof lamports === 'string' ? BigInt(lamports) : lamports;
   const sol = Number(val) / 1e9;

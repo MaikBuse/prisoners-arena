@@ -1,4 +1,4 @@
-import { fetchTournament, fetchConfig, getAllEntries, getProgramId } from '@/lib/solana';
+import { fetchTournament, fetchConfig, getAllEntries, getProgramId, getChainTimestamp } from '@/lib/solana';
 import { upsertTournament, getTournament, getCachedEntryData, healClosedTournament } from '@/lib/db';
 import type { CachedEntryData } from '@/lib/db';
 import { apiSuccess, apiError, rateLimited, buildScoreboard } from '@/lib/api';
@@ -21,7 +21,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (tournament) {
       // Chain hit — build entry data map from live entries and cache everything
-      const entries = await getAllEntries(tournament.address);
+      const [entries, chainTimestamp] = await Promise.all([
+        getAllEntries(tournament.address),
+        getChainTimestamp(),
+      ]);
       if (entries.length > 0) {
         const entryDataMap = new Map<string, CachedEntryData>();
         // Build bytecodes array indexed by player position in tournament
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
       const scoreboard = buildScoreboard(tournament, entries);
       const cacheSeconds = tournament.state === 'Payout' ? 3600 : 10;
-      return apiSuccess({ tournament, entries, scoreboard }, cacheSeconds);
+      return apiSuccess({ tournament, entries, scoreboard, chainTimestamp }, cacheSeconds);
     }
 
     // Chain miss — account closed by operator, try SQLite fallback

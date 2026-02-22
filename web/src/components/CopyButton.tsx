@@ -28,7 +28,7 @@ export function CopyButton({ text }: { text: string }) {
 
   return (
     <button
-      onClick={handleCopy}
+      onClick={(e) => { e.stopPropagation(); handleCopy(); }}
       className="text-muted hover:text-foreground text-xs ml-1 cursor-pointer"
       title="Copy to clipboard"
     >

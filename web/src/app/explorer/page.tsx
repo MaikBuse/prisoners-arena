@@ -49,6 +49,9 @@ function ExplorerContent() {
 
   const [sidebarTournaments, setSidebarTournaments] = useState<SidebarTournament[]>([]);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [sidebarOffset, setSidebarOffset] = useState(0);
+  const [sidebarHasMore, setSidebarHasMore] = useState(true);
+  const [sidebarLoadingMore, setSidebarLoadingMore] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -58,6 +61,7 @@ function ExplorerContent() {
   const [entries, setEntries] = useState<EntryAccount[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [clockOffset, setClockOffset] = useState(0);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
@@ -70,15 +74,18 @@ function ExplorerContent() {
       .then(r => r.json())
       .then(json => {
         if (json.ok) {
-          setSidebarTournaments(json.data.tournaments);
+          const tournaments = json.data.tournaments;
+          setSidebarTournaments(tournaments);
+          setSidebarOffset(tournaments.length);
+          setSidebarHasMore(tournaments.length === 50);
           // Set initial selection from URL or default to first
           if (!initializedRef.current) {
             initializedRef.current = true;
             const urlId = searchParams.get('t');
             if (urlId) {
               setSelectedId(parseInt(urlId, 10));
-            } else if (json.data.tournaments.length > 0) {
-              const firstId = json.data.tournaments[0].id;
+            } else if (tournaments.length > 0) {
+              const firstId = tournaments[0].id;
               setSelectedId(firstId);
               router.replace(`/explorer?t=${firstId}`, { scroll: false });
             }
@@ -103,6 +110,9 @@ function ExplorerContent() {
         setTournament(json.data.tournament);
         setEntries(json.data.entries);
         setScoreboard(json.data.scoreboard || []);
+        if (json.data.chainTimestamp) {
+          setClockOffset(json.data.chainTimestamp - Math.floor(Date.now() / 1000));
+        }
         setDetailError(null);
       } else {
         setDetailError(json.error || 'Failed to fetch tournament');
@@ -153,6 +163,23 @@ function ExplorerContent() {
     return a.player.localeCompare(b.player) * dir;
   });
 
+  const loadMoreTournaments = useCallback(async () => {
+    setSidebarLoadingMore(true);
+    try {
+      const res = await fetch(`/api/tournaments?limit=50&offset=${sidebarOffset}`);
+      const json = await res.json();
+      if (json.ok) {
+        const more = json.data.tournaments;
+        setSidebarTournaments(prev => [...prev, ...more]);
+        setSidebarOffset(prev => prev + more.length);
+        setSidebarHasMore(more.length === 50);
+      }
+    } catch {
+      // non-critical
+    }
+    setSidebarLoadingMore(false);
+  }, [sidebarOffset]);
+
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('desc'); }
@@ -173,37 +200,48 @@ function ExplorerContent() {
       ) : sidebarTournaments.length === 0 ? (
         <div className="text-sm text-muted px-2">No tournaments found.</div>
       ) : (
-        sidebarTournaments.map(st => {
-          const isSelected = st.id === selectedId;
-          const dState = displayState(st as TournamentAccount);
-          return (
+        <>
+          {sidebarTournaments.map(st => {
+            const isSelected = st.id === selectedId;
+            const dState = displayState(st as TournamentAccount);
+            return (
+              <button
+                key={st.id}
+                onClick={() => selectTournament(st.id)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-accent/10 border-l-2 border-l-accent'
+                    : 'hover:bg-white/5 border-l-2 border-l-transparent'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`text-sm font-medium ${isSelected ? 'text-foreground' : 'text-muted'}`}>
+                    #{st.id}
+                  </span>
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                    dState === 'Registration' ? 'badge-registration' :
+                    dState === 'Reveal' ? 'badge-reveal' :
+                    dState === 'Running' ? 'badge-running' :
+                    dState === 'Completed' ? 'badge-completed' : 'badge-payout'
+                  }`}>{dState}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-0.5 text-xs text-muted">
+                  <span>{formatLamports(st.pool)} SOL</span>
+                  <span>{st.participantCount} players</span>
+                </div>
+              </button>
+            );
+          })}
+          {sidebarHasMore && (
             <button
-              key={st.id}
-              onClick={() => selectTournament(st.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
-                isSelected
-                  ? 'bg-accent/10 border-l-2 border-l-accent'
-                  : 'hover:bg-white/5 border-l-2 border-l-transparent'
-              }`}
+              onClick={loadMoreTournaments}
+              disabled={sidebarLoadingMore}
+              className="w-full text-center px-3 py-2.5 text-xs text-muted hover:text-foreground transition-colors disabled:opacity-50"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className={`text-sm font-medium ${isSelected ? 'text-foreground' : 'text-muted'}`}>
-                  #{st.id}
-                </span>
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                  dState === 'Registration' ? 'badge-registration' :
-                  dState === 'Reveal' ? 'badge-reveal' :
-                  dState === 'Running' ? 'badge-running' :
-                  dState === 'Completed' ? 'badge-completed' : 'badge-payout'
-                }`}>{dState}</span>
-              </div>
-              <div className="flex items-center gap-3 mt-0.5 text-xs text-muted">
-                <span>{formatLamports(st.pool)} SOL</span>
-                <span>{st.participantCount} players</span>
-              </div>
+              {sidebarLoadingMore ? 'Loading...' : 'Load more'}
             </button>
-          );
-        })
+          )}
+        </>
       )}
     </div>
   );
@@ -363,8 +401,8 @@ function ExplorerContent() {
 
                     {/* Phase Widgets */}
                     {t.state === 'Registration' && (() => {
-                      const nowSec = Math.floor(Date.now() / 1000);
-                      const deadlinePassed = nowSec >= Number(t.registrationEnds);
+                      const chainNow = Math.floor(Date.now() / 1000) + clockOffset;
+                      const deadlinePassed = chainNow >= Number(t.registrationEnds);
                       const needed = Math.max(0, minParticipants - t.participantCount);
                       return (
                         <div className="mt-6 pt-6 border-t border-card-border">
@@ -382,7 +420,7 @@ function ExplorerContent() {
                               </div>
                             ) : (
                               <SegmentedCountdown
-                                targetTimestamp={Number(t.registrationEnds)}
+                                targetTimestamp={Number(t.registrationEnds) - clockOffset}
                                 label="Registration Ends"
                                 expiredText="Starting soon"
                                 expiredClassName="text-accent"
@@ -404,7 +442,7 @@ function ExplorerContent() {
                       <div className="mt-6 pt-6 border-t border-card-border">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <SegmentedCountdown
-                            targetTimestamp={Number(t.revealEnds)}
+                            targetTimestamp={Number(t.revealEnds) - clockOffset}
                             label="Reveal Ends"
                             expiredText="Closing soon"
                             expiredClassName="text-warning"
@@ -459,7 +497,7 @@ function ExplorerContent() {
                         ) : t.payoutStartedAt !== '0' && (
                           <div className="mt-4">
                             <SegmentedCountdown
-                              targetTimestamp={Number(t.payoutStartedAt) + 30 * 86400}
+                              targetTimestamp={Number(t.payoutStartedAt) + 30 * 86400 - clockOffset}
                               label="Claim Deadline"
                               expiredText="Claims expired"
                             />

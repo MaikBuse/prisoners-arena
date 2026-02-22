@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
 import type { TournamentAccount } from '@/lib/solana';
 import type { ScoreboardEntry } from '@/lib/api';
@@ -70,6 +70,15 @@ export function ScoreboardTable({
   const isInView = useInView(tableRef, { once: true, amount: 0.1 });
   const useLayoutAnim = sorted.length <= 50;
 
+  const pageSize = 10;
+  const [page, setPage] = useState(0);
+  // Reset page when tournament changes
+  useEffect(() => { setPage(0); }, [tournament.id]);
+  const totalPages = Math.ceil(sorted.length / pageSize);
+  const safePage = Math.min(page, Math.max(0, totalPages - 1));
+  const paged = sorted.slice(safePage * pageSize, (safePage + 1) * pageSize);
+  const rankOffset = safePage * pageSize;
+
   return (
     <div className="neon-card rounded-2xl overflow-hidden">
       <div className="p-5 border-b border-card-border flex items-center justify-between">
@@ -107,8 +116,8 @@ export function ScoreboardTable({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((e, i) => {
-              const rank = i + 1;
+            {paged.map((e, i) => {
+              const rank = rankOffset + i + 1;
               const isWinner = t.state === 'Payout' && e.score >= t.minWinningScore;
               const isSelected = expandedPlayer === e.player;
 
@@ -169,6 +178,36 @@ export function ScoreboardTable({
           </tbody>
         </table>
       </div>
+      {sorted.length > pageSize && (
+        <div className="px-5 py-3 border-t border-card-border flex items-center justify-between">
+          <span className="text-xs text-muted">
+            {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, sorted.length)} of {sorted.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(0)}
+              disabled={safePage === 0}
+              className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
+            >«</button>
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
+            >‹</button>
+            <span className="px-2 text-xs text-muted">{safePage + 1} / {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={safePage >= totalPages - 1}
+              className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
+            >›</button>
+            <button
+              onClick={() => setPage(totalPages - 1)}
+              disabled={safePage >= totalPages - 1}
+              className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
+            >»</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

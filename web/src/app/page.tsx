@@ -27,6 +27,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [clockOffset, setClockOffset] = useState(0);
   const [sortField, setSortField] = useState<'score' | 'strategy' | 'player'>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pastTournaments, setPastTournaments] = useState<TournamentAccount[]>([]);
@@ -41,6 +42,9 @@ export default function Home() {
       const json = await res.json();
       if (json.ok) {
         setData(json.data);
+        if (json.data.chainTimestamp) {
+          setClockOffset(json.data.chainTimestamp - Math.floor(Date.now() / 1000));
+        }
         setError(null);
       } else {
         setError(json.error || 'Failed to fetch tournament data');
@@ -279,7 +283,7 @@ export default function Home() {
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <CountdownTimer
-                      targetTimestamp={Number(t.registrationEnds)}
+                      targetTimestamp={Number(t.registrationEnds) - clockOffset}
                       label="Registration Ends"
                       expiredText={needsMorePlayers ? 'Waiting for players' : 'Starting soon'}
                       expiredClassName={needsMorePlayers ? 'text-warning' : 'text-accent'}
@@ -295,7 +299,7 @@ export default function Home() {
               {t.state === 'Reveal' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <CountdownTimer
-                    targetTimestamp={Number(t.revealEnds)}
+                    targetTimestamp={Number(t.revealEnds) - clockOffset}
                     label="Reveal Ends"
                     expiredText="Closing soon"
                     expiredClassName="text-warning"
@@ -348,7 +352,7 @@ export default function Home() {
                   {displayState(t) !== 'Completed' && t.payoutStartedAt !== '0' && (
                     <div className="mt-4">
                       <CountdownTimer
-                        targetTimestamp={Number(t.payoutStartedAt) + 30 * 86400}
+                        targetTimestamp={Number(t.payoutStartedAt) + 30 * 86400 - clockOffset}
                         label="Claim Deadline"
                         expiredText="Claims expired"
                       />
@@ -441,13 +445,13 @@ export default function Home() {
                             <thead>
                               <tr className="text-muted text-xs border-b border-card-border bg-surface">
                                 <th className="px-4 py-2 text-left w-10">#</th>
-                                <th className="px-4 py-2 text-left cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort('player')}>
+                                <th className="px-4 py-2 text-left cursor-pointer hover:text-foreground select-none" onClick={(e) => { e.stopPropagation(); toggleSort('player'); }}>
                                   Player{sortIcon('player')}
                                 </th>
-                                <th className="px-4 py-2 text-left cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort('strategy')}>
+                                <th className="px-4 py-2 text-left cursor-pointer hover:text-foreground select-none" onClick={(e) => { e.stopPropagation(); toggleSort('strategy'); }}>
                                   Strategy{sortIcon('strategy')}
                                 </th>
-                                <th className="px-4 py-2 text-right cursor-pointer hover:text-foreground select-none" onClick={() => toggleSort('score')}>
+                                <th className="px-4 py-2 text-right cursor-pointer hover:text-foreground select-none" onClick={(e) => { e.stopPropagation(); toggleSort('score'); }}>
                                   Score{sortIcon('score')}
                                 </th>
                                 <th className="px-4 py-2 text-right">Matches</th>
@@ -505,25 +509,25 @@ export default function Home() {
                               <span className="text-xs text-muted">
                                 {scorePage * pageSize + 1}–{Math.min((scorePage + 1) * pageSize, entries.length)} of {entries.length}
                               </span>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 <button
-                                  onClick={() => setScorePage(0)}
+                                  onClick={(e) => { e.stopPropagation(); setScorePage(0); }}
                                   disabled={scorePage === 0}
                                   className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
                                 >«</button>
                                 <button
-                                  onClick={() => setScorePage(p => Math.max(0, p - 1))}
+                                  onClick={(e) => { e.stopPropagation(); setScorePage(p => Math.max(0, p - 1)); }}
                                   disabled={scorePage === 0}
                                   className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
                                 >‹</button>
                                 <span className="px-2 text-xs text-muted">{scorePage + 1} / {totalPages}</span>
                                 <button
-                                  onClick={() => setScorePage(p => Math.min(totalPages - 1, p + 1))}
+                                  onClick={(e) => { e.stopPropagation(); setScorePage(p => Math.min(totalPages - 1, p + 1)); }}
                                   disabled={scorePage >= totalPages - 1}
                                   className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
                                 >›</button>
                                 <button
-                                  onClick={() => setScorePage(totalPages - 1)}
+                                  onClick={(e) => { e.stopPropagation(); setScorePage(totalPages - 1); }}
                                   disabled={scorePage >= totalPages - 1}
                                   className="px-2 py-1 text-xs rounded border border-card-border disabled:opacity-30 hover:bg-white/5 transition-colors"
                                 >»</button>
