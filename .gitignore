@@ -27,3 +27,4 @@ wallets/
 test-ledger/
 arena-local.toml
 operator.db
+simulator-wallets/
