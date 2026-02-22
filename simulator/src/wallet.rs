@@ -69,11 +69,11 @@ pub fn init_players(wallet_dir: &str, count: usize) -> Result<Vec<Keypair>> {
     Ok(players)
 }
 
-/// Ensure all players have at least `min_balance` lamports, topping up from funder if needed.
-pub fn ensure_funded(
+/// Ensure all referenced players have at least `min_balance` lamports, topping up from funder if needed.
+pub fn ensure_funded_refs(
     client: &RpcClient,
     funder: &Keypair,
-    players: &[Keypair],
+    players: &[&Keypair],
     min_balance: u64,
     topup_amount: u64,
     tx_delay: Duration,

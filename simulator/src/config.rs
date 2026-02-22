@@ -30,8 +30,23 @@ pub struct SimulatorConfig {
     /// Path to the funder keypair file (funds player wallets)
     pub funder: String,
 
-    /// Number of simulated players per tournament
-    pub player_count: usize,
+    /// Min players entering per tournament
+    pub player_count_min: usize,
+
+    /// Max players entering per tournament (= wallet pool size)
+    pub player_count_max: usize,
+
+    /// Min players that claim refund during Registration
+    pub refund_count_min: usize,
+
+    /// Max players that claim refund during Registration
+    pub refund_count_max: usize,
+
+    /// Min players that skip reveal (operator forfeits them)
+    pub no_reveal_count_min: usize,
+
+    /// Max players that skip reveal
+    pub no_reveal_count_max: usize,
 
     /// Directory to store generated player keypair files
     pub wallet_dir: String,
@@ -68,7 +83,14 @@ struct FileNetworkConfig {
 #[derive(Debug, Deserialize, Default)]
 struct FileSimulatorConfig {
     funder: Option<String>,
+    /// Legacy field — used as both min and max when min/max not set
     player_count: Option<usize>,
+    player_count_min: Option<usize>,
+    player_count_max: Option<usize>,
+    refund_count_min: Option<usize>,
+    refund_count_max: Option<usize>,
+    no_reveal_count_min: Option<usize>,
+    no_reveal_count_max: Option<usize>,
     wallet_dir: Option<String>,
     #[serde(default)]
     strategies: Vec<u8>,
@@ -84,7 +106,12 @@ impl ArenaConfig {
     /// - `RPC_URL` — Solana RPC endpoint
     /// - `PROGRAM_ID` — On-chain program ID
     /// - `FUNDER` — Path to funder keypair JSON file
-    /// - `PLAYER_COUNT` — Number of simulated players
+    /// - `PLAYER_COUNT_MIN` — Min players per tournament
+    /// - `PLAYER_COUNT_MAX` — Max players per tournament
+    /// - `REFUND_COUNT_MIN` — Min players that refund
+    /// - `REFUND_COUNT_MAX` — Max players that refund
+    /// - `NO_REVEAL_COUNT_MIN` — Min players that skip reveal
+    /// - `NO_REVEAL_COUNT_MAX` — Max players that skip reveal
     /// - `WALLET_DIR` — Directory for player keypair files
     /// - `STRATEGIES` — Comma-separated strategy indices (e.g. "0,1,4")
     /// - `MIN_PLAYER_BALANCE` — Top-up threshold in lamports
@@ -119,7 +146,59 @@ impl ArenaConfig {
                 .unwrap_or_else(|| "~/.config/solana/id.json".to_string()),
         );
 
-        let player_count = env_parse("PLAYER_COUNT", file.simulator.player_count.unwrap_or(4));
+        // Player count: env > toml min/max > legacy player_count > default 4
+        let legacy_count = file.simulator.player_count.unwrap_or(4);
+        let player_count_min = env_parse(
+            "PLAYER_COUNT_MIN",
+            file.simulator.player_count_min.unwrap_or(legacy_count),
+        );
+        let player_count_max = env_parse(
+            "PLAYER_COUNT_MAX",
+            file.simulator.player_count_max.unwrap_or(legacy_count),
+        );
+
+        let refund_count_min = env_parse(
+            "REFUND_COUNT_MIN",
+            file.simulator.refund_count_min.unwrap_or(0),
+        );
+        let refund_count_max = env_parse(
+            "REFUND_COUNT_MAX",
+            file.simulator.refund_count_max.unwrap_or(0),
+        );
+
+        let no_reveal_count_min = env_parse(
+            "NO_REVEAL_COUNT_MIN",
+            file.simulator.no_reveal_count_min.unwrap_or(0),
+        );
+        let no_reveal_count_max = env_parse(
+            "NO_REVEAL_COUNT_MAX",
+            file.simulator.no_reveal_count_max.unwrap_or(0),
+        );
+
+        // Validation
+        anyhow::ensure!(
+            player_count_min <= player_count_max,
+            "player_count_min ({}) must be <= player_count_max ({})",
+            player_count_min,
+            player_count_max
+        );
+        anyhow::ensure!(
+            player_count_min >= 2,
+            "player_count_min ({}) must be >= 2 (contract minimum)",
+            player_count_min
+        );
+        anyhow::ensure!(
+            refund_count_min <= refund_count_max,
+            "refund_count_min ({}) must be <= refund_count_max ({})",
+            refund_count_min,
+            refund_count_max
+        );
+        anyhow::ensure!(
+            no_reveal_count_min <= no_reveal_count_max,
+            "no_reveal_count_min ({}) must be <= no_reveal_count_max ({})",
+            no_reveal_count_min,
+            no_reveal_count_max
+        );
 
         let wallet_dir = env_or(
             "WALLET_DIR",
@@ -155,7 +234,12 @@ impl ArenaConfig {
             },
             simulator: SimulatorConfig {
                 funder,
-                player_count,
+                player_count_min,
+                player_count_max,
+                refund_count_min,
+                refund_count_max,
+                no_reveal_count_min,
+                no_reveal_count_max,
                 wallet_dir,
                 strategies,
                 min_player_balance,

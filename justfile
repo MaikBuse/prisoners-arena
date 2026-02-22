@@ -49,7 +49,7 @@ build-contract:
 
 # Build contract (deterministic, for deploy/verification)
 build-contract-verifiable:
-    solana-verify build --library-name prisoners_arena
+    solana-verify build --library-name prisoners_arena --base-image solanafoundation/solana-verifiable-build:3.0.1 ./contract
 
 # Build operator
 build-operator:
@@ -101,12 +101,23 @@ deploy-devnet: build-contract-verifiable
 deploy-mainnet: build-contract-verifiable
     anchor deploy --provider.cluster mainnet
 
-# Verify deployed program matches source repo
-verify-contract:
+# Verify deployed program matches source repo (devnet)
+verify-contract-devnet:
     solana-verify verify-from-repo \
         https://github.com/makoto-kusanagi/prisoners-arena-program \
         --program-id 2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga \
-        --library-name prisoners_arena
+        --library-name prisoners_arena \
+        --base-image solanafoundation/solana-verifiable-build:3.0.1 \
+        -u https://api.devnet.solana.com
+
+# Verify deployed program matches source repo (mainnet)
+verify-contract-mainnet:
+    solana-verify verify-from-repo \
+        https://github.com/makoto-kusanagi/prisoners-arena-program \
+        --program-id 2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga \
+        --library-name prisoners_arena \
+        --base-image solanafoundation/solana-verifiable-build:3.0.1 \
+        -u https://api.mainnet-beta.solana.com
 
 # Format all code
 fmt:

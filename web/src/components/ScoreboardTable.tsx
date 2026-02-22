@@ -19,14 +19,14 @@ interface ScoreboardTableProps {
   sortDir: 'asc' | 'desc';
 }
 
-function RankBadge({ rank }: { rank: number }) {
-  if (rank === 1) {
+function RankBadge({ rank, finished }: { rank: number; finished: boolean }) {
+  if (finished && rank === 1) {
     return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full medal-gold text-white text-xs font-bold shadow-sm">1</span>;
   }
-  if (rank === 2) {
+  if (finished && rank === 2) {
     return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full medal-silver text-white text-xs font-bold shadow-sm">2</span>;
   }
-  if (rank === 3) {
+  if (finished && rank === 3) {
     return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full medal-bronze text-white text-xs font-bold shadow-sm">3</span>;
   }
   return <span className="text-muted">{rank}</span>;
@@ -127,7 +127,7 @@ export function ScoreboardTable({
                   whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
                 >
                   <td className="px-3 sm:px-5 py-2 sm:py-3 whitespace-nowrap text-center">
-                    <RankBadge rank={rank} />
+                    <RankBadge rank={rank} finished={t.state === 'Payout'} />
                   </td>
                   <td className="px-3 sm:px-5 py-2 sm:py-3 font-mono text-sm">
                     <a

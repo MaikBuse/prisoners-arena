@@ -131,7 +131,9 @@ export async function GET(request: NextRequest) {
     verification: {
       tool: 'solana-verify',
       tool_url: 'https://github.com/Ellipsis-Labs/solana-verifiable-build',
-      command: `solana-verify verify-from-repo https://github.com/makoto-kusanagi/prisoners-arena-program --program-id ${programId} --library-name prisoners_arena`,
+      command: `solana-verify verify-from-repo https://github.com/makoto-kusanagi/prisoners-arena-program --program-id ${programId} --library-name prisoners_arena --base-image solanafoundation/solana-verifiable-build:3.0.1 -u ${getConfig().rpcUrl}`,
+      note: 'This project uses Solana SDK v3. Two workarounds are needed: (1) Install patched solana-verify from PR #228: cargo install solana-verify --git https://github.com/MidTermDev/solana-verifiable-build.git --branch fix/sdk-v3-cargo-lock-compat (2) The --base-image flag above is required because the auto-detected Docker image ships Rust 1.84 which lacks edition 2024 support.',
+      patch_pr: 'https://github.com/Ellipsis-Labs/solana-verifiable-build/pull/228',
     },
     source_url: 'https://github.com/MaikBuse/prisoners-arena',
     explorer_url: explorerLink(programId),

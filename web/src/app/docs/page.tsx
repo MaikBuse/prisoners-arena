@@ -453,13 +453,28 @@ export default async function HowItWorksPage() {
             <DetailBlock summary="How to verify the program binary">
               <div className="text-sm text-muted space-y-2">
                 <p>Anyone can verify that the deployed program matches the public source code using <a href="https://github.com/Ellipsis-Labs/solana-verifiable-build" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover">solana-verify</a>:</p>
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-xs text-muted mb-2">
+                  <strong>Note:</strong> This project uses Solana SDK v3 which split the <code className="bg-surface px-1 rounded font-mono">solana-program</code> crate into subcrates. Two workarounds are needed until upstream catches up:
+                  <ol className="list-decimal list-inside mt-2 space-y-2">
+                    <li><strong>Install patched solana-verify</strong> — the released version (v0.4.11) cannot parse the Cargo.lock. Until <a href="https://github.com/Ellipsis-Labs/solana-verifiable-build/pull/228" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover">PR #228</a> is merged:
+                      <div className="bg-surface border border-card-border rounded-lg p-2 mt-1 font-mono">
+                        cargo install solana-verify \<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;--git https://github.com/MidTermDev/solana-verifiable-build.git \<br />
+                        &nbsp;&nbsp;&nbsp;&nbsp;--branch fix/sdk-v3-cargo-lock-compat
+                      </div>
+                    </li>
+                    <li><strong>Specify the Docker image</strong> — the auto-detected image ships Rust 1.84 which lacks edition 2024 support. Pass <code className="bg-surface px-1 rounded font-mono">--base-image solanafoundation/solana-verifiable-build:3.0.1</code> to select a newer image.</li>
+                  </ol>
+                </div>
                 <div className="bg-surface border border-card-border rounded-lg p-3 font-mono text-xs">
                   solana-verify verify-from-repo \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;https://github.com/makoto-kusanagi/prisoners-arena-program \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;--program-id {'<PROGRAM_ID>'} \<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;--library-name prisoners_arena
+                  &nbsp;&nbsp;&nbsp;&nbsp;--library-name prisoners_arena \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;--base-image solanafoundation/solana-verifiable-build:3.0.1 \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;-u {cfg.rpcUrl}
                 </div>
-                <p>The program ID can be found via the <a href="/api/config" className="text-accent hover:text-accent-hover">config API</a> or on the homepage.</p>
+                <p>The program ID and RPC URL can be found via the <a href="/api/config" className="text-accent hover:text-accent-hover">config API</a> or on the homepage.</p>
               </div>
             </DetailBlock>
 

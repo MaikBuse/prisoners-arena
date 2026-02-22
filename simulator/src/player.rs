@@ -23,6 +23,7 @@ mod disc {
     pub const ENTER_TOURNAMENT: [u8; 8] = [19, 21, 109, 109, 227, 108, 232, 25];
     pub const REVEAL_STRATEGY: [u8; 8] = [102, 15, 100, 245, 177, 6, 9, 198];
     pub const CLAIM_PAYOUT: [u8; 8] = [127, 240, 132, 62, 227, 198, 146, 133];
+    pub const CLAIM_REFUND: [u8; 8] = [15, 16, 30, 161, 255, 228, 97, 60];
 }
 
 /// Compute SHA256 commitment hash for a builtin strategy (index 0-8).
@@ -121,6 +122,32 @@ pub fn claim_payout(
         program_id: *program_id,
         accounts,
         data: disc::CLAIM_PAYOUT.to_vec(),
+    };
+
+    send_transaction(client, &[ix], player)
+}
+
+/// Claim refund during Registration phase (closes entry, returns stake).
+pub fn claim_refund(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    player: &Keypair,
+    tournament_id: u32,
+) -> Result<Signature> {
+    let (tournament_pda, _) = state::get_tournament_pda(program_id, tournament_id);
+    let (entry_pda, _) = state::get_entry_pda(program_id, &tournament_pda, &player.pubkey());
+
+    let accounts = vec![
+        AccountMeta::new(tournament_pda, false),
+        AccountMeta::new(entry_pda, false),
+        AccountMeta::new(player.pubkey(), true),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: disc::CLAIM_REFUND.to_vec(),
     };
 
     send_transaction(client, &[ix], player)
