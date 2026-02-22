@@ -34,6 +34,7 @@ export default function Home() {
   const [pastLoading, setPastLoading] = useState(true);
   const pastFetched = useRef(false);
   const [scorePage, setScorePage] = useState(0);
+  const [network, setNetwork] = useState('');
   const pageSize = 10;
 
   const fetchData = useCallback(async () => {
@@ -53,6 +54,10 @@ export default function Home() {
       setError(e instanceof Error ? e.message : 'Network error — API unreachable');
     }
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    setNetwork(window.__ENV__?.NETWORK || 'devnet');
   }, []);
 
   useEffect(() => {
@@ -240,19 +245,27 @@ export default function Home() {
             </div>
           </div>
         ) : error && !data ? (
-          <div className="neon-card rounded-2xl p-8 text-center">
-            <p className="text-error font-medium mb-3">⚠️ {error}</p>
-            <button
-              onClick={() => { setLoading(true); setError(null); fetchData(); }}
-              className="px-4 py-2 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
-            >
-              Retry
-            </button>
-          </div>
+          network === 'mainnet-beta' ? (
+            <ComingSoonCard />
+          ) : (
+            <div className="neon-card rounded-2xl p-8 text-center">
+              <p className="text-error font-medium mb-3">⚠️ {error}</p>
+              <button
+                onClick={() => { setLoading(true); setError(null); fetchData(); }}
+                className="px-4 py-2 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
+              >
+                Retry
+              </button>
+            </div>
+          )
         ) : !t ? (
-          <div className="neon-card rounded-2xl p-8 text-center text-muted">
-            No tournament found. The program may not be initialized yet.
-          </div>
+          network === 'mainnet-beta' ? (
+            <ComingSoonCard />
+          ) : (
+            <div className="neon-card rounded-2xl p-8 text-center text-muted">
+              No tournament found. The program may not be initialized yet.
+            </div>
+          )
         ) : (
           <div className="space-y-6">
             <div className="neon-card rounded-2xl p-6 cursor-pointer" onClick={() => router.push(`/explorer?t=${t.id}`)}>
@@ -802,6 +815,24 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="bg-surface rounded-lg px-3 py-2 border border-card-border">
       <div className="text-xs text-muted">{label}</div>
       <div className="font-bold text-sm mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function ComingSoonCard() {
+  return (
+    <div className="neon-card rounded-2xl p-8 sm:p-12 text-center">
+      <div className="text-5xl mb-4">🚀</div>
+      <h3 className="text-xl font-bold mb-2">Mainnet Coming Soon</h3>
+      <p className="text-muted mb-6 max-w-md mx-auto">
+        The tournament program is not yet deployed on mainnet. Head to devnet to see the action.
+      </p>
+      <a
+        href="https://prisoners-arena.dev"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
+      >
+        Switch to Devnet →
+      </a>
     </div>
   );
 }

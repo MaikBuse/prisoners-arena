@@ -67,6 +67,11 @@ function ExplorerContent() {
   const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
   const [minParticipants, setMinParticipants] = useState<number>(2);
   const initializedRef = useRef(false);
+  const [network, setNetwork] = useState('');
+
+  useEffect(() => {
+    setNetwork(window.__ENV__?.NETWORK || 'devnet');
+  }, []);
 
   // Fetch sidebar list
   useEffect(() => {
@@ -310,7 +315,21 @@ function ExplorerContent() {
         {/* Main content */}
         <main className="flex-1 min-w-0">
           <div className="max-w-5xl mx-auto px-4 py-8">
-            {(sidebarLoading || detailLoading) && !t ? (
+            {network === 'mainnet-beta' && !sidebarLoading && sidebarTournaments.length === 0 ? (
+              <div className="neon-card rounded-2xl p-8 sm:p-12 text-center">
+                <div className="text-5xl mb-4">🚀</div>
+                <h3 className="text-xl font-bold mb-2">Mainnet Coming Soon</h3>
+                <p className="text-muted mb-6 max-w-md mx-auto">
+                  The tournament program is not yet deployed on mainnet. Head to devnet to see the action.
+                </p>
+                <a
+                  href="https://prisoners-arena.dev/explorer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
+                >
+                  Switch to Devnet →
+                </a>
+              </div>
+            ) : (sidebarLoading || detailLoading) && !t ? (
               <div className="space-y-6">
                 <div className="neon-card rounded-2xl p-8 animate-pulse">
                   <div className="h-8 bg-skeleton rounded w-1/3 mb-4" />
