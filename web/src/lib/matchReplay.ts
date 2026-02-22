@@ -148,14 +148,16 @@ export async function getPlayerMatches(
   const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
-  // Get pairings with refunded players filtered out (strategy == 255)
-  const strategies = new Uint8Array(tournament.strategies);
-  const pairings: [number, number][] = wasm.get_tournament_pairings_filtered(n, k, seed, strategies);
+  // Get ALL pairings (unfiltered) so matchIndex stays aligned with the
+  // original pairing list.  We skip refunded players (strategy == 255)
+  // manually — this keeps matchIndex correct for replay_match / replayMatch.
+  const allPairings: [number, number][] = wasm.get_tournament_pairings(n, k, seed);
 
   // Filter to pairings involving our player
   const matches: PlayerMatchInfo[] = [];
-  for (let matchIndex = 0; matchIndex < pairings.length; matchIndex++) {
-    const [a, b] = pairings[matchIndex];
+  for (let matchIndex = 0; matchIndex < allPairings.length; matchIndex++) {
+    const [a, b] = allPairings[matchIndex];
+    if (tournament.strategies[a] === 255 || tournament.strategies[b] === 255) continue;
     if (a !== playerIndex && b !== playerIndex) continue;
 
     const isPlayerA = a === playerIndex;
@@ -253,8 +255,7 @@ export async function getPlayerStats(
   const k = wasm.get_effective_k(tournament.participantCount, tournament.matchesPerPlayer);
   const n = tournament.participantCount;
 
-  const strategies = new Uint8Array(tournament.strategies);
-  const pairings: [number, number][] = wasm.get_tournament_pairings_filtered(n, k, seed, strategies);
+  const allPairings: [number, number][] = wasm.get_tournament_pairings(n, k, seed);
 
   let totalScore = 0;
   let wins = 0;
@@ -264,8 +265,9 @@ export async function getPlayerStats(
   let coopMoves = 0;
   let totalMatches = 0;
 
-  for (let matchIndex = 0; matchIndex < pairings.length; matchIndex++) {
-    const [a, b] = pairings[matchIndex];
+  for (let matchIndex = 0; matchIndex < allPairings.length; matchIndex++) {
+    const [a, b] = allPairings[matchIndex];
+    if (tournament.strategies[a] === 255 || tournament.strategies[b] === 255) continue;
     if (a !== playerIndex && b !== playerIndex) continue;
 
     const isPlayerA = a === playerIndex;
