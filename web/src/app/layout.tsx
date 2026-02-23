@@ -4,6 +4,7 @@ import './globals.css';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getNetworkConfig } from '@/lib/network-config';
 import type { NetworkId } from '@/lib/network-config';
+import { enterNetwork } from '@/lib/network-context';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const hdrs = await headers();
   const network = (hdrs.get('x-network') as NetworkId) || 'devnet';
+  enterNetwork(network);
   const cfg = getNetworkConfig(network);
 
   const envPayload = JSON.stringify({

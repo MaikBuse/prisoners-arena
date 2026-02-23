@@ -9,7 +9,11 @@ export function getProgramId(): PublicKey {
   const config = getConfig();
   let pid = _programIds.get(config.network);
   if (!pid) {
-    pid = new PublicKey(config.programId);
+    try {
+      pid = new PublicKey(config.programId);
+    } catch {
+      pid = PublicKey.default; // 11111111111111111111111111111111
+    }
     _programIds.set(config.network, pid);
   }
   return pid;

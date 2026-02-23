@@ -81,6 +81,32 @@ export default function Home() {
   const t = data?.tournament;
   const entries = data?.entries || [];
 
+  if (network === 'mainnet-beta') {
+    return (
+      <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
+        <LightRays className="absolute inset-0 z-0" speed={6} />
+        <div className="relative z-10 text-center px-4">
+          <div className="animate-float inline-block mb-8">
+            <Logo size={100} />
+          </div>
+          <div className="cta-section rounded-2xl p-8 sm:p-12 relative overflow-hidden max-w-lg mx-auto">
+            <ShineBorder shineColor={["var(--color-accent)", "var(--color-accent-hover)", "var(--color-accent)"]} borderWidth={2} duration={10} />
+            <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-white">Mainnet Coming Soon</h1>
+            <p className="text-muted mb-8 max-w-md mx-auto">
+              The tournament program is not yet deployed on mainnet. Head to devnet to see the action.
+            </p>
+            <a
+              href="https://prisoners-arena.dev"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity text-lg"
+            >
+              Switch to Devnet →
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Nav */}
@@ -245,27 +271,19 @@ export default function Home() {
             </div>
           </div>
         ) : error && !data ? (
-          network === 'mainnet-beta' ? (
-            <ComingSoonCard />
-          ) : (
-            <div className="neon-card rounded-2xl p-8 text-center">
-              <p className="text-error font-medium mb-3">⚠️ {error}</p>
-              <button
-                onClick={() => { setLoading(true); setError(null); fetchData(); }}
-                className="px-4 py-2 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
-              >
-                Retry
-              </button>
-            </div>
-          )
+          <div className="neon-card rounded-2xl p-8 text-center">
+            <p className="text-error font-medium mb-3">⚠️ {error}</p>
+            <button
+              onClick={() => { setLoading(true); setError(null); fetchData(); }}
+              className="px-4 py-2 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              Retry
+            </button>
+          </div>
         ) : !t ? (
-          network === 'mainnet-beta' ? (
-            <ComingSoonCard />
-          ) : (
-            <div className="neon-card rounded-2xl p-8 text-center text-muted">
-              No tournament found. The program may not be initialized yet.
-            </div>
-          )
+          <div className="neon-card rounded-2xl p-8 text-center text-muted">
+            No tournament found. The program may not be initialized yet.
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="neon-card rounded-2xl p-6 cursor-pointer" onClick={() => router.push(`/explorer?t=${t.id}`)}>
@@ -819,20 +837,3 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ComingSoonCard() {
-  return (
-    <div className="neon-card rounded-2xl p-8 sm:p-12 text-center">
-      <div className="text-5xl mb-4">🚀</div>
-      <h3 className="text-xl font-bold mb-2">Mainnet Coming Soon</h3>
-      <p className="text-muted mb-6 max-w-md mx-auto">
-        The tournament program is not yet deployed on mainnet. Head to devnet to see the action.
-      </p>
-      <a
-        href="https://prisoners-arena.dev"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-white font-medium hover:opacity-90 transition-opacity"
-      >
-        Switch to Devnet →
-      </a>
-    </div>
-  );
-}

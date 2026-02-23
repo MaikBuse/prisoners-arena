@@ -12,6 +12,10 @@ export function runWithNetwork<T>(network: NetworkId, fn: () => T): T {
   return storage.run(network, fn);
 }
 
+export function enterNetwork(network: NetworkId): void {
+  storage.enterWith(network);
+}
+
 export function getCurrentNetwork(): NetworkId {
   return storage.getStore() ?? 'devnet';
 }
