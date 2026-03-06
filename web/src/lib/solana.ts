@@ -23,7 +23,12 @@ export function getConnection(): Connection {
   const config = getConfig();
   let conn = _connections.get(config.network);
   if (!conn) {
-    conn = new Connection(config.rpcUrl, 'confirmed');
+    conn = new Connection(config.rpcUrl, {
+      commitment: 'confirmed',
+      fetchMiddleware: (info, init, fetch) => {
+        fetch(info, { ...init, signal: AbortSignal.timeout(10_000) });
+      },
+    });
     _connections.set(config.network, conn);
   }
   return conn;

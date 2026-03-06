@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
   return apiSuccess({
     program_id: programId,
     network: getNetwork(),
-    rpc_url: getConfig().rpcUrl,
     current_tournament: currentTournament,
     pda_seeds: {
       config: ['config'],
@@ -142,7 +141,6 @@ export async function GET(request: NextRequest) {
       const expUrl = c.network === 'mainnet-beta' ? expBase : `${expBase}?cluster=${c.network}`;
       return [c.network, {
         program_id: c.programId,
-        rpc_url: c.rpcUrl,
         base_url: c.baseUrl,
         explorer_url: expUrl,
         idl_url: `${c.baseUrl}/api/idl`,

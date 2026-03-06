@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { fetchConfig, getProgramId, getNetwork, explorerLink } from '@/lib/solana';
-import { getConfig, resolveNetwork } from '@/lib/config';
+import { resolveNetwork } from '@/lib/config';
 import { apiSuccess, apiError, rateLimited } from '@/lib/api';
 import { runWithNetwork } from '@/lib/network-context';
 
@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
         ...config,
         programId,
         network: getNetwork(),
-        rpcUrl: getConfig().rpcUrl,
         explorerUrl: explorerLink(programId),
       });
     } catch (e) {

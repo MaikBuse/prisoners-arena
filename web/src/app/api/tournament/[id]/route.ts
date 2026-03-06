@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     try {
     const { id } = await params;
     const idNum = parseInt(id, 10);
-    if (isNaN(idNum)) return apiError('Invalid tournament ID', 'INVALID_ID', 400);
+    if (isNaN(idNum) || idNum < 0 || idNum > 0xFFFFFFFF) return apiError('Invalid tournament ID', 'INVALID_ID', 400);
 
     const programId = getProgramId().toBase58();
     const tournament = await fetchTournament(idNum);

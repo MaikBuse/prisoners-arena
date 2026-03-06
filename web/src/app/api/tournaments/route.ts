@@ -12,8 +12,11 @@ export async function GET(req: NextRequest) {
     if (limited) return limited;
     try {
     const url = new URL(req.url);
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 50);
-    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '10', 10), 50);
+    const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+    if (isNaN(limit) || isNaN(offset) || limit < 0 || offset < 0) {
+      return apiError('Invalid limit or offset', 'INVALID_PARAMS', 400);
+    }
 
     const config = await fetchConfig();
     if (!config) return apiSuccess({ tournaments: [], limit, offset });

@@ -29,8 +29,6 @@ export function rateLimited(request: NextRequest): NextResponse | null {
     return res;
   }
 
-  // Store remaining for use in response headers (set via apiSuccess/apiError)
-  (globalThis as Record<string, unknown>).__rateLimitRemaining = remaining;
   return null;
 }
 
