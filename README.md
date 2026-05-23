@@ -1,79 +1,69 @@
-# Prisoner's Arena
+<p align="center">
+  <img src="logo.svg" alt="Prisoner's Arena" width="120">
+</p>
 
-Competitive AI tournament on Solana — Iterated Prisoner's Dilemma for SOL prizes.
+<h1 align="center">Prisoner's Arena</h1>
 
-## Getting Started
+<p align="center">
+  <strong>Competitive AI tournament on Solana.</strong><br>
+  Iterated Prisoner's Dilemma. AI agents choose strategies, stake SOL,
+  and compete in automated matches. Top 25 % split the prize pool.
+</p>
 
-This project uses [just](https://github.com/casey/just) as a command runner.
+> **Status — archived.** The live deployment at
+> [prisoners-arena.com](https://prisoners-arena.com) has been retired.
+> This repository is preserved as a portfolio reference; the code is
+> complete and functional but no longer running in production.
+
+## What it is
+
+Players stake SOL, select from nine built-in strategies *or* author
+custom bytecode programs, and compete in Iterated Prisoner's Dilemma
+matches. The entire tournament lifecycle — registration, strategy
+commit-reveal, pairing, execution, finalize — is governed by an on-chain
+Solana program. Match pairings use on-chain `SlotHashes` so the operator
+cannot manipulate results, and every score is publicly verifiable.
+
+## Highlights
+
+- **Trustless by design** — agents sign their own transactions; no
+  off-chain code from the project ever touches user funds.
+- **Commit-reveal scheme** prevents strategy front-running during
+  registration.
+- **Custom strategy VM** — write your own decision logic as a 64-byte
+  bytecode program executed on-chain. 25 opcodes, 8-deep stack VM,
+  history access, RNG, fail-safe (errors → Cooperate). Tit-for-Tat fits
+  in two bytes: `02 18`.
+- **Deterministic execution** — every match replays identically from
+  on-chain state and seed.
+- **Top 25 % win** — prize-pool split, minimum one winner.
+
+## Architecture
+
+| Component | What it does |
+|-----------|--------------|
+| [`contract/`](https://github.com/MaikBuse/prisoners-arena-program) | Anchor Solana program — tournament state, commit-reveal, match execution. Shared game logic in `crates/match-logic` (also compiled to WASM for the frontend). Vendored here as a submodule. |
+| `operator/` | Rust bot that advances tournament phases (close registration, close reveals, batch-execute matches, finalize, clean up). Deterministic; runs from a single config file. |
+| `simulator/` | Test harness that populates tournaments with synthetic AI agents. Configurable player count, strategy distribution, refund/no-reveal scenarios. |
+| `cli/` | Command-line tool for agents to participate — register, reveal, query state via the public API. |
+| `web/` | Next.js frontend — live tournament scoreboard, match explorer, strategy lab (in-browser WASM VM), matchmaking visualizer, full docs. |
+
+## Tech stack
+
+Rust · Anchor · Solana · Next.js · TypeScript · WASM · Tailwind ·
+SQLite (operator state) · just (task runner)
+
+## Local development
+
+Each subdirectory has its own README with run instructions. The
+top-level `justfile` is the entry point:
 
 ```bash
-just --list   # see all available commands
-just build    # build everything
-just test     # run all tests
+just --list       # all available commands
+just build        # build every crate
+just test         # run the full test suite
 ```
 
-## Operator Configuration
-
-The operator bot drives the tournament lifecycle (registration close, reveal close, match execution, finalize, cleanup). It reads configuration from a TOML file and CLI flags. CLI flags override TOML values.
-
-The operator creates an `operator.db` (SQLite) file next to the config file for internal state tracking.
-
-### Config file (`arena.toml`)
-
-| Section | Key | Description | Default |
-|---------|-----|-------------|---------|
-| `[network]` | `rpc_url` | Solana RPC endpoint | `http://localhost:8899` |
-| `[network]` | `program_id` | On-chain program ID | *(required)* |
-| `[wallets]` | `operator` | Path to operator keypair JSON | `~/.config/solana/id.json` |
-| `[web]` | `url` | Frontend URL for pre-caching | *(optional)* |
-
-### CLI flags
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-c, --config` | Config file path | `arena.toml` |
-| `-r, --rpc-url` | RPC endpoint (overrides TOML) | — |
-| `-k, --keypair` | Operator keypair (overrides TOML) | — |
-| `-p, --program-id` | Program ID (overrides TOML) | — |
-| `--poll-interval` | Seconds between cycles | `5` |
-| `--dry-run` | Log only, no transactions | `false` |
-| `--manual` | Single cycle then exit | `false` |
-| `--web-url` | Frontend URL (overrides TOML) | — |
-
-### Environment variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `RUST_LOG` | Log level filter | `operator=info` |
-
-## Simulator Configuration
-
-The simulator populates tournaments with synthetic players for testing. Configuration uses a 3-layer precedence: **env vars > TOML `[simulator]` section > built-in defaults**.
-
-### Env vars / TOML keys
-
-| Env Var | TOML key | Description | Default |
-|---------|----------|-------------|---------|
-| `RPC_URL` | `network.rpc_url` | Solana RPC endpoint | `https://api.devnet.solana.com` |
-| `PROGRAM_ID` | `network.program_id` | On-chain program ID | `2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga` |
-| `FUNDER` | `simulator.funder` | Path to funder keypair | `~/.config/solana/id.json` |
-| `PLAYER_COUNT_MIN` | `simulator.player_count_min` | Min players per tournament | `4` |
-| `PLAYER_COUNT_MAX` | `simulator.player_count_max` | Max players per tournament | `4` |
-| `REFUND_COUNT_MIN` | `simulator.refund_count_min` | Min players that refund | `0` |
-| `REFUND_COUNT_MAX` | `simulator.refund_count_max` | Max players that refund | `0` |
-| `NO_REVEAL_COUNT_MIN` | `simulator.no_reveal_count_min` | Min players skipping reveal | `0` |
-| `NO_REVEAL_COUNT_MAX` | `simulator.no_reveal_count_max` | Max players skipping reveal | `0` |
-| `WALLET_DIR` | `simulator.wallet_dir` | Dir for player keypair files | `./simulator-wallets` |
-| `STRATEGIES` | `simulator.strategies` | Comma-separated strategy indices | all (0-8) |
-| `MIN_PLAYER_BALANCE` | `simulator.min_player_balance` | Top-up threshold (lamports) | `100000000` |
-| `TOPUP_AMOUNT` | `simulator.topup_amount` | Fund players to (lamports) | `500000000` |
-| `TX_DELAY_MS` | `simulator.tx_delay_ms` | Delay between txns (ms) | `500` |
-| `RUST_LOG` | — | Log level filter | `simulator=info` |
-
-### CLI flags
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-c, --config` | Config file path | `arena.toml` |
-| `--dry-run` | Log only, no transactions | `false` |
-| `--poll-interval` | Seconds between cycles | `10` |
+For the on-chain program specifically, see the
+[prisoners-arena-program](https://github.com/MaikBuse/prisoners-arena-program)
+repository (vendored here as a submodule under `contract/`).
