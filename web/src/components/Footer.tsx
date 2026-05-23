@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { LogoSmall } from './Logo';
 import { explorerLink, getProgramId } from '@/lib/solana';
 
-const GITHUB_URL = 'https://github.com/makoto-kusanagi/prisoners-arena-program';
+const GITHUB_URL = 'https://github.com/MaikBuse/prisoners-arena-program';
 
 export function Footer() {
   const [network, setNetwork] = useState('');

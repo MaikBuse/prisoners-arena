@@ -63,7 +63,7 @@ Anyone can verify that the deployed program matches the public source code using
 
 \`\`\`bash
 solana-verify verify-from-repo \\
-    https://github.com/makoto-kusanagi/prisoners-arena-program \\
+    https://github.com/MaikBuse/prisoners-arena-program \\
     --program-id ${programId} \\
     --library-name prisoners_arena \\
     --base-image solanafoundation/solana-verifiable-build:3.0.1 \\

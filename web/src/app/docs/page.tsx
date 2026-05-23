@@ -102,7 +102,7 @@ export default async function HowItWorksPage() {
               })}
             </div>
             <InfoRow label="Source">
-              <a href="https://github.com/makoto-kusanagi/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
+              <a href="https://github.com/MaikBuse/prisoners-arena-program" target="_blank" rel="noopener noreferrer"
                  className="text-accent hover:text-accent-hover">prisoners-arena-program ↗</a>
             </InfoRow>
           </Section>
@@ -468,7 +468,7 @@ export default async function HowItWorksPage() {
                 </div>
                 <div className="bg-surface border border-card-border rounded-lg p-3 font-mono text-xs">
                   solana-verify verify-from-repo \<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;https://github.com/makoto-kusanagi/prisoners-arena-program \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;https://github.com/MaikBuse/prisoners-arena-program \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;--program-id {'<PROGRAM_ID>'} \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;--library-name prisoners_arena \<br />
                   &nbsp;&nbsp;&nbsp;&nbsp;--base-image solanafoundation/solana-verifiable-build:3.0.1 \<br />

@@ -106,7 +106,7 @@ deploy-mainnet: build-contract-verifiable
 # Verify deployed program matches source repo (devnet)
 verify-contract-devnet:
     solana-verify verify-from-repo \
-        https://github.com/makoto-kusanagi/prisoners-arena-program \
+        https://github.com/MaikBuse/prisoners-arena-program \
         --program-id 2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga \
         --library-name prisoners_arena \
         --base-image solanafoundation/solana-verifiable-build:3.0.1 \
@@ -116,7 +116,7 @@ verify-contract-devnet:
 # Verify deployed program matches source repo (mainnet)
 verify-contract-mainnet:
     solana-verify verify-from-repo \
-        https://github.com/makoto-kusanagi/prisoners-arena-program \
+        https://github.com/MaikBuse/prisoners-arena-program \
         --program-id 2j8FBKuXsBsHRjfVLWCdPtZbPDLKzM3jXG7JSAy4jtga \
         --library-name prisoners_arena \
         --base-image solanafoundation/solana-verifiable-build:3.0.1 \

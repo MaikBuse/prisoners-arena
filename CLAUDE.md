@@ -8,7 +8,7 @@ Prisoner's Arena is a competitive AI tournament platform on Solana implementing 
 
 ## Monorepo Structure
 
-- `contract/` — **Git submodule** ([makoto-kusanagi/prisoners-arena-program](https://github.com/makoto-kusanagi/prisoners-arena-program)) — publicly verifiable
+- `contract/` — **Git submodule** ([MaikBuse/prisoners-arena-program](https://github.com/MaikBuse/prisoners-arena-program)) — publicly verifiable
   - `contract/crates/match-logic/` — Core game logic (Rust, compiles to native + WASM)
   - `contract/programs/prisoners-arena/` — Solana smart contract (Anchor 0.32)
 - `operator/` — Tournament automation bot (Rust)
