@@ -67,3 +67,7 @@ just test         # run the full test suite
 For the on-chain program specifically, see the
 [prisoners-arena-program](https://github.com/MaikBuse/prisoners-arena-program)
 repository (vendored here as a submodule under `contract/`).
+
+## License
+
+[PolyForm Noncommercial License 1.0.0](LICENSE).
